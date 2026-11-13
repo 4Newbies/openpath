@@ -1,13 +1,27 @@
 {
-  "name": "server",
+  "name": "openpath-server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "OpenPath Backend with PostgreSQL Prisma support and Amharic STT/TTS services",
+  "main": "src/index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
   },
-  "keywords": [],
-  "type": "commonjs",
+  "keywords": [
+    "openpath",
+    "accessibility",
+    "amharic",
+    "stt",
+    "tts",
+    "wcag",
+    "postgresql",
+    "prisma"
+  ],
+  "author": "OpenPath Accessibility Team",
+  "license": "MIT",
   "dependencies": {
     "express": "^5.3.0"
   }

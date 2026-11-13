@@ -199,9 +199,184 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-200 min-h-screen;
   }
   html {
     @apply font-sans;
   }
+  :focus-visible {
+    outline: 3px solid var(--focus) !important;
+    outline-offset: 2px !important;
+  }
+}
+
+/* ==============================================================================
+   WCAG 2.2 AA Contrast Modes
+   ============================================================================== */
+
+/* 1. High Contrast Dark Mode */
+html.contrast-high-dark {
+  --background: #000000;
+  --surface: #0a0a0a;
+  --surface-secondary: #141414;
+  --foreground: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #f0f0f0;
+  --text-muted: #d0d0d0;
+  --border: #00ffff;
+  --input: #00ffff;
+  --focus: #ffee00;
+  --primary: #ffee00;
+  --primary-foreground: #000000;
+  --primary-hover: #ffd700;
+  --secondary: #00ffff;
+  --secondary-foreground: #000000;
+  --accent: #00ffff;
+  --destructive: #ff4d4f;
+  --card: #0a0a0a;
+}
+
+html.contrast-high-dark * {
+  border-color: #00ffff !important;
+}
+
+/* 2. High Contrast Light Mode */
+html.contrast-high-light {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-secondary: #f4f4f5;
+  --foreground: #000000;
+  --text-primary: #000000;
+  --text-secondary: #111111;
+  --text-muted: #222222;
+  --border: #000000;
+  --input: #000000;
+  --focus: #0033cc;
+  --primary: #0033cc;
+  --primary-foreground: #ffffff;
+  --primary-hover: #002299;
+  --secondary: #111111;
+  --secondary-foreground: #ffffff;
+  --card: #ffffff;
+}
+
+html.contrast-high-light * {
+  border-color: #000000 !important;
+}
+
+/* 3. Yellow On Black (Low Vision / Photophobia Optimal) */
+html.contrast-yellow-black {
+  --background: #000000;
+  --surface: #000000;
+  --surface-secondary: #1a1a00;
+  --foreground: #ffee00;
+  --text-primary: #ffee00;
+  --text-secondary: #fff44f;
+  --text-muted: #eedc00;
+  --border: #ffee00;
+  --input: #ffee00;
+  --focus: #00ffff;
+  --primary: #ffee00;
+  --primary-foreground: #000000;
+  --primary-hover: #ffff55;
+  --secondary: #ffee00;
+  --secondary-foreground: #000000;
+  --card: #000000;
+}
+
+html.contrast-yellow-black * {
+  border-color: #ffee00 !important;
+  color: #ffee00 !important;
+}
+
+html.contrast-yellow-black button[data-slot="button"] {
+  background-color: #ffee00 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+
+/* ==============================================================================
+   WCAG 2.2 AA Contrast Modes
+   ============================================================================== */
+
+/* 1. High Contrast Dark Mode */
+html.contrast-high-dark {
+  --background: #000000;
+  --surface: #0a0a0a;
+  --surface-secondary: #141414;
+  --foreground: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #f0f0f0;
+  --text-muted: #d0d0d0;
+  --border: #00ffff;
+  --input: #00ffff;
+  --focus: #ffee00;
+  --primary: #ffee00;
+  --primary-foreground: #000000;
+  --primary-hover: #ffd700;
+  --secondary: #00ffff;
+  --secondary-foreground: #000000;
+  --accent: #00ffff;
+  --destructive: #ff4d4f;
+  --card: #0a0a0a;
+}
+
+html.contrast-high-dark * {
+  border-color: #00ffff !important;
+}
+
+/* 2. High Contrast Light Mode */
+html.contrast-high-light {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-secondary: #f4f4f5;
+  --foreground: #000000;
+  --text-primary: #000000;
+  --text-secondary: #111111;
+  --text-muted: #222222;
+  --border: #000000;
+  --input: #000000;
+  --focus: #0033cc;
+  --primary: #0033cc;
+  --primary-foreground: #ffffff;
+  --primary-hover: #002299;
+  --secondary: #111111;
+  --secondary-foreground: #ffffff;
+  --card: #ffffff;
+}
+
+html.contrast-high-light * {
+  border-color: #000000 !important;
+}
+
+/* 3. Yellow On Black (Low Vision / Photophobia Optimal) */
+html.contrast-yellow-black {
+  --background: #000000;
+  --surface: #000000;
+  --surface-secondary: #1a1a00;
+  --foreground: #ffee00;
+  --text-primary: #ffee00;
+  --text-secondary: #fff44f;
+  --text-muted: #eedc00;
+  --border: #ffee00;
+  --input: #ffee00;
+  --focus: #00ffff;
+  --primary: #ffee00;
+  --primary-foreground: #000000;
+  --primary-hover: #ffff55;
+  --secondary: #ffee00;
+  --secondary-foreground: #000000;
+  --card: #000000;
+}
+
+html.contrast-yellow-black * {
+  border-color: #ffee00 !important;
+  color: #ffee00 !important;
+}
+
+html.contrast-yellow-black button[data-slot="button"] {
+  background-color: #ffee00 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
 }

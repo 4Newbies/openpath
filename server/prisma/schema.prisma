@@ -1,0 +1,331 @@
+// ==============================================================================
+// OpenPath Prisma Schema - PostgreSQL Primary Database
+// Architecture: Separate Authentication, Onboarding, Learner Profiles,
+// Accessibility Preferences, Alternative Identification, and Voice Interactions
+// ==============================================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ------------------------------------------------------------------------------
+// 1. Authentication & User Security
+// ------------------------------------------------------------------------------
+
+enum UserRole {
+  LEARNER
+  ADVISOR
+  ACCESSIBILITY_SPECIALIST
+  ADMIN
+}
+
+enum AuthType {
+  PASSWORD
+  REFUGEE_PASSCODE
+  PROVISIONAL_SESSION
+  TELEPHONE_OTP
+}
+
+enum PreferredLanguage {
+  AMHARIC
+  ENGLISH
+}
+
+model User {
+  id                String            @id @default(uuid())
+  email             String?           @unique
+  phoneNumber       String?           @unique
+  primaryLanguage   PreferredLanguage @default(AMHARIC)
+  role              UserRole          @default(LEARNER)
+  authType          AuthType          @default(PROVISIONAL_SESSION)
+  isActive          Boolean           @default(true)
+  isRefugeeStatus   Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relationships
+  account                 Account?
+  profile                 LearnerProfile?
+  accessibilityPreference AccessibilityPreference?
+  identifications         IdentificationDocument[]
+  onboardingSessions      OnboardingSession[]
+  supportRequests         SupportRequest[]
+
+  @@index([email])
+  @@index([phoneNumber])
+}
+
+model Account {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  passwordHash        String?
+  refugeeRecoveryCode String?   @unique // 6-character memorable code (e.g. OP-7492)
+  provisionalToken    String?   @unique
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+// ------------------------------------------------------------------------------
+// 2. Learner Profiles & Demographics
+// ------------------------------------------------------------------------------
+
+enum EducationLevel {
+  NO_FORMAL_SCHOOLING
+  BASIC_LITERACY_NUMERACY
+  PRIMARY_SCHOOL
+  SECONDARY_SCHOOL
+  TECHNICAL_VOCATIONAL
+  DIPLOMA
+  BACHELORS_OR_HIGHER
+}
+
+enum ContactMethod {
+  PHONE_CALL
+  SMS
+  TELEGRAM
+  WHATSAPP
+  COMMUNITY_LIAISON
+}
+
+model LearnerProfile {
+  id                     String         @id @default(uuid())
+  userId                 String         @unique
+  user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Names in both Ge'ez (Amharic) and Latin scripts
+  fullNameAmharic        String?
+  fullNameEnglish        String?
+  dateOfBirth            DateTime?
+  ageRange               String?        // e.g. "18-24", "25-34" for learners without exact birth certificate
+  gender                 String?
+  currentRegion          String?        // e.g. "Addis Ababa", "Amhara", "Oromia", "Tigray", "Refugee Camp"
+  currentLocation        String?        // Specific city or camp name
+  
+  // Education & Aspirations
+  educationLevel         EducationLevel @default(BASIC_LITERACY_NUMERACY)
+  readingComfortLevel    String?        // "high", "moderate", "needs_voice_help"
+  primaryLearningGoal    String?        // e.g. "Digital Literacy", "Vocational Trade", "Language Skills"
+  preferredContactMethod ContactMethod  @default(PHONE_CALL)
+  trustedContactName     String?        // Optional contact advocate or community worker
+  trustedContactPhone    String?
+
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+}
+
+// ------------------------------------------------------------------------------
+// 3. Alternative Identification (Refugees & Displaced Learners)
+// ------------------------------------------------------------------------------
+
+enum IdDocumentType {
+  NATIONAL_ID
+  PASSPORT
+  KEBELE_ID
+  UNHCR_REFUGEE_REGISTRATION
+  COMMUNITY_ELDER_LETTER
+  PROVISIONAL_SELF_ATTESTATION
+}
+
+enum IdVerificationStatus {
+  PENDING
+  CONFIRMED
+  EXEMPT
+  REQUIRES_CLARIFICATION
+}
+
+model IdentificationDocument {
+  id              String               @id @default(uuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType    IdDocumentType       @default(PROVISIONAL_SELF_ATTESTATION)
+  documentNumber  String?              // e.g. UNHCR registration number or Kebele number
+  status          IdVerificationStatus @default(PENDING)
+  notes           String?              // Confidential notes by counselor
+  isRefugeeDoc    Boolean              @default(false)
+  issuedBy        String?              // e.g. "UNHCR Melkadida", "Local Kebele Admin"
+  verifiedAt      DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([documentType])
+}
+
+// ------------------------------------------------------------------------------
+// 4. Accessibility Preferences (WCAG 2.2 AA Tailored)
+// ------------------------------------------------------------------------------
+
+enum FontSizePreference {
+  NORMAL        // 100%
+  LARGE         // 125%
+  EXTRA_LARGE   // 150%
+  MAXIMUM       // 175%
+}
+
+enum ContrastMode {
+  DEFAULT
+  HIGH_CONTRAST_DARK
+  HIGH_CONTRAST_LIGHT
+  YELLOW_ON_BLACK
+}
+
+enum AmharicTTSModel {
+  AZURE_AMEHA   // am-ET-AmehaNeural
+  MMS_TTS       // Meta Massively Multilingual Speech Amharic
+}
+
+model AccessibilityPreference {
+  id                   String             @id @default(uuid())
+  userId               String             @unique
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Screen & Visual Assistance
+  screenReaderActive   Boolean            @default(false)
+  highContrastMode     ContrastMode       @default(DEFAULT)
+  fontSize             FontSizePreference @default(NORMAL)
+  reducedMotion        Boolean            @default(false)
+  highContrastCursor   Boolean            @default(false)
+
+  // Voice & Audio Assistance
+  voiceGuidanceEnabled Boolean            @default(true)
+  autoReadAloud        Boolean            @default(true)
+  amharicVoiceModel    AmharicTTSModel    @default(AZURE_AMEHA)
+  speechRate           Float              @default(1.0) // 0.75x to 1.5x
+  preferVoiceInput     Boolean            @default(false)
+
+  // Physical & Motor Accommodations
+  extendedTimeLimit    Boolean            @default(true)
+  largeClickTargets    Boolean            @default(true)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+// ------------------------------------------------------------------------------
+// 5. Onboarding Sessions & Progress Management (One-Question-At-A-Time)
+// ------------------------------------------------------------------------------
+
+model OnboardingSession {
+  id                 String             @id @default(uuid())
+  userId             String
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recoveryCode       String             @unique // 6-digit code for resuming
+  currentStepIndex   Int                @default(0)
+  totalSteps         Int                @default(6)
+  isCompleted        Boolean            @default(false)
+  completedAt        DateTime?
+  lastActiveAt       DateTime           @default(now())
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  answers            OnboardingAnswer[]
+  voiceInteractions  VoiceInteraction[]
+
+  @@index([userId])
+  @@index([recoveryCode])
+}
+
+model OnboardingAnswer {
+  id                 String            @id @default(uuid())
+  sessionId          String
+  session            OnboardingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  stepIndex          Int
+  stepKey            String            // e.g. "language_accessibility", "identity", "contact", "education"
+  
+  // JSONB storage for flexible answers and evolving schema
+  answerData         Json              // In PostgreSQL, this maps to JSONB!
+  
+  // Voice Metadata
+  answeredViaVoice   Boolean           @default(false)
+  transcribedText    String?           // Amharic transcribed text from Addis Scribe
+  voiceConfidence    Float?            // 0.0 to 1.0 confidence score
+  audioDurationSecs  Float?
+
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@unique([sessionId, stepKey])
+  @@index([sessionId])
+  @@index([stepKey])
+}
+
+// ------------------------------------------------------------------------------
+// 6. Voice-Assisted Interactions Log (Addis Scribe STT & Azure Ameha/MMS TTS)
+// ------------------------------------------------------------------------------
+
+enum VoiceServiceType {
+  ADDIS_SCRIBE_STT
+  AZURE_AMEHA_TTS
+  MMS_TTS
+  BROWSER_SPEECH_RECOGNITION
+  BROWSER_SPEECH_SYNTHESIS
+}
+
+enum InteractionStatus {
+  SUCCESS
+  FALLBACK_USED
+  FAILED
+}
+
+model VoiceInteraction {
+  id               String            @id @default(uuid())
+  sessionId        String?
+  session          OnboardingSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  serviceType      VoiceServiceType
+  languageCode     String            @default("am-ET") // Amharic
+  inputText        String?           // For TTS: input Amharic text; For STT: audio duration/bytes info
+  outputText       String?           // For STT: transcribed Amharic text
+  status           InteractionStatus @default(SUCCESS)
+  latencyMs        Int?
+  confidenceScore  Float?
+  errorMessage     String?
+  createdAt        DateTime          @default(now())
+
+  @@index([serviceType])
+  @@index([createdAt])
+}
+
+// ------------------------------------------------------------------------------
+// 7. Private Support Requests (Confidential Help for Vulnerable Learners)
+// ------------------------------------------------------------------------------
+
+enum SupportCategory {
+  DOCUMENT_VERIFICATION_HELP
+  AMHARIC_VOICE_ASSISTANCE
+  ACCESSIBILITY_BARRIER
+  READING_ASSISTANCE
+  CONFIDENTIAL_COUNSELOR_REQUEST
+}
+
+enum SupportStatus {
+  OPEN
+  ASSIGNED
+  RESOLVED
+}
+
+model SupportRequest {
+  id              String          @id @default(uuid())
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category        SupportCategory @default(DOCUMENT_VERIFICATION_HELP)
+  message         String
+  hasVoiceNote    Boolean         @default(false)
+  voiceNoteUrl    String?         // Audio message URL/path
+  contactPhone    String?
+  status          SupportStatus   @default(OPEN)
+  isConfidential  Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([status])
+  @@index([category])
+}

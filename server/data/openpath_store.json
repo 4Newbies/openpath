@@ -1,0 +1,138 @@
+{
+  "users": [
+    {
+      "id": "b842cb7e-1bb0-46a8-b3c9-27ea150f42fe",
+      "email": null,
+      "phoneNumber": null,
+      "primaryLanguage": "AMHARIC",
+      "role": "LEARNER",
+      "authType": "PROVISIONAL_SESSION",
+      "isActive": true,
+      "isRefugeeStatus": true,
+      "createdAt": "2026-11-13T22:27:16.277Z",
+      "updatedAt": "2026-11-13T22:27:16.280Z"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "b83ef714-b9b6-49cc-af6f-f602f8eb312e",
+      "userId": "b842cb7e-1bb0-46a8-b3c9-27ea150f42fe",
+      "passwordHash": null,
+      "refugeeRecoveryCode": "OP-X7P7",
+      "provisionalToken": "8f915e97c495fdc7eea49e3c06b2d9adaae0a7683d9adb2c",
+      "lastLoginAt": "2026-11-13T22:27:16.284Z",
+      "failedLoginAttempts": 0,
+      "lockedUntil": null,
+      "createdAt": "2026-11-13T22:27:16.284Z",
+      "updatedAt": "2026-11-13T22:27:16.284Z"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "a245c91d-5c15-4429-9203-dae2217ca628",
+      "userId": "b842cb7e-1bb0-46a8-b3c9-27ea150f42fe",
+      "fullNameAmharic": "ዮናስ ታደሰ አበበ",
+      "fullNameEnglish": "Yonas Tadesse Abebe",
+      "dateOfBirth": null,
+      "ageRange": "18-24",
+      "gender": null,
+      "currentRegion": "መልካዲዳ የስደተኞች ካምፕ",
+      "currentLocation": "",
+      "educationLevel": "BASIC_LITERACY_NUMERACY",
+      "readingComfortLevel": "moderate",
+      "primaryLearningGoal": "",
+      "preferredContactMethod": "PHONE_CALL",
+      "trustedContactName": null,
+      "trustedContactPhone": null,
+      "createdAt": "2026-11-13T22:27:16.366Z",
+      "updatedAt": "2026-11-13T22:27:16.366Z"
+    }
+  ],
+  "identifications": [
+    {
+      "id": "c7b6ffe3-52ea-4f27-999d-2205c9113850",
+      "userId": "b842cb7e-1bb0-46a8-b3c9-27ea150f42fe",
+      "documentType": "UNHCR_REFUGEE_REGISTRATION",
+      "documentNumber": "UNHCR-ETH-2026-9812",
+      "status": "PENDING",
+      "notes": null,
+      "isRefugeeDoc": true,
+      "issuedBy": null,
+      "verifiedAt": null,
+      "createdAt": "2026-11-13T22:27:16.366Z",
+      "updatedAt": "2026-11-13T22:27:16.366Z"
+    }
+  ],
+  "accessibilityPreferences": [
+    {
+      "id": "43d6df8a-727a-48e0-8403-7c0f22f333b2",
+      "userId": "b842cb7e-1bb0-46a8-b3c9-27ea150f42fe",
+      "screenReaderActive": false,
+      "highContrastMode": "DEFAULT",
+      "fontSize": "NORMAL",
+      "reducedMotion": false,
+      "highContrastCursor": false,
+      "voiceGuidanceEnabled": true,
+      "autoReadAloud": true,
+      "amharicVoiceModel": "AZURE_AMEHA",
+      "speechRate": 1,
+      "preferVoiceInput": false,
+      "extendedTimeLimit": true,
+      "largeClickTargets": true,
+      "createdAt": "2026-11-13T22:27:16.286Z",
+      "updatedAt": "2026-11-13T22:27:16.286Z"
+    }
+  ],
+  "onboardingSessions": [
+    {
+      "id": "6e6e9acf-28f0-47f7-be64-2951f8b5a922",
+      "userId": "b842cb7e-1bb0-46a8-b3c9-27ea150f42fe",
+      "recoveryCode": "OP-X7P7",
+      "currentStepIndex": 2,
+      "totalSteps": 6,
+      "isCompleted": true,
+      "completedAt": "2026-11-13T22:27:16.368Z",
+      "lastActiveAt": "2026-11-13T22:27:16.368Z",
+      "createdAt": "2026-11-13T22:27:16.287Z",
+      "updatedAt": "2026-11-13T22:27:16.368Z"
+    }
+  ],
+  "onboardingAnswers": [
+    {
+      "id": "a0f93f57-ef68-4ddf-9e36-6aeb28cd6e8f",
+      "sessionId": "6e6e9acf-28f0-47f7-be64-2951f8b5a922",
+      "stepIndex": 1,
+      "stepKey": "identity",
+      "answerData": {
+        "fullNameAmharic": "ዮናስ ታደሰ አበበ",
+        "fullNameEnglish": "Yonas Tadesse Abebe",
+        "ageRange": "18-24",
+        "currentRegion": "መልካዲዳ የስደተኞች ካምፕ",
+        "idType": "UNHCR_REFUGEE_REGISTRATION",
+        "documentNumber": "UNHCR-ETH-2026-9812",
+        "isRefugeeDoc": true
+      },
+      "answeredViaVoice": true,
+      "transcribedText": "ዮናስ ታደሰ አበበ",
+      "voiceConfidence": 0.96,
+      "createdAt": "2026-11-13T22:27:16.364Z",
+      "updatedAt": "2026-11-13T22:27:16.364Z"
+    }
+  ],
+  "voiceInteractions": [],
+  "supportRequests": [
+    {
+      "id": "009857cc-0ad0-427c-92fe-9e157c6745c0",
+      "userId": "b842cb7e-1bb0-46a8-b3c9-27ea150f42fe",
+      "category": "DOCUMENT_VERIFICATION_HELP",
+      "message": "ስደተኛ ነኝ፣ የመታወቂያ ሰነድ እርዳታ እፈልጋለሁ።",
+      "hasVoiceNote": true,
+      "voiceNoteUrl": null,
+      "contactPhone": "+251 911 223 344",
+      "status": "OPEN",
+      "isConfidential": true,
+      "createdAt": "2026-11-13T22:27:16.367Z",
+      "updatedAt": "2026-11-13T22:27:16.367Z"
+    }
+  ]
+}
