@@ -108,6 +108,12 @@
     "calendarNowEthiopian": "አሁን የኢትዮጵያ አቆጣጠር እየተጠቀሙ ነው።",
     "dateExampleEthiopian": "በኢትዮጵያ አቆጣጠር። ለምሳሌ፦ መጋቢት 18 ቀን 1993 ዓ.ም.",
     "dateExampleGregorian": "በግሪጎሪያን አቆጣጠር። ለምሳሌ፦ 27 3 2001 (ቀን፣ ወር፣ ዓመት)።",
+    "savedOffline": "በዚህ መሣሪያ ላይ ተቀምጧል። ኢንተርኔት ሲመለስ ይላካል።",
+    "queuedTitle": "መልሶችዎ በዚህ መሣሪያ ላይ ተቀምጠዋል",
+    "queuedBody": "ኢንተርኔት ሲመለስ ይላካሉ። ይህን ገጽ ክፍት መተው ወይም በኋላ በዚህ መሣሪያ ተመልሰው መምጣት ይችላሉ።",
+    "sentNow": "ኢንተርኔት ተመልሷል። መልሶችዎ ተልከዋል።",
+    "trySendNow": "አሁን ለመላክ ይሞክሩ",
+    "editAnswers": "መልሶቼን ልቀይር",
     "errors": {
       "required_text": "እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ።",
       "required_single": "እባክዎ አንድ መልስ ይምረጡ።",
@@ -152,6 +158,8 @@
     "voice_no_microphone": "ማይክሮፎን የለም። እባክዎ ይጻፉ።",
     "voice_failed": "አልሰራም። እባክዎ ይጻፉ።",
     "dateExampleGregorian": "በግሪጎሪያን አቆጣጠር። እንዲህ፦ 27 3 2001።",
+    "savedOffline": "በዚህ ስልክ ላይ ተቀምጧል። ኢንተርኔት ሲመጣ እንልከዋለን።",
+    "queuedBody": "ኢንተርኔት ሲመጣ እንልካቸዋለን። ይህን ገጽ መዝጋት ይችላሉ።",
     "errors": {
       "required_text": "እባክዎ መልስ ይጻፉ።",
       "required_single": "እባክዎ አንዱን ይምረጡ።",

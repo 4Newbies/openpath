@@ -56,6 +56,21 @@ for (const [name, makeStore] of stores) {
         expect(a.headers['cache-control']).toBe('no-store');
       });
 
+      it('is safe to repeat with the same clientKey (no second session after a lost reply)', async () => {
+        const body = { flowId: 'alx-onboarding', lang: 'am', clientKey: 'k_0123456789abcdefXYZ' };
+        const first = await request(app).post('/v1/sessions').send(body).expect(201);
+        const again = await request(app).post('/v1/sessions').send(body).expect(200);
+        expect(again.body).toEqual(first.body);
+        const [a, b] = await Promise.all([
+          request(app).post('/v1/sessions').send({ ...body, clientKey: 'k_concurrent_000000001' }),
+          request(app).post('/v1/sessions').send({ ...body, clientKey: 'k_concurrent_000000001' }),
+        ]);
+        expect(a.body.id).toBe(b.body.id);
+        expect([a.status, b.status].sort()).toEqual([200, 201]);
+        const bad = await request(app).post('/v1/sessions').send({ ...body, clientKey: 'short' }).expect(400);
+        expect(bad.body.error).toMatchObject({ code: 'invalid_client_key', field: 'clientKey' });
+      });
+
       it('rejects unknown flows and languages with the standard error shape', async () => {
         const r = await request(app).post('/v1/sessions').send({ flowId: 'nope' }).expect(400);
         expect(r.body).toEqual({ error: { code: 'unknown_flow', message: expect.any(String), field: 'flowId' } });

@@ -226,12 +226,29 @@ country, add one entry to `PHONE_COUNTRIES` in `shared/flow.js` (calling code, t
 prefix, number pattern, example) and its code to the `country` enum in
 `shared/questions.schema.json`.
 
+## When the server can't be reached
+
+The form keeps working offline or when the API is down:
+
+- Answers are always kept on the device (`localStorage`) as the learner goes.
+- If saving to the server fails, a note at the top says, and screen readers hear,
+  *"Saved on this device. It will be sent when you are back online."*
+- If the learner presses *Send*, the form shows *"Your answers are saved on this
+  device"* and queues the submit, also across a reload. It has *Try sending now* and
+  *Change my answers* buttons.
+- When the browser comes back online (and every 20 seconds while waiting) it retries,
+  then shows the thank-you screen and announces that the answers were sent.
+- Every request is safe to repeat: answers are saved as a whole set, a repeated
+  submit counts as sent, and the browser sends a random `clientKey` with "create a
+  session", so a retry after a lost reply gets the same session, not a second one.
+
 ## Events
 
 | Event | `detail` |
 |-------|----------|
 | `openpath:step` | `{ flowId, stepId, index, total }` (`stepId` is `"setup"` on "How do you want to use this?" and `"review"` on the review screen) |
-| `openpath:complete` | `{ flowId, sessionId, answers }`, leaving out answers to `private` questions |
+| `openpath:complete` | `{ flowId, sessionId, answers }`, leaving out answers to `private` questions. Fired when the server has the answers (or at once without `api`). |
+| `openpath:queued` | `{ flowId }`: *Send* was pressed while the server couldn't be reached; the answers wait on the device and `openpath:complete` follows when they are sent. |
 
 Both bubble and cross the shadow boundary (`composed: true`). Theme with
 `--openpath-color`, `--openpath-color-dark` (a light colour for dark mode) and

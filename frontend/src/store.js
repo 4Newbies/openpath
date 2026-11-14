@@ -25,6 +25,8 @@ export function createStore(flow, { storage = safeStorage() } = {}) {
     preferences: { access: [] },
     sessionId: null,
     resumeCode: null,
+    clientKey: null, // makes creating the server session safe to repeat
+    pendingSubmit: false, // "Send" was pressed while the server was unreachable
   });
 
   function read() {
@@ -72,6 +74,12 @@ export function createStore(flow, { storage = safeStorage() } = {}) {
     },
     setSession(sessionId, resumeCode) {
       commit({ ...state, sessionId, resumeCode });
+    },
+    setClientKey(clientKey) {
+      commit({ ...state, clientKey });
+    },
+    setPendingSubmit(pendingSubmit) {
+      commit({ ...state, pendingSubmit });
     },
     clear() {
       try {

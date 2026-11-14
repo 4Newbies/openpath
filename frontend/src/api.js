@@ -9,6 +9,16 @@ export class ApiError extends Error {
   }
 }
 
+/** The server could not be reached at all (offline, not running, gateway down). */
+export const isUnreachable = (e) => e instanceof ApiError && [0, 502, 503, 504].includes(e.status);
+
+/** A random key that makes "create a session" safe to repeat (see the API's clientKey). */
+export function newClientKey(cryptoImpl = globalThis.crypto) {
+  const bytes = new Uint8Array(16);
+  cryptoImpl.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 export function createApi(base, { fetchImpl } = {}) {
   const root = base.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1';
 
@@ -36,7 +46,8 @@ export function createApi(base, { fetchImpl } = {}) {
 
   const enc = encodeURIComponent;
   return {
-    createSession: (flowId, lang) => call('POST', '/sessions', { flowId, lang }),
+    health: () => call('GET', '/health'),
+    createSession: (flowId, lang, clientKey) => call('POST', '/sessions', { flowId, lang, clientKey }),
     getSession: (id) => call('GET', `/sessions/${enc(id)}`),
     saveAnswers: (id, answers, step) => call('PUT', `/sessions/${enc(id)}/answers`, { answers, step }),
     submit: (id, answers) => call('POST', `/sessions/${enc(id)}/submit`, { answers }),

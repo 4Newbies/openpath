@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS openpath_sessions (
   submitted_at  TIMESTAMPTZ
 );
 
+-- Random key chosen by the browser, so retrying "create a session" after a
+-- lost connection returns the same session instead of making a second one.
+ALTER TABLE openpath_sessions ADD COLUMN IF NOT EXISTS client_key TEXT UNIQUE;
+
 CREATE TABLE IF NOT EXISTS openpath_profile_answers (
   session_id  TEXT PRIMARY KEY REFERENCES openpath_sessions(id) ON DELETE CASCADE,
   answers     JSONB NOT NULL DEFAULT '{}'::jsonb,

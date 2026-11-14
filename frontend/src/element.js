@@ -1,5 +1,5 @@
 import { cleanAnswer, validateAnswer, validateAnswers } from '../../shared/flow.js';
-import { ApiError, createApi } from './api.js';
+import { ApiError, createApi, isUnreachable, newClientKey } from './api.js';
 import { h, setText } from './dom.js';
 import { loadFlow } from './loader.js';
 import { errorMessage, FALLBACK_LANG, hasPack, LANG_CODE_RE, labelOf, langAttrs, loadPack, packInfo, pick, t, tList } from './messages.js';
@@ -16,6 +16,8 @@ import css from './styles.css?inline';
 let counter = 0;
 const DONE = 'done';
 const SETUP = 'setup';
+const QUEUED = 'queued'; // answers wait on the device until the server can be reached
+const RETRY_MS = 20000;
 
 // Language packs live next to the script by default:
 // <script src=".../openpath.js"> loads packs from ".../lang/<code>.json".
@@ -37,9 +39,15 @@ const SCRIPT_LANG_BASE = (() => {
  *            from lang-path (default: the "lang" folder next to openpath.js).
  * languages: optional; shows a language switcher on the first screen and in Settings.
  *
+ * When the API can't be reached the form keeps working: answers stay on the
+ * device, a note says they will be sent when the learner is back online,
+ * and saving (and a pressed "Send") is retried when the connection returns
+ * and every 20 seconds. Every request is safe to repeat.
+ *
  * Events (bubble and cross the shadow boundary):
  *   openpath:step      detail { flowId, stepId, index, total }
  *   openpath:complete  detail { flowId, sessionId, answers }  (private answers left out)
+ *   openpath:queued    detail { flowId }  "Send" was pressed offline; sent later
  */
 export class OpenPathFlow extends HTMLElement {
   static get observedAttributes() {
@@ -131,11 +139,16 @@ export class OpenPathFlow extends HTMLElement {
     this.root.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && (this.speaking || this.listening)) this.stopHelpers({ announce: true });
     });
+    // Back online: send what is waiting.
+    this.onOnline = () => this.retryNow();
+    globalThis.addEventListener?.('online', this.onOnline);
     this.ready = this.start();
   }
 
   disconnectedCallback() {
     this.stopHelpers();
+    this.stopRetry();
+    globalThis.removeEventListener?.('online', this.onOnline);
   }
 
   attributeChangedCallback(name, oldValue, value) {
@@ -155,6 +168,21 @@ export class OpenPathFlow extends HTMLElement {
     this.api = api ? createApi(api) : null;
     this.applyPreferences();
 
+    if (this.api) {
+      // Find out early whether the server can be reached (doesn't hold up the form).
+      this.api.health().then(
+        () => this.setOffline(false),
+        (e) => isUnreachable(e) && this.setOffline(true),
+      );
+      // "Send" was pressed offline last time: keep waiting, and try again now.
+      if (this.store.state.pendingSubmit) {
+        this.queued = true;
+        this.render();
+        this.startRetry();
+        this.retryNow();
+        return;
+      }
+    }
     if (this.api && this.store.state.sessionId) await this.checkSession();
     const step = this.nav.resolve(this.store.state.step, this.store.state.answers);
     if (step !== this.store.state.step) this.store.setStep(step);
@@ -171,8 +199,139 @@ export class OpenPathFlow extends HTMLElement {
       const s = await this.api.getSession(this.store.state.sessionId);
       if (s.status !== 'open') this.store.clear();
     } catch (e) {
-      if (e instanceof ApiError && e.status === 404) this.store.setSession(null, null);
+      if (e instanceof ApiError && e.status === 404) this.forgetSession();
+      if (isUnreachable(e)) this.setOffline(true);
     }
+  }
+
+  forgetSession() {
+    this.store.setSession(null, null);
+    this.store.setClientKey(null);
+  }
+
+  // ---- offline -----------------------------------------------------------------
+
+  /** Show or hide the "saved on this device" note, in place (focus stays). */
+  setOffline(on) {
+    this.offline = on;
+    const note = this.view?.querySelector('.op-offline');
+    if (!on) return note?.remove();
+    if (!note && this.flow) this.view.querySelector('.op-header')?.after(this.offlineNote());
+  }
+
+  offlineNote() {
+    return h('p', { class: 'op-offline', text: this.tr('savedOffline') });
+  }
+
+  startRetry() {
+    this.retryTimer ??= setInterval(() => this.retryNow(), RETRY_MS);
+  }
+
+  stopRetry() {
+    clearInterval(this.retryTimer);
+    this.retryTimer = null;
+  }
+
+  /** Try again to send what is waiting: a pressed "Send", or the latest answers. */
+  retryNow() {
+    if (!this.api || !this.store) return this.saveChain;
+    // Already trying: try once more after it (the connection may have just come back).
+    if (this.retrying) {
+      this.retryAgain = true;
+      return this.saveChain.then(() => this.saveChain);
+    }
+    this.retrying = true;
+    this.retryAgain = false;
+    this.saveChain = this.saveChain
+      .then(async () => {
+        if (this.store.state.pendingSubmit) return this.flushSubmit();
+        try {
+          await this.pushAnswers();
+          this.setOffline(false);
+          this.stopRetry();
+        } catch (e) {
+          if (!isUnreachable(e)) this.stopRetry(); // the server answered; nothing to wait for
+        }
+      })
+      .finally(() => {
+        this.retrying = false;
+        if (this.retryAgain) this.retryNow();
+      });
+    return this.saveChain;
+  }
+
+  queueSubmit() {
+    this.busy = false;
+    this.store.setPendingSubmit(true);
+    this.queued = true;
+    this.setOffline(true);
+    this.render({ focus: true });
+    this.announce(this.tr('savedOffline'));
+    this.startRetry();
+    this.emit('openpath:queued', { flowId: this.flow.flowId });
+  }
+
+  /** Send a submit that waited offline. */
+  async flushSubmit() {
+    const { answers } = this.store.state;
+    let sessionId;
+    try {
+      sessionId = await this.sendSubmit(answers);
+    } catch (e) {
+      if (isUnreachable(e)) return; // still offline: keep waiting
+      // The server refused the answers: back to the review to fix them.
+      this.stopRetry();
+      this.store.setPendingSubmit(false);
+      this.queued = false;
+      this.submitError = this.tr('submitFailed');
+      this.store.setStep(REVIEW);
+      this.render({ focus: true });
+      this.announce(this.submitError);
+      return;
+    }
+    this.stopRetry();
+    this.setOffline(false);
+    const { clean } = validateAnswers(this.flow, answers, { mode: 'submit' });
+    // Move focus only if the learner is still in the form.
+    this.finish(sessionId, clean, { focus: Boolean(this.shadowRoot.activeElement) });
+    this.announce(this.tr('sentNow'));
+  }
+
+  renderQueued(focus) {
+    const heading = h('h2', { class: 'op-question', tabindex: '-1', text: this.tr('queuedTitle') });
+    this.view.append(
+      h(
+        'div',
+        { class: 'op-step' },
+        heading,
+        h('p', { class: 'op-body', text: this.tr('queuedBody') }),
+        h(
+          'div',
+          { class: 'op-nav' },
+          h('button', {
+            type: 'button',
+            class: 'op-button op-secondary',
+            text: this.tr('editAnswers'),
+            onclick: () => {
+              this.stopRetry();
+              this.store.setPendingSubmit(false);
+              this.queued = false;
+              this.go(REVIEW, { returnToReview: false });
+            },
+          }),
+          h('button', {
+            type: 'button',
+            class: 'op-button op-primary',
+            text: this.tr('trySendNow'),
+            onclick: async () => {
+              await this.retryNow();
+              if (this.queued) this.announce(this.tr('savedOffline'));
+            },
+          }),
+        ),
+      ),
+    );
+    if (focus) heading.focus();
   }
 
   applyPreferences(prefs = this.prefs) {
@@ -372,6 +531,7 @@ export class OpenPathFlow extends HTMLElement {
         .reduce((out, p) => (out ? `${out}${/[.?!።፧]$/.test(out) ? '' : '.'} ${p}` : p), '');
     if (this.step === SETUP) return { text: join(tr('setupTitle'), tr('setupIntro')) };
     if (this.step === DONE) return { text: join(tr('doneTitle'), tr('doneBody')) };
+    if (this.step === QUEUED) return { text: join(tr('queuedTitle'), tr('queuedBody')) };
     if (this.step === REVIEW) {
       const items = this.view.querySelectorAll('.op-review-item');
       return { text: join(tr('reviewTitle'), tr('reviewIntro'), ...[...items].map((i) => `${i.querySelector('dt').textContent}: ${i.querySelector('dd').textContent}`)) };
@@ -481,9 +641,11 @@ export class OpenPathFlow extends HTMLElement {
   }
 
   announce(text) {
-    // Clear first so the same message is announced again.
+    // Clear first so the same message is announced again. A newer message
+    // replaces one that has not been announced yet.
+    clearTimeout(this.announceTimer);
     this.live.textContent = '';
-    setTimeout(() => {
+    this.announceTimer = setTimeout(() => {
       setText(this.live, text);
     }, 50);
   }
@@ -494,6 +656,7 @@ export class OpenPathFlow extends HTMLElement {
 
   get step() {
     if (this.done) return DONE;
+    if (this.queued) return QUEUED;
     if (this.setupOpen) return SETUP;
     return this.store.state.step;
   }
@@ -541,11 +704,13 @@ export class OpenPathFlow extends HTMLElement {
     this.view.append(header);
     const tools = h('div', { class: 'op-tools' });
     header.append(tools);
-    if (this.step !== DONE && this.step !== SETUP) {
+    if (this.offline) this.view.append(this.offlineNote());
+    if (this.step !== DONE && this.step !== SETUP && this.step !== QUEUED) {
       tools.append(h('button', { type: 'button', class: 'op-button op-secondary op-small', onclick: () => this.openSetup(), text: this.tr('settings') }));
     }
 
     if (this.step === DONE) return this.renderDone(focus);
+    if (this.step === QUEUED) return this.renderQueued(focus);
     if (this.step === SETUP) {
       const setup = renderSetup({
         tr: (k, v) => this.tr(k, v),
@@ -689,9 +854,15 @@ export class OpenPathFlow extends HTMLElement {
     this.saveChain = this.saveChain.then(async () => {
       try {
         await this.pushAnswers();
+        this.setOffline(false);
         if (announce) this.announce(this.tr('saved'));
-      } catch {
-        if (announce) this.announce(this.tr('savedLocal'));
+      } catch (e) {
+        if (isUnreachable(e)) {
+          // Kept on the device; sent when the connection returns.
+          this.setOffline(true);
+          this.startRetry();
+          if (announce) this.announce(this.tr('savedOffline'));
+        } else if (announce) this.announce(this.tr('savedLocal'));
       }
     });
     return this.saveChain;
@@ -699,7 +870,10 @@ export class OpenPathFlow extends HTMLElement {
 
   async ensureSession() {
     if (this.store.state.sessionId) return this.store.state.sessionId;
-    const s = await this.api.createSession(this.flow.flowId, this.uiLang);
+    // The same key on every retry: if a reply was lost, the server returns
+    // the session it already made instead of a second one.
+    if (!this.store.state.clientKey) this.store.setClientKey(newClientKey());
+    const s = await this.api.createSession(this.flow.flowId, this.uiLang, this.store.state.clientKey);
     this.store.setSession(s.id, s.resumeCode);
     return s.id;
   }
@@ -710,7 +884,7 @@ export class OpenPathFlow extends HTMLElement {
       await this.api.saveAnswers(id, this.store.state.answers, this.step === DONE ? null : this.step);
     } catch (e) {
       if (retry && e instanceof ApiError && (e.status === 404 || e.code === 'already_submitted')) {
-        this.store.setSession(null, null);
+        this.forgetSession();
         return this.pushAnswers(false);
       }
       throw e;
@@ -744,28 +918,42 @@ export class OpenPathFlow extends HTMLElement {
     if (this.api) {
       try {
         await this.saveChain;
-        sessionId = await this.ensureSession();
-        await this.api.submit(sessionId, answers);
+        sessionId = await this.sendSubmit(answers);
       } catch (e) {
-        if (!(e instanceof ApiError && e.code === 'already_submitted')) {
-          this.busy = false;
-          this.submitError = this.tr('submitFailed');
-          this.render();
-          this.view.querySelector('.op-primary')?.focus();
-          this.announce(this.submitError);
-          return;
-        }
+        // Offline: keep the answers here and send them when the connection returns.
+        if (isUnreachable(e)) return this.queueSubmit();
+        this.busy = false;
+        this.submitError = this.tr('submitFailed');
+        this.render();
+        this.view.querySelector('.op-primary')?.focus();
+        this.announce(this.submitError);
+        return;
       }
     }
+    this.finish(sessionId, clean);
+  }
 
+  /** Submit to the API. Safe to repeat: "already submitted" counts as sent. */
+  async sendSubmit(answers) {
+    const sessionId = await this.ensureSession();
+    try {
+      await this.api.submit(sessionId, answers);
+    } catch (e) {
+      if (!(e instanceof ApiError && e.code === 'already_submitted')) throw e;
+    }
+    return sessionId;
+  }
+
+  finish(sessionId, clean, { focus = true } = {}) {
     const publicAnswers = Object.fromEntries(
       Object.entries(clean).filter(([id]) => !this.nav.question(id).private),
     );
     this.busy = false;
+    this.queued = false;
     this.store.clear();
     this.done = true; // not persisted: a reload starts a fresh form
-    this.render({ focus: true });
-    this.autoSpeak(true);
+    this.render({ focus });
+    this.autoSpeak(focus);
     this.emit('openpath:complete', { flowId: this.flow.flowId, sessionId, answers: publicAnswers });
   }
 }

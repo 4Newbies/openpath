@@ -12,6 +12,7 @@ const toSession = (row) => ({
   flowId: row.flow_id,
   flowVersion: row.flow_version,
   lang: row.lang,
+  clientKey: row.client_key ?? null,
   status: row.status,
   step: row.step,
   createdAt: row.created_at.toISOString(),
@@ -65,13 +66,13 @@ export function createPgStore(connectionString) {
       await pool.query(schemaSql);
     },
 
-    async create({ id, resumeCode, flowId, flowVersion, lang }) {
+    async create({ id, resumeCode, flowId, flowVersion, lang, clientKey = null }) {
       try {
         return await tx(async (c) => {
           const { rows } = await c.query(
-            `INSERT INTO openpath_sessions (id, resume_code, flow_id, flow_version, lang)
-             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-            [id, resumeCode, flowId, flowVersion, lang],
+            `INSERT INTO openpath_sessions (id, resume_code, flow_id, flow_version, lang, client_key)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [id, resumeCode, flowId, flowVersion, lang, clientKey],
           );
           await c.query('INSERT INTO openpath_profile_answers (session_id) VALUES ($1)', [id]);
           return toSession(rows[0]);
@@ -96,6 +97,11 @@ export function createPgStore(connectionString) {
         profile: rows[0].answers,
         private: Object.fromEntries(priv.rows.map((r) => [r.question_id, r.body])),
       };
+    },
+
+    async getByClientKey(clientKey) {
+      const { rows } = await pool.query('SELECT id FROM openpath_sessions WHERE client_key = $1', [clientKey]);
+      return rows.length ? this.get(rows[0].id) : null;
     },
 
     async saveAnswers(id, { profile, privateAnswers, step }) {

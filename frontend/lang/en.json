@@ -111,6 +111,12 @@
     "calendarNowEthiopian": "Now using the Ethiopian calendar.",
     "dateExampleEthiopian": "Ethiopian calendar. For example: 18 Megabit 1993.",
     "dateExampleGregorian": "Gregorian calendar. For example: 27 3 2001 (day, month, year).",
+    "savedOffline": "Saved on this device. It will be sent when you are back online.",
+    "queuedTitle": "Your answers are saved on this device",
+    "queuedBody": "They will be sent when you are back online. You can keep this page open, or come back to it later on this device.",
+    "sentNow": "You are back online. Your answers have been sent.",
+    "trySendNow": "Try sending now",
+    "editAnswers": "Change my answers",
     "errors": {
       "required_text": "Please type an answer to this question.",
       "required_single": "Please choose one answer.",
@@ -155,6 +161,8 @@
     "voice_no_microphone": "No microphone found. Please type.",
     "voice_failed": "This did not work. Please type.",
     "dateExampleGregorian": "Gregorian calendar. Like this: 27 3 2001.",
+    "savedOffline": "Saved on this phone. We will send it when the internet is back.",
+    "queuedBody": "We will send them when the internet is back. You can close this page.",
     "errors": {
       "required_text": "Please write an answer.",
       "required_single": "Please pick one.",

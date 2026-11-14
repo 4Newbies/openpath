@@ -106,14 +106,28 @@ export function createApp({ store, flows, config, log = console }) {
     res.json({ ok: true });
   });
 
+  // Repeat-safe: with the same clientKey, a retried request (for example after
+  // a dropped connection) gets the session it already created (200), not a new one.
+  const CLIENT_KEY_RE = /^[A-Za-z0-9_-]{16,64}$/;
+
   v1.post('/sessions', async (req, res) => {
-    const { flowId, lang = 'en' } = bodyOf(req);
+    const { flowId, lang = 'en', clientKey } = bodyOf(req);
     if (typeof flowId !== 'string' || !flows.has(flowId)) {
       throw new ApiError(400, 'unknown_flow', 'This question flow is not known to the server.', 'flowId');
     }
     if (typeof lang !== 'string' || !LANG_RE.test(lang)) {
       throw new ApiError(400, 'invalid_lang', 'Language must be a language code such as "en", "am" or "ar".', 'lang');
     }
+    if (clientKey !== undefined && (typeof clientKey !== 'string' || !CLIENT_KEY_RE.test(clientKey))) {
+      throw new ApiError(400, 'invalid_client_key', 'clientKey must be 16 to 64 letters, digits, - or _.', 'clientKey');
+    }
+    const existing = async () => {
+      const s = clientKey ? await store.getByClientKey(clientKey) : null;
+      if (s && s.flowId !== flowId) throw new ApiError(409, 'client_key_in_use', 'This clientKey belongs to another flow.', 'clientKey');
+      return s;
+    };
+    const again = await existing();
+    if (again) return res.status(200).json({ id: again.id, resumeCode: again.resumeCode });
     const flow = flows.get(flowId);
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
@@ -123,10 +137,14 @@ export function createApp({ store, flows, config, log = console }) {
           flowId,
           flowVersion: flow.version,
           lang,
+          clientKey: clientKey ?? null,
         });
         return res.status(201).json({ id: s.id, resumeCode: s.resumeCode });
       } catch (e) {
         if (!(e instanceof StoreDuplicate)) throw e;
+        // Two copies of the same request at once: the other one won.
+        const raced = await existing();
+        if (raced) return res.status(200).json({ id: raced.id, resumeCode: raced.resumeCode });
       }
     }
     throw new Error('Could not allocate a unique resume code');

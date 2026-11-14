@@ -30,7 +30,24 @@ paths:
               properties:
                 flowId: { type: string, example: alx-onboarding }
                 lang: { type: string, pattern: '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$', default: en, example: am, description: 'Interface language of the form (en, am, ar ...).' }
+                clientKey:
+                  type: string
+                  pattern: '^[A-Za-z0-9_-]{16,64}$'
+                  description: >-
+                    Optional random key from the browser that makes this request safe to repeat:
+                    the same key returns the session it already created (200) instead of a new one.
+                    Treat it as a secret.
       responses:
+        '200':
+          description: The session already created with this clientKey (a repeated request)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, resumeCode]
+                properties:
+                  id: { $ref: '#/components/schemas/SessionId' }
+                  resumeCode: { type: string }
         '201':
           description: Session created
           content:

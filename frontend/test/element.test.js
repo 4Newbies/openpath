@@ -197,7 +197,7 @@ describe('<openpath-flow>', () => {
       'PUT /v1/sessions/sid/answers', // skipped private note
       'POST /v1/sessions/sid/submit',
     ]);
-    expect(calls[0][2]).toEqual({ flowId: 'test-flow', lang: 'en' });
+    expect(calls[0][2]).toEqual({ flowId: 'test-flow', lang: 'en', clientKey: expect.stringMatching(/^[A-Za-z0-9_-]{22}$/) });
     expect(calls[2][2]).toEqual({ answers: { name: 'Hana' }, step: 'kind' });
     expect(detail).toEqual({ flowId: 'test-flow', sessionId: 'sid', answers: { name: 'Hana', kind: 'a' } });
   });

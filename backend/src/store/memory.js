@@ -26,11 +26,14 @@ export function createMemoryStore() {
 
   return {
     async init() {},
-    async create({ id, resumeCode, flowId, flowVersion, lang }) {
-      if (sessions.has(id) || [...sessions.values()].some((s) => s.resumeCode === resumeCode)) throw new StoreDuplicate();
+    async create({ id, resumeCode, flowId, flowVersion, lang, clientKey = null }) {
+      const all = [...sessions.values()];
+      if (sessions.has(id) || all.some((s) => s.resumeCode === resumeCode || (clientKey && s.clientKey === clientKey))) {
+        throw new StoreDuplicate();
+      }
       const now = new Date().toISOString();
       sessions.set(id, {
-        id, resumeCode, flowId, flowVersion, lang,
+        id, resumeCode, flowId, flowVersion, lang, clientKey,
         status: 'open', step: null, createdAt: now, updatedAt: now, submittedAt: null,
       });
       profiles.set(id, {});
@@ -39,6 +42,10 @@ export function createMemoryStore() {
     },
     async get(id) {
       return view(id);
+    },
+    async getByClientKey(clientKey) {
+      const s = [...sessions.values()].find((x) => x.clientKey === clientKey);
+      return s ? view(s.id) : null;
     },
     async saveAnswers(id, { profile, privateAnswers, step }) {
       const s = openOrThrow(id);

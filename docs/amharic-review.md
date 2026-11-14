@@ -161,6 +161,12 @@ Buttons, messages and help text around the questions.
 | calendarNowEthiopian | Now using the Ethiopian calendar. | አሁን የኢትዮጵያ አቆጣጠር እየተጠቀሙ ነው። | – |  |
 | dateExampleEthiopian | Ethiopian calendar. For example: 18 Megabit 1993. | በኢትዮጵያ አቆጣጠር። ለምሳሌ፦ መጋቢት 18 ቀን 1993 ዓ.ም. | – |  |
 | dateExampleGregorian | Gregorian calendar. For example: 27 3 2001 (day, month, year). | በግሪጎሪያን አቆጣጠር። ለምሳሌ፦ 27 3 2001 (ቀን፣ ወር፣ ዓመት)። | በግሪጎሪያን አቆጣጠር። እንዲህ፦ 27 3 2001። |  |
+| savedOffline | Saved on this device. It will be sent when you are back online. | በዚህ መሣሪያ ላይ ተቀምጧል። ኢንተርኔት ሲመለስ ይላካል። | በዚህ ስልክ ላይ ተቀምጧል። ኢንተርኔት ሲመጣ እንልከዋለን። |  |
+| queuedTitle | Your answers are saved on this device | መልሶችዎ በዚህ መሣሪያ ላይ ተቀምጠዋል | – |  |
+| queuedBody | They will be sent when you are back online. You can keep this page open, or come back to it later on this device. | ኢንተርኔት ሲመለስ ይላካሉ። ይህን ገጽ ክፍት መተው ወይም በኋላ በዚህ መሣሪያ ተመልሰው መምጣት ይችላሉ። | ኢንተርኔት ሲመጣ እንልካቸዋለን። ይህን ገጽ መዝጋት ይችላሉ። |  |
+| sentNow | You are back online. Your answers have been sent. | ኢንተርኔት ተመልሷል። መልሶችዎ ተልከዋል። | – |  |
+| trySendNow | Try sending now | አሁን ለመላክ ይሞክሩ | – |  |
+| editAnswers | Change my answers | መልሶቼን ልቀይር | – |  |
 | errors.required_text | Please type an answer to this question. | እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ። | እባክዎ መልስ ይጻፉ። |  |
 | errors.required_single | Please choose one answer. | እባክዎ አንድ መልስ ይምረጡ። | እባክዎ አንዱን ይምረጡ። |  |
 | errors.required_multi | Please choose at least one answer. | እባክዎ ቢያንስ አንድ መልስ ይምረጡ። | እባክዎ አንድ ወይም ከዚያ በላይ ይምረጡ። |  |
