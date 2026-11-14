@@ -12,6 +12,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const port = Number(process.env.PORT || 5173);
+// OPENPATH_DEMO_API=http://localhost:4199 points the demo pages at another API
+// (the browser walk uses its own in-memory API, never the demo database).
+const DEMO_API = process.env.OPENPATH_DEMO_API || '';
+const DEFAULT_API = 'http://localhost:4000';
 
 const MOUNTS = [
   ['/openpath.js.map', path.join(root, 'dist/openpath.js.map')],
@@ -60,7 +64,13 @@ http
       res.writeHead(404, { 'Content-Type': 'text/plain' }).end(`Not found: ${urlPath}.${hint}`);
       return;
     }
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
+    const type = TYPES[path.extname(file).toLowerCase()] || 'application/octet-stream';
+    if (DEMO_API && file.endsWith('.html')) {
+      const html = fs.readFileSync(file, 'utf8').replaceAll(DEFAULT_API, DEMO_API);
+      res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-cache' }).end(html);
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'no-cache' });
     fs.createReadStream(file).pipe(res);
   })
   .listen(port, () => {

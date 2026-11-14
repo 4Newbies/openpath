@@ -66,12 +66,13 @@ TEST_DATABASE_URL=postgres://openpath:local-dev-only@localhost:5433/openpath_tes
 cd frontend && npm install && npm test        # unit, element and axe (jsdom) tests
 npm run build && npm run test:browser         # real Chrome/Edge: the onboarding form, the job list (filter,
                                               # apply) and the employer form, in en, am and ar (right to left),
-                                              # with each helper on and all off: axe incl. contrast,
-                                              # 320px/200%/400% reflow, dark mode, focus, targets
-                                              # (OPENPATH_LANGS=ar and OPENPATH_PAGES=jobs,employer run fewer;
-                                              # the employer walks post test jobs, so prefer npm run dev:memory;
-                                              # one full run is ~600 API requests: two runs within 15 minutes
-                                              # can reach the default rate limit)
+                                              # with each helper on and all off: axe incl. contrast in the
+                                              # light and dark themes, 320px/200%/400% reflow, focus, targets.
+                                              # It starts its own in-memory API (:4199) and demo server (:5199)
+                                              # and fails if anything calls the demo API on :4000, so it never
+                                              # touches the demo database. WALK_API=none tests with no API;
+                                              # OPENPATH_LANGS=ar and OPENPATH_PAGES=jobs,employer run fewer;
+                                              # DEMO_PORT / WALK_API_PORT change the ports.
 npm run review:amharic                        # rebuild docs/amharic-review.md after changing Amharic text
 ```
 

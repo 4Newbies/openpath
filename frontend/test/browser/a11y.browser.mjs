@@ -31,8 +31,14 @@ import { chromium } from 'playwright-core';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
-const PORT = Number(process.env.DEMO_PORT || 5173);
+// The walk starts its own demo server and its own in-memory API on ports of
+// its own, so it never writes to the demo database (the Docker API on :4000).
+// WALK_API=none tests the form with no API at all (answers wait on the device).
+const PORT = Number(process.env.DEMO_PORT || 5199);
 const BASE = `http://localhost:${PORT}`;
+const API_PORT = Number(process.env.WALK_API_PORT || 4199);
+const API = `http://localhost:${API_PORT}`;
+const NO_API = process.env.WALK_API === 'none';
 const axeSource = fs.readFileSync(path.join(root, 'node_modules/axe-core/axe.min.js'), 'utf8');
 const readJson = (p) => JSON.parse(fs.readFileSync(path.join(root, p), 'utf8'));
 const FLOW = readJson('public/questions/onboarding.json');
@@ -201,11 +207,12 @@ async function walk(browser, mode, lang, apiUp) {
   const pageErrors = [];
   page.on('pageerror', (e) => pageErrors.push(e.message));
   page.on('response', async (r) => {
-    if (r.status() >= 400 && r.url().includes(':4000/')) fail(at('api'), `${r.request().method()} ${r.url()} -> ${r.status()} ${await r.text().catch(() => '')}`);
+    if (r.status() >= 400 && r.url().startsWith(API)) fail(at('api'), `${r.request().method()} ${r.url()} -> ${r.status()} ${await r.text().catch(() => '')}`);
     if (r.status() >= 400 && r.url().includes('/lang/')) fail(at('pack'), `${r.url()} -> ${r.status()}`);
   });
   page.on('request', (r) => {
     if (new URL(r.url()).hostname !== 'localhost') fail(at('network'), `request left this machine: ${r.url()}`);
+    if (new URL(r.url()).port === '4000') fail(at('network'), `request to the demo API (the walk must use its own): ${r.url()}`);
   });
   await page.addInitScript(FAKE_PROVIDERS);
   await page.goto(`${BASE}/demo/index.html`);
@@ -533,9 +540,10 @@ async function careerContext(browser, mode, lang, extra = {}) {
   page.on('request', (r) => {
     requests.push(`${r.method()} ${r.url()} ${r.postData() ?? ''}`);
     if (new URL(r.url()).hostname !== 'localhost') fail(`${lang} / ${mode.label}`, `request left this machine: ${r.url()}`);
+    if (new URL(r.url()).port === '4000') fail(`${lang} / ${mode.label}`, `request to the demo API (the walk must use its own): ${r.url()}`);
   });
   page.on('response', async (r) => {
-    if (r.status() >= 400 && (r.url().includes(':4000/') || r.url().includes('/lang/') || r.url().includes('/questions/'))) {
+    if (r.status() >= 400 && (r.url().startsWith(API) || r.url().includes('/lang/') || r.url().includes('/questions/'))) {
       fail(`${lang} / ${mode.label}`, `${r.request().method()} ${r.url()} -> ${r.status()}`);
     }
   });
@@ -681,7 +689,7 @@ async function employerWalk(browser, mode, lang, apiUp) {
   await form.getByRole('heading', { name: apiUp ? s('doneTitle') : s('queuedTitle') }).waitFor();
   await checkDeep(page, at('sent'), lang);
   if (apiUp) {
-    const list = await (await fetch('http://localhost:4000/v1/jobs')).json();
+    const list = await (await fetch(`${API}/v1/jobs`)).json();
     const job = list['@graph'].find((j) => JSON.stringify(j.title).includes(title));
     if (!job) fail(at('api'), 'the new job is not in GET /v1/jobs');
     else if (JSON.stringify(job.jobBenefits) !== JSON.stringify(['Step-free workplace', 'Written instructions'])) fail(at('api'), `support stored as ${JSON.stringify(job.jobBenefits)}`);
@@ -691,17 +699,44 @@ async function employerWalk(browser, mode, lang, apiUp) {
 }
 
 // ---- run --------------------------------------------------------------------
-let server;
-if (!(await reachable(`${BASE}/demo/index.html`))) {
-  if (!fs.existsSync(path.join(root, 'dist/openpath.js'))) {
-    console.error('dist/openpath.js is missing. Run `npm run build` first.');
+if (!fs.existsSync(path.join(root, 'dist/openpath.js'))) {
+  console.error('dist/openpath.js is missing. Run `npm run build` first.');
+  process.exit(2);
+}
+for (const [what, url] of [['demo', `${BASE}/demo/`], ['API', `${API}/v1/health`]]) {
+  if (await reachable(url)) {
+    console.error(`Port for the walk's ${what} is already in use (${url}). Stop it, or set ${what === 'demo' ? 'DEMO_PORT' : 'WALK_API_PORT'}.`);
     process.exit(2);
   }
-  server = spawn(process.execPath, [path.join(root, 'scripts/serve.mjs')], { env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
-  for (let i = 0; i < 50 && !(await reachable(`${BASE}/demo/index.html`)); i++) await new Promise((r) => setTimeout(r, 100));
 }
-const apiUp = await reachable('http://localhost:4000/v1/health');
-console.log(`demo: ${BASE}/demo/  api: ${apiUp ? 'running (answers go to the server)' : 'not running (answers wait on the device; checks the queued screen)'}`);
+// Its own in-memory API: nothing is written to a database, no rate limit.
+const apiServer = NO_API
+  ? null
+  : spawn(process.execPath, [path.resolve(root, '../backend/scripts/dev-memory.js')], {
+      env: { ...process.env, PORT: String(API_PORT), CORS_ORIGINS: BASE, RATE_LIMIT_MAX: '0', DATABASE_URL: '', NODE_ENV: 'development' },
+      stdio: 'ignore',
+    });
+// Its own demo server, with the demo pages pointed at that API.
+const server = spawn(process.execPath, [path.join(root, 'scripts/serve.mjs')], {
+  env: { ...process.env, PORT: String(PORT), OPENPATH_DEMO_API: API },
+  stdio: 'ignore',
+});
+const stopServers = () => {
+  server.kill();
+  apiServer?.kill();
+};
+process.on('exit', stopServers);
+for (let i = 0; i < 100; i++) {
+  if ((await reachable(`${BASE}/demo/index.html`)) && (NO_API || (await reachable(`${API}/v1/health`)))) break;
+  await new Promise((r) => setTimeout(r, 100));
+}
+const apiUp = !NO_API && (await reachable(`${API}/v1/health`));
+if (!NO_API && !apiUp) {
+  console.error(`The walk's in-memory API did not start on ${API}.`);
+  stopServers();
+  process.exit(2);
+}
+console.log(`demo: ${BASE}/demo/  api: ${apiUp ? `in-memory on ${API} (the demo database is never touched)` : 'none (answers wait on the device; checks the queued screen)'}`);
 
 const browser = await launch();
 try {
@@ -724,7 +759,7 @@ try {
   }
 } finally {
   await browser.close();
-  server?.kill();
+  stopServers();
 }
 
 if (failures.length) {
