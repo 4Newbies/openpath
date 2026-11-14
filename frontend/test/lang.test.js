@@ -152,8 +152,9 @@ describe('<openpath-flow> languages', () => {
     expect(button(ltr, 'Why-next').getAttribute('lang')).toBeNull();
   });
 
-  it('the stylesheet uses only logical properties, so it works in both directions', () => {
-    const css = fs.readFileSync(path.resolve(LANG_DIR, '../src/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  it.each(['styles.css', 'jobs.css'])('%s uses only logical properties, so it works in both directions', (file) => {
+    // Comments and viewport media queries (which are about the screen, not text direction) are left out.
+    const css = fs.readFileSync(path.resolve(LANG_DIR, `../src/${file}`), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/@media[^{]*\{/g, '{');
     const physical = css.match(/(^|[\s;{])((margin|padding|border)-(left|right|top|bottom)|left|right|top|bottom|float|(min-|max-)?(width|height))\s*:|text-align:\s*(left|right)/gm);
     expect(physical).toBeNull();
   });

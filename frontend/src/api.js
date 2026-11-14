@@ -51,6 +51,8 @@ export function createApi(base, { fetchImpl } = {}) {
   const enc = encodeURIComponent;
   return {
     health: () => call('GET', '/health'),
+    listJobs: () => call('GET', '/jobs'),
+    saveJob: (job) => call('POST', '/jobs', job),
     createSession: (flowId, lang, clientKey) => call('POST', '/sessions', { flowId, lang, clientKey }),
     getSession: (id) => call('GET', `/sessions/${enc(id)}`),
     saveAnswers: (id, answers, step) => call('PUT', `/sessions/${enc(id)}/answers`, { answers, step }),

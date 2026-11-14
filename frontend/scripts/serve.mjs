@@ -2,6 +2,7 @@
 //   /openpath.js   -> dist/openpath.js (run `npm run build` first)
 //   /lang/*        -> dist/lang/* (language packs)
 //   /questions/*   -> public/questions/*
+//   /jobs/*        -> public/jobs/* (sample jobs, schema.org/JobPosting)
 //   /savanna/*     -> public/savanna/*
 //   /demo/*        -> demo/*
 import http from 'node:http';
@@ -17,6 +18,7 @@ const MOUNTS = [
   ['/openpath.js', path.join(root, 'dist/openpath.js')],
   ['/lang/', path.join(root, 'dist/lang/')], // language packs, next to the script
   ['/questions/', path.join(root, 'public/questions/')],
+  ['/jobs/', path.join(root, 'public/jobs/')],
   ['/savanna/', path.join(root, 'public/savanna/')],
   ['/demo/', path.join(root, 'demo/')],
 ];

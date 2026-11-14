@@ -1,0 +1,165 @@
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "JobPosting",
+      "identifier": "sample-data-entry-addis",
+      "title": [
+        { "@value": "Data entry clerk", "@language": "en" },
+        { "@value": "የመረጃ መዝጋቢ", "@language": "am" }
+      ],
+      "description": [
+        { "@value": "Enter customer records into our system and check them for mistakes. Training is given in the first two weeks. Sample job for the OpenPath demo.", "@language": "en" },
+        { "@value": "የደንበኞችን መረጃ ወደ ሲስተማችን ያስገቡ፤ ስህተት እንዳይኖር ያረጋግጡ። በመጀመሪያዎቹ ሁለት ሳምንታት ሥልጠና ይሰጣል። ለOpenPath ማሳያ የተዘጋጀ የናሙና ሥራ።", "@language": "am" }
+      ],
+      "hiringOrganization": { "@type": "Organization", "name": "Addis Digital Services (sample)" },
+      "jobLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": [{ "@value": "Addis Ababa", "@language": "en" }, { "@value": "አዲስ አበባ", "@language": "am" }],
+          "addressCountry": "ET"
+        }
+      },
+      "employmentType": "FULL_TIME",
+      "datePosted": "2026-11-02",
+      "validThrough": "2027-06-30",
+      "directApply": true,
+      "jobBenefits": ["Screen-reader-friendly application", "Written instructions", "Flexible hours", "Step-free workplace"]
+    },
+    {
+      "@type": "JobPosting",
+      "identifier": "sample-customer-service-addis",
+      "title": [
+        { "@value": "Customer service agent (Amharic and English)", "@language": "en" },
+        { "@value": "የደንበኞች አገልግሎት ሠራተኛ (አማርኛ እና እንግሊዝኛ)", "@language": "am" }
+      ],
+      "description": [
+        { "@value": "Answer customer questions by phone and chat, in Amharic and English. Shifts are planned a month ahead. Sample job for the OpenPath demo.", "@language": "en" },
+        { "@value": "የደንበኞችን ጥያቄዎች በስልክና በቻት በአማርኛና በእንግሊዝኛ ይመልሱ። የሥራ ፈረቃዎች ከአንድ ወር በፊት ይታቀዳሉ። ለOpenPath ማሳያ የተዘጋጀ የናሙና ሥራ።", "@language": "am" }
+      ],
+      "hiringOrganization": { "@type": "Organization", "name": "Abyssinia Contact Centre (sample)" },
+      "jobLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": [{ "@value": "Addis Ababa", "@language": "en" }, { "@value": "አዲስ አበባ", "@language": "am" }],
+          "addressCountry": "ET"
+        }
+      },
+      "employmentType": "FULL_TIME",
+      "datePosted": "2026-10-28",
+      "validThrough": "2027-05-31",
+      "directApply": true,
+      "jobBenefits": ["Sign language interpreter at interview", "Step-free workplace", "Extra time in assessments", "Written instructions"]
+    },
+    {
+      "@type": "JobPosting",
+      "identifier": "sample-web-developer-hawassa",
+      "title": [
+        { "@value": "Junior web developer", "@language": "en" },
+        { "@value": "ጀማሪ የድር ገንቢ", "@language": "am" }
+      ],
+      "description": [
+        { "@value": "Build and fix web pages for small businesses, with a mentor. You can work from home anywhere in Ethiopia. Sample job for the OpenPath demo.", "@language": "en" },
+        { "@value": "ከአማካሪ ጋር ለአነስተኛ ንግዶች ድረ ገጾችን ይሥሩ፤ ያስተካክሉ። በኢትዮጵያ ውስጥ ከየትኛውም ቦታ ከቤት ሆነው መሥራት ይችላሉ። ለOpenPath ማሳያ የተዘጋጀ የናሙና ሥራ።", "@language": "am" }
+      ],
+      "hiringOrganization": { "@type": "Organization", "name": "Hawassa Tech Hub (sample)" },
+      "jobLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": [{ "@value": "Hawassa", "@language": "en" }, { "@value": "ሐዋሳ", "@language": "am" }],
+          "addressCountry": "ET"
+        }
+      },
+      "jobLocationType": "TELECOMMUTE",
+      "applicantLocationRequirements": { "@type": "Country", "name": "ET" },
+      "employmentType": "CONTRACTOR",
+      "datePosted": "2026-11-10",
+      "validThrough": "2027-04-30",
+      "directApply": true,
+      "jobBenefits": ["Remote work possible", "Screen-reader-friendly application", "Flexible hours", "Extra time in assessments"]
+    },
+    {
+      "@type": "JobPosting",
+      "identifier": "sample-sewing-bahir-dar",
+      "title": [
+        { "@value": "Sewing machine operator", "@language": "en" },
+        { "@value": "የልብስ ስፌት ማሽን ኦፕሬተር", "@language": "am" }
+      ],
+      "description": [
+        { "@value": "Sew school uniforms on industrial machines. No experience needed: we train you on the job. Sample job for the OpenPath demo.", "@language": "en" },
+        { "@value": "የትምህርት ቤት ዩኒፎርሞችን በኢንዱስትሪ ማሽን ይስፉ። ልምድ አያስፈልግም፤ በሥራ ላይ እናሠለጥናለን። ለOpenPath ማሳያ የተዘጋጀ የናሙና ሥራ።", "@language": "am" }
+      ],
+      "hiringOrganization": { "@type": "Organization", "name": "Bahir Dar Textile Cooperative (sample)" },
+      "jobLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": [{ "@value": "Bahir Dar", "@language": "en" }, { "@value": "ባሕር ዳር", "@language": "am" }],
+          "addressCountry": "ET"
+        }
+      },
+      "employmentType": "FULL_TIME",
+      "datePosted": "2026-10-20",
+      "validThrough": "2027-03-31",
+      "directApply": true,
+      "jobBenefits": ["Step-free workplace", "Written instructions", "Sign language interpreter at interview"]
+    },
+    {
+      "@type": "JobPosting",
+      "identifier": "sample-health-data-adama",
+      "title": [
+        { "@value": "Community health data assistant", "@language": "en" },
+        { "@value": "የማኅበረሰብ ጤና መረጃ ረዳት", "@language": "am" }
+      ],
+      "description": [
+        { "@value": "Collect and type up survey answers for a six-month community health project. Some travel to nearby villages. Sample job for the OpenPath demo.", "@language": "en" },
+        { "@value": "ለስድስት ወር የማኅበረሰብ ጤና ፕሮጀክት የጥናት መልሶችን ይሰብስቡ፤ ይተይቡ። በአቅራቢያ ወዳሉ መንደሮች አንዳንድ ጉዞ አለ። ለOpenPath ማሳያ የተዘጋጀ የናሙና ሥራ።", "@language": "am" }
+      ],
+      "hiringOrganization": { "@type": "Organization", "name": "Adama Community Health Network (sample)" },
+      "jobLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": [{ "@value": "Adama", "@language": "en" }, { "@value": "አዳማ", "@language": "am" }],
+          "addressCountry": "ET"
+        }
+      },
+      "employmentType": "TEMPORARY",
+      "datePosted": "2026-11-05",
+      "validThrough": "2027-02-28",
+      "directApply": true,
+      "jobBenefits": ["Extra time in assessments", "Flexible hours", "Written instructions"]
+    },
+    {
+      "@type": "JobPosting",
+      "identifier": "sample-virtual-assistant-gondar",
+      "title": [
+        { "@value": "Virtual assistant intern", "@language": "en" },
+        { "@value": "የቨርቹዋል ረዳት ልምምድ", "@language": "am" }
+      ],
+      "description": [
+        { "@value": "Help a small team with email, calendars and documents for three months, fully online. Good for graduates of the ALX Virtual Assistant course. Sample job for the OpenPath demo.", "@language": "en" },
+        { "@value": "ለሦስት ወራት ሙሉ በሙሉ በኦንላይን ለአንድ አነስተኛ ቡድን በኢሜይል፣ በቀን መቁጠሪያና በሰነዶች ያግዙ። የALX ቨርቹዋል ረዳት ኮርስ ለጨረሱ ተስማሚ ነው። ለOpenPath ማሳያ የተዘጋጀ የናሙና ሥራ።", "@language": "am" }
+      ],
+      "hiringOrganization": { "@type": "Organization", "name": "Gondar Remote Work Collective (sample)" },
+      "jobLocation": {
+        "@type": "Place",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": [{ "@value": "Gondar", "@language": "en" }, { "@value": "ጎንደር", "@language": "am" }],
+          "addressCountry": "ET"
+        }
+      },
+      "jobLocationType": "TELECOMMUTE",
+      "applicantLocationRequirements": { "@type": "Country", "name": "ET" },
+      "employmentType": "INTERN",
+      "datePosted": "2026-11-12",
+      "validThrough": "2027-01-31",
+      "directApply": true,
+      "jobBenefits": ["Remote work possible", "Flexible hours", "Screen-reader-friendly application", "Extra time in assessments"]
+    }
+  ]
+}

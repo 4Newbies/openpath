@@ -2,7 +2,8 @@ import { cleanAnswer, validateAnswer, validateAnswers } from '../../shared/flow.
 import { ApiError, createApi, isUnreachable, newClientKey } from './api.js';
 import { h, setText } from './dom.js';
 import { loadFlow } from './loader.js';
-import { errorMessage, FALLBACK_LANG, hasPack, LANG_CODE_RE, labelOf, langAttrs, loadPack, packInfo, pick, t, tList } from './messages.js';
+import { resolveLanguages } from './language.js';
+import { errorMessage, FALLBACK_LANG, labelOf, langAttrs, packInfo, pick, t, tList } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
 import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
 import { getSpeech, getVoice, loadVoiceModule, voiceAvailable } from './providers.js';
@@ -18,18 +19,6 @@ const DONE = 'done';
 const SETUP = 'setup';
 const QUEUED = 'queued'; // answers wait on the device until the server can be reached
 const RETRY_MS = 20000;
-
-// Language packs live next to the script by default:
-// <script src=".../openpath.js"> loads packs from ".../lang/<code>.json".
-// (Read while the classic script runs; null when imported as a module.)
-const SCRIPT_LANG_BASE = (() => {
-  try {
-    const src = document.currentScript?.src;
-    return src ? new URL('lang/', src).href : null;
-  } catch {
-    return null;
-  }
-})();
 
 /**
  * <openpath-flow questions="/questions/onboarding.json" api="http://localhost:4000" lang="en"
@@ -68,31 +57,6 @@ export class OpenPathFlow extends HTMLElement {
     return this.activeLang ?? FALLBACK_LANG;
   }
 
-  langBase() {
-    const attr = this.getAttribute('lang-path');
-    try {
-      if (attr) return new URL(attr.endsWith('/') ? attr : `${attr}/`, document.baseURI).href;
-      return SCRIPT_LANG_BASE ?? new URL('lang/', document.baseURI).href;
-    } catch {
-      return 'lang/';
-    }
-  }
-
-  /** Codes from the languages="am,en,ar" attribute, in the host's order. */
-  languageList() {
-    const list = (this.getAttribute('languages') ?? '').split(/[\s,]+/).filter((c) => LANG_CODE_RE.test(c));
-    return [...new Set(list)];
-  }
-
-  requestedLang() {
-    const list = this.languageList();
-    const saved = this.prefs?.lang;
-    if (saved && list.includes(saved)) return saved; // the learner's own choice
-    const attr = (this.getAttribute('lang') ?? '').trim();
-    if (LANG_CODE_RE.test(attr)) return attr;
-    return list[0] ?? FALLBACK_LANG;
-  }
-
   /**
    * Load the packs needed (the wanted language and every switcher language,
    * so each option can show its own name) and switch to the wanted one.
@@ -102,14 +66,10 @@ export class OpenPathFlow extends HTMLElement {
   async resolveLanguage() {
     const token = {};
     this.langToken = token;
-    const base = this.langBase();
-    const list = this.languageList();
-    const wanted = this.requestedLang();
-    const codes = [...new Set([wanted, ...list])].filter((c) => c !== FALLBACK_LANG);
-    await Promise.all(codes.map((c) => loadPack(c, base)));
+    const { lang, switcher } = await resolveLanguages(this, this.prefs);
     if (this.langToken !== token) return false;
-    this.activeLang = hasPack(wanted) ? wanted : FALLBACK_LANG;
-    this.switcherLangs = list.filter(hasPack).map(packInfo);
+    this.activeLang = lang;
+    this.switcherLangs = switcher;
     this.applyLanguage();
     return true;
   }

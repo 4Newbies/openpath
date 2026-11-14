@@ -167,6 +167,51 @@ Buttons, messages and help text around the questions.
 | sentNow | You are back online. Your answers have been sent. | ኢንተርኔት ተመልሷል። መልሶችዎ ተልከዋል። | – |  |
 | trySendNow | Try sending now | አሁን ለመላክ ይሞክሩ | – |  |
 | editAnswers | Change my answers | መልሶቼን ልቀይር | – |  |
+| jobsTitle | Jobs | ሥራዎች | – |  |
+| jobsLoading | Loading jobs… | ሥራዎችን በመጫን ላይ… | – |  |
+| jobsFailed | The jobs could not be loaded. Please try again. | ሥራዎቹን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ። | – |  |
+| tryAgain | Try again | እንደገና ይሞክሩ | – |  |
+| jobsCount | {count} jobs | {count} ሥራዎች | – |  |
+| jobsCountOne | 1 job | 1 ሥራ | – |  |
+| jobsCountNone | There are no open jobs right now. | አሁን ክፍት ሥራ የለም። | – |  |
+| jobsCountFiltered | {count} of {total} jobs offer all the support you chose. | ከ{total} ሥራዎች ውስጥ {count}ቱ የመረጡትን ድጋፍ ሁሉ ይሰጣሉ። | ከ{total} ሥራዎች {count}ቱ የመረጡት እርዳታ አላቸው። |  |
+| jobsCountFilteredOne | 1 of {total} jobs offers all the support you chose. | ከ{total} ሥራዎች ውስጥ 1 ሥራ የመረጡትን ድጋፍ ሁሉ ይሰጣል። | ከ{total} ሥራዎች 1 ሥራ የመረጡት እርዳታ አለው። |  |
+| jobsCountFilteredNone | None of the {total} jobs offers all the support you chose. Try choosing less. | ከ{total} ሥራዎች ውስጥ የመረጡትን ድጋፍ ሁሉ የሚሰጥ የለም። ያነሰ ይምረጡ። | የመረጡት እርዳታ ሁሉ ያለው ሥራ የለም። ያነሰ ይምረጡ። |  |
+| applyFor | Apply for {title} | ለ«{title}» ያመልክቱ | – |  |
+| jobOrganisation | Employer | አሠሪ | – |  |
+| jobWhere | Where | ቦታ | – |  |
+| jobRemote | Remote: work from home | ከቤት ሆኖ መሥራት ይቻላል | – |  |
+| jobType | Type | ዓይነት | – |  |
+| jobPosted | Posted | የወጣበት ቀን | – |  |
+| jobApplyBy | Apply by | የማመልከቻ የመጨረሻ ቀን | – |  |
+| supportOffered | Support offered | የሚሰጡ ድጋፎች | – |  |
+| noSupportListed | No support listed yet. | እስካሁን የተዘረዘረ ድጋፍ የለም። | – |  |
+| employment_FULL_TIME | Full time | ሙሉ ቀን | – |  |
+| employment_PART_TIME | Part time | የትርፍ ሰዓት | – |  |
+| employment_CONTRACTOR | Contract | በኮንትራት | – |  |
+| employment_TEMPORARY | Temporary | ጊዜያዊ | – |  |
+| employment_INTERN | Internship | የልምምድ ሥራ | – |  |
+| employment_VOLUNTEER | Volunteer | በጎ ፈቃድ | – |  |
+| employment_PER_DIEM | Paid by the day | በቀን ክፍያ | – |  |
+| employment_OTHER | Other | ሌላ | – |  |
+| support_screen-reader-application | Screen-reader-friendly application | ለስክሪን አንባቢ ምቹ የሆነ ማመልከቻ | – |  |
+| support_sign-language-interview | Sign language interpreter at interview | በቃለ መጠይቅ ላይ የምልክት ቋንቋ አስተርጓሚ | – |  |
+| support_step-free-workplace | Step-free workplace | ደረጃ የሌለው የሥራ ቦታ | – |  |
+| support_flexible-hours | Flexible hours | ተለዋዋጭ የሥራ ሰዓት | – |  |
+| support_remote-work | Remote work possible | ከቤት ሆኖ መሥራት ይቻላል | – |  |
+| support_written-instructions | Written instructions | የጽሑፍ መመሪያዎች | – |  |
+| support_extra-time-assessments | Extra time in assessments | በፈተናዎች ላይ ተጨማሪ ጊዜ | – |  |
+| supportFilterLegend | Support I need | የሚያስፈልገኝ ድጋፍ | – |  |
+| supportFilterPrivacy | Only you can see this. Employers are not told. | ይህን ማየት የሚችሉት እርስዎ ብቻ ነዎት። ለአሠሪዎች አይነገርም። | ይህን የሚያዩት እርስዎ ብቻ ነዎት። ለአሠሪዎች አንነግርም። |  |
+| supportFilterHint | Tick the support you need to see only jobs that offer it. | የሚያስፈልግዎትን ድጋፍ ይምረጡ፤ ያንን ድጋፍ የሚሰጡ ሥራዎች ብቻ ይታያሉ። | – |  |
+| rememberFilter | Remember on this device | በዚህ መሣሪያ ላይ አስታውስ | – |  |
+| clearFilter | Clear my choices | ምርጫዎቼን አጽዳ | – |  |
+| backToJobs | Back to jobs | ወደ ሥራዎች ተመለስ | – |  |
+| applyingFor | Applying for {title} at {organisation} | ለ{organisation} «{title}» ሥራ እያመለከቱ ነው | – |  |
+| prefilled | Filled in from your earlier answers. You can change it. | ቀደም ብለው ከሰጡት መልስ ተሞልቷል። መቀየር ይችላሉ። | ይህን ሞልተንልዎታል። መቀየር ይችላሉ። |  |
+| profileKept | Your name and phone number are kept on this device, so you do not have to type them again when you apply for a job. | ለሥራ ሲያመለክቱ ዳግም እንዳይጽፉት ስምዎና ስልክ ቁጥርዎ በዚህ መሣሪያ ላይ ተቀምጠዋል። | – |  |
+| forgetProfile | Forget them on this device | በዚህ መሣሪያ ላይ እንዲረሱ አድርግ | – |  |
+| profileForgotten | Done. They are no longer kept on this device. | ተደርጓል። ከእንግዲህ በዚህ መሣሪያ ላይ አይቀመጡም። | – |  |
 | errors.required_text | Please type an answer to this question. | እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ። | እባክዎ መልስ ይጻፉ። |  |
 | errors.required_single | Please choose one answer. | እባክዎ አንድ መልስ ይምረጡ። | እባክዎ አንዱን ይምረጡ። |  |
 | errors.required_multi | Please choose at least one answer. | እባክዎ ቢያንስ አንድ መልስ ይምረጡ። | እባክዎ አንድ ወይም ከዚያ በላይ ይምረጡ። |  |
