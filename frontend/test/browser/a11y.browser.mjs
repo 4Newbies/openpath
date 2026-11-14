@@ -1,16 +1,21 @@
 // Real-browser accessibility check for <openpath-flow>, using the Chrome or
 // Edge already installed on this machine (playwright-core, no download).
 //
-//   npm run build && npm run test:browser
+//   npm run build && npm run test:browser          (all languages)
+//   OPENPATH_LANGS=ar npm run test:browser         (only some)
 //
-// Walks the whole default flow once per mode: every helper off, each helper
-// on by itself, bigger text + high contrast at 320px (= 400% zoom), dark mode
-// at 320px, and 640px (200% zoom). On every screen it checks:
+// Walks the whole default flow in English, Amharic and Arabic (right to
+// left), once per mode: every helper off, each helper on by itself, bigger
+// text + high contrast at 320px (= 400% zoom), dark mode at 320px, and 640px
+// (200% zoom). The language is chosen with the form's own language switcher.
+// On every screen it checks:
 //   axe (WCAG 2.2 AA, incl. colour contrast) has no serious/critical issues,
-//   no sideways scroll, targets >= 44x44px, text >= 18px, focus lands on the
-//   question heading, errors are linked and announced, the 3px focus ring,
-//   no requests leave this machine, and nothing is spoken unless read-aloud
-//   is on. Read-aloud and voice use fake providers registered by the page
+//   no sideways scroll, targets >= 44x44px, text >= 18px, lang and dir on the
+//   form, focus lands on the question heading, errors are linked and
+//   announced, the 3px focus ring, no requests leave this machine, and
+//   nothing is spoken unless read-aloud is on. It also checks that Back/Next
+//   follow the reading direction and the phone box stays left to right.
+//   Read-aloud and voice use fake providers registered by the page
 //   (OpenPath.setSpeechProvider / setVoiceProvider), so the run is the same
 //   on every machine. The API is optional.
 
@@ -25,6 +30,29 @@ const root = path.resolve(here, '../..');
 const PORT = Number(process.env.DEMO_PORT || 5173);
 const BASE = `http://localhost:${PORT}`;
 const axeSource = fs.readFileSync(path.join(root, 'node_modules/axe-core/axe.min.js'), 'utf8');
+const readJson = (p) => JSON.parse(fs.readFileSync(path.join(root, p), 'utf8'));
+const FLOW = readJson('public/questions/onboarding.json');
+const LANGS = (process.env.OPENPATH_LANGS || 'en,am,ar').split(',');
+const PACKS = Object.fromEntries(['en', ...LANGS].map((l) => [l, readJson(`lang/${l}.json`)]));
+
+// The same lookup the form uses: [lang simple, lang, en simple, en].
+function S(lang, key, simple = false, vars = {}) {
+  const p = PACKS[lang];
+  const en = PACKS.en;
+  const list = simple ? [p.simple, p.strings, en.simple, en.strings] : [p.strings, en.strings];
+  for (const c of list) {
+    const v = key.split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), c);
+    if (typeof v === 'string') return v.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? vars[k] : `{${k}}`));
+  }
+  throw new Error(`no string ${key}`);
+}
+// Question text as the form shows it (English when there is no translation).
+function Q(lang, id, simple = false) {
+  const q = FLOW.questions.find((x) => x.id === id);
+  const text = simple && q.simple ? q.simple : q.label;
+  return text[lang] ?? text.en;
+}
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Fake providers, registered the moment openpath.js defines window.OpenPath
 // (the page itself is served unchanged).
@@ -82,7 +110,7 @@ const shadow = (page, fn, arg) =>
     return new Function('host', 'root', 'arg', src)(host, host.shadowRoot, a);
   }, [fn, arg]);
 
-async function checkScreen(page, where) {
+async function checkScreen(page, where, lang) {
   const violations = await page.evaluate(async () => {
     const r = await window.axe.run(document, {
       runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
@@ -96,7 +124,9 @@ async function checkScreen(page, where) {
   const scroll = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
   if (scroll[0] > scroll[1]) fail(where, `sideways scroll: content ${scroll[0]}px in a ${scroll[1]}px viewport`);
 
-  const problems = await shadow(page, `
+  const problems = await shadow(
+    page,
+    `
     const out = [];
     for (const el of root.querySelectorAll('button, input:not([type=radio]):not([type=checkbox]), select, textarea, .op-option')) {
       const r = el.getBoundingClientRect();
@@ -107,21 +137,20 @@ async function checkScreen(page, where) {
       const fs = parseFloat(getComputedStyle(el).fontSize);
       if (fs < 18) out.push('text ' + el.tagName + ' "' + el.textContent.trim().slice(0, 30) + '" is ' + fs + 'px');
     }
-    if (root.querySelector('.op-root').getAttribute('lang') !== host.getAttribute('lang')) out.push('lang attribute missing');
+    const formRoot = root.querySelector('.op-root');
+    if (formRoot.getAttribute('lang') !== arg.lang) out.push('lang is "' + formRoot.getAttribute('lang') + '", expected ' + arg.lang);
+    if (formRoot.getAttribute('dir') !== arg.dir) out.push('dir is "' + formRoot.getAttribute('dir') + '", expected ' + arg.dir);
     return out;
-  `);
+  `,
+    { lang, dir: PACKS[lang].dir },
+  );
   problems.forEach((p) => fail(where, p));
 }
 
 const focusedIsHeading = (page) => shadow(page, `return !!root.activeElement && root.activeElement.matches('h2.op-question[tabindex="-1"]');`);
 
-async function next(page, where) {
-  await page.locator('openpath-flow').getByRole('button', { name: 'Next', exact: true }).click();
-  if (!(await focusedIsHeading(page))) fail(where, 'focus did not move to the next question heading');
-}
-
-async function checkError(page, where, { field }) {
-  await page.locator('openpath-flow').getByRole('button', { name: 'Next', exact: true }).click();
+async function checkError(page, where, nextName, { field }) {
+  await page.locator('openpath-flow').getByRole('button', { name: nextName, exact: true }).click();
   const r = await shadow(page, `
     const a = root.activeElement;
     const err = root.querySelector('.op-error');
@@ -140,37 +169,25 @@ async function checkError(page, where, { field }) {
   await page.waitForTimeout(120);
   const live = await shadow(page, `return root.querySelector('[aria-live=polite]').textContent;`);
   if (!live || !r.message?.includes(live)) fail(where, `live region said "${live}", expected the error "${r.message}"`);
-}
-
-// Answer by voice: consent the first time, then check the result went in.
-async function speak(page, where, words, check) {
-  const host = page.locator('openpath-flow');
-  await page.evaluate((w) => window.__say.push(w), words);
-  const mic = host.getByRole('button', { name: 'Speak your answer' });
-  if ((await mic.getAttribute('aria-pressed')) !== null) fail(where, 'mic button should not have aria-pressed');
-  await mic.click();
-  const allow = host.getByRole('button', { name: 'Allow' });
-  if (await allow.isVisible().catch(() => false)) {
-    await checkScreen(page, `${where} (consent)`);
-    await allow.click();
-  }
-  await host.locator('.op-voice-status').filter({ hasText: 'You said' }).waitFor();
-  if (!(await check())) fail(where, `the spoken answer "${words}" was not filled in`);
+  return r.message;
 }
 
 const MODES = [
   { label: 'all helpers off, 1280px', width: 1280, helpers: [] },
-  { label: 'simple words', width: 1280, helpers: ['Simple words'] },
-  { label: 'read aloud', width: 1280, helpers: ['Read questions to me'] },
-  { label: 'voice input', width: 1280, helpers: ['I want to speak my answers'] },
-  { label: 'bigger text + high contrast, 320px', width: 320, helpers: ['Bigger text', 'High contrast'] },
+  { label: 'simple words', width: 1280, helpers: ['helperSimple'] },
+  { label: 'read aloud', width: 1280, helpers: ['helperReadAloud'] },
+  { label: 'voice input', width: 1280, helpers: ['helperVoice'] },
+  { label: 'bigger text + high contrast, 320px', width: 320, helpers: ['helperLarger', 'helperContrast'] },
   { label: 'dark mode, 320px', width: 320, helpers: [], colorScheme: 'dark' },
   { label: '640px (200% zoom)', width: 640, helpers: [] },
 ];
 
-async function walk(browser, mode) {
-  const at = (s) => `${mode.label} / ${s}`;
+async function walk(browser, mode, lang) {
+  const at = (s) => `${lang} / ${mode.label} / ${s}`;
   const has = (h) => mode.helpers.includes(h);
+  const simple = has('helperSimple');
+  const s = (key, vars) => S(lang, key, simple, vars); // after the setup screen
+  const rtl = PACKS[lang].dir === 'rtl';
   const context = await browser.newContext({ viewport: { width: mode.width, height: 800 }, colorScheme: mode.colorScheme ?? 'light' });
   const page = await context.newPage();
   await page.addInitScript(axeSource);
@@ -178,6 +195,7 @@ async function walk(browser, mode) {
   page.on('pageerror', (e) => pageErrors.push(e.message));
   page.on('response', async (r) => {
     if (r.status() >= 400 && r.url().includes(':4000/')) fail(at('api'), `${r.request().method()} ${r.url()} -> ${r.status()} ${await r.text().catch(() => '')}`);
+    if (r.status() >= 400 && r.url().includes('/lang/')) fail(at('pack'), `${r.url()} -> ${r.status()}`);
   });
   page.on('request', (r) => {
     if (new URL(r.url()).hostname !== 'localhost') fail(at('network'), `request left this machine: ${r.url()}`);
@@ -191,145 +209,200 @@ async function walk(browser, mode) {
   const host = page.locator('openpath-flow');
   const field = (name) => host.locator(`[name="${name}"]`);
   const radio = (value) => host.locator(`input[type=radio][value="${value}"]`);
+  const button = (name, exact = true) => host.getByRole('button', { name, exact });
+  const next = async (where) => {
+    await button(s('next')).click();
+    if (!(await focusedIsHeading(page))) fail(where, 'focus did not move to the next question heading');
+  };
 
-  // 1. How do you want to use this?
-  await host.getByRole('heading', { name: 'How do you want to use this?' }).waitFor();
-  await checkScreen(page, at('setup'));
-  // After the language switcher (when the host offers languages), the first
-  // control keeps every helper off.
+  // 1. How do you want to use this? Choose the language with the switcher.
+  await host.getByRole('heading', { name: S('en', 'setupTitle') }).waitFor();
+  if (lang !== 'en') {
+    const choice = host.locator(`.op-lang button[lang="${lang}"]`);
+    if ((await choice.textContent()) !== PACKS[lang].name) fail(at('switcher'), `the ${lang} option is not written in ${lang}`);
+    await choice.click();
+    await host.getByRole('heading', { name: S(lang, 'setupTitle') }).waitFor();
+    const focus = await shadow(page, `const a = root.activeElement; return a && a.getAttribute('lang') + ' ' + a.getAttribute('aria-pressed');`);
+    if (focus !== `${lang} true`) fail(at('switcher'), `focus after choosing a language: ${focus}`);
+  }
+  await checkScreen(page, at('setup'), lang);
+  // After the language switcher, the first control keeps every helper off.
   const firstControl = await shadow(page, `return [...root.querySelectorAll('button, input')].find((c) => !c.closest('.op-lang')).textContent;`);
-  if (firstControl !== "Continue with my device's own tools") fail(at('setup'), `first control is "${firstControl}"`);
+  if (firstControl !== S(lang, 'useDeviceTools')) fail(at('setup'), `first control is "${firstControl}"`);
   if (mode.helpers.length) {
-    for (const label of mode.helpers) await host.getByLabel(label, { exact: true }).check();
-    await host.getByRole('button', { name: 'Continue with these helpers' }).click();
+    for (const key of mode.helpers) await host.getByLabel(S(lang, key), { exact: true }).check();
+    await button(S(lang, 'continueWithHelpers')).click();
   } else {
-    await host.getByRole('button', { name: "Continue with my device's own tools" }).click();
+    await button(S(lang, 'useDeviceTools')).click();
   }
   if (!(await focusedIsHeading(page))) fail(at('setup'), 'focus did not move to the first question');
 
   // intro (info)
-  await checkScreen(page, at('info'));
-  if (has('Read questions to me')) {
+  await checkScreen(page, at('info'), lang);
+  if (has('helperReadAloud')) {
     await page.waitForFunction(() => window.__speech.log.length > 0);
     const said = await page.evaluate(() => window.__speech.log[0]);
-    if (!/Before you start/.test(said)) fail(at('read aloud'), `first step read as "${said}"`);
-    if (!(await host.getByRole('button', { name: 'Stop', exact: true }).isVisible())) fail(at('read aloud'), 'no Stop control while reading');
+    if (!said.includes(Q(lang, 'intro'))) fail(at('read aloud'), `first step read as "${said}"`);
+    if (!(await button(s('stopReading')).isVisible())) fail(at('read aloud'), 'no Stop control while reading');
     await page.keyboard.press('Escape');
     if ((await page.evaluate(() => window.__speech.stops)) < 1) fail(at('read aloud'), 'Escape did not stop speech');
-    if (!(await host.getByRole('button', { name: 'Listen', exact: true }).isVisible())) fail(at('read aloud'), 'no Listen button');
+    if (!(await button(s('listen')).isVisible())) fail(at('read aloud'), 'no Listen button');
   }
-  await next(page, at('info'));
+  await next(at('info'));
 
   // full name (text)
-  await checkError(page, at('text'), { field: 'input[text]' });
-  await checkScreen(page, at('text with error'));
+  await checkError(page, at('text'), s('next'), { field: 'input[text]' });
+  await checkScreen(page, at('text with error'), lang);
   if ((await field('fullName').getAttribute('autocomplete')) !== 'name') fail(at('text'), 'no autocomplete="name"');
-  if (has('I want to speak my answers')) {
-    await speak(page, at('voice text'), 'Hana Tesfaye', async () => (await field('fullName').inputValue()) === 'Hana Tesfaye');
+  // Back and Next follow the reading direction.
+  const [backX, nextX] = await Promise.all([button(s('back')).boundingBox(), button(s('next')).boundingBox()]).then((b) => b.map((x) => x.x));
+  if (rtl ? !(nextX < backX) : !(nextX > backX)) fail(at('direction'), `Back at x=${backX}, Next at x=${nextX} in a ${rtl ? 'right-to-left' : 'left-to-right'} form`);
+  if (has('helperVoice')) {
+    await speak(page, at('voice text'), lang, 'Hana Tesfaye', async () => (await field('fullName').inputValue()) === 'Hana Tesfaye');
     const focused = await shadow(page, `return root.activeElement && root.activeElement.name;`);
     if (focused !== 'fullName') fail(at('voice text'), 'focus did not return to the field after speaking');
-    await checkScreen(page, at('voice text result'));
+    await checkScreen(page, at('voice text result'), lang);
   } else {
     await field('fullName').fill('Hana Tesfaye');
   }
-  await next(page, at('text'));
+  await next(at('text'));
 
-  // phone
+  // phone: +251 shown as text, local formats accepted, stored internationally
   await field('phone').fill('12');
-  await checkError(page, at('phone'), { field: 'input[tel]' });
+  const phoneError = await checkError(page, at('phone'), s('next'), { field: 'input[tel]' });
+  if (!phoneError.includes('0911 234 567')) fail(at('phone'), `the error gives no example: "${phoneError}"`);
   if ((await field('phone').getAttribute('autocomplete')) !== 'tel-national') fail(at('phone'), 'no autocomplete="tel-national"');
-  if ((await host.locator('.op-prefix').textContent()) !== '+251') fail(at('phone'), 'no +251 prefix shown');
+  const phoneBox = await shadow(page, `
+    const prefix = root.querySelector('.op-prefix');
+    const input = root.querySelector('[name=phone]');
+    const p = prefix.getBoundingClientRect();
+    const i = input.getBoundingClientRect();
+    const cs = getComputedStyle(prefix);
+    return { text: prefix.textContent, prefixLeft: p.right <= i.left + 1, dir: getComputedStyle(input).direction,
+             rounded: parseFloat(cs.borderTopLeftRadius) > 0 && parseFloat(cs.borderTopRightRadius) === 0 };
+  `);
+  if (phoneBox.text !== '+251') fail(at('phone'), `prefix shows "${phoneBox.text}"`);
+  if (!phoneBox.prefixLeft || phoneBox.dir !== 'ltr') fail(at('phone'), `phone box is not left to right: ${JSON.stringify(phoneBox)}`);
+  if (!phoneBox.rounded) fail(at('phone'), 'the +251 box has its rounded corners on the wrong side');
   const pasteBlocked = await shadow(page, `
     const el = root.querySelector('[name=phone]');
     const dt = new DataTransfer();
-    dt.setData('text/plain', '+251 911 234 567');
+    dt.setData('text/plain', '0911 234 567');
     const ev = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true, composed: true });
     el.dispatchEvent(ev);
     return ev.defaultPrevented;
   `);
   if (pasteBlocked) fail(at('phone'), 'paste is blocked');
-  await field('phone').fill('+251 911 234 567');
-  await checkScreen(page, at('phone'));
-  await next(page, at('phone'));
+  await field('phone').fill('0911 234 567');
+  await checkScreen(page, at('phone'), lang);
+  await next(at('phone'));
 
   // date of birth, Ethiopian calendar: three native selects
-  await checkError(page, at('date'), { field: 'select[select-one]' });
-  await checkScreen(page, at('date with error'));
-  await host.getByLabel('Day').selectOption('18');
-  await host.getByLabel('Month').selectOption('7');
-  await host.getByLabel('Year').selectOption('1993');
-  await next(page, at('date'));
+  await checkError(page, at('date'), s('next'), { field: 'select[select-one]' });
+  await checkScreen(page, at('date with error'), lang);
+  await host.getByLabel(s('day'), { exact: true }).selectOption('18');
+  await host.getByLabel(s('month'), { exact: true }).selectOption('7');
+  await host.getByLabel(s('year'), { exact: true }).selectOption('1993');
+  await next(at('date'));
 
   // language (single)
-  await checkError(page, at('single'), { field: 'input[radio]' });
-  if (has('I want to speak my answers')) {
-    await speak(page, at('voice choice'), 'Amharic please', () => radio('am').isChecked());
+  await checkError(page, at('single'), s('next'), { field: 'input[radio]' });
+  if (has('helperVoice')) {
+    await speak(page, at('voice choice'), lang, 'አማርኛ', () => radio('am').isChecked());
   } else {
     await radio('am').check();
   }
-  await checkScreen(page, at('single'));
-  await next(page, at('single'));
+  await checkScreen(page, at('single'), lang);
+  await next(at('single'));
 
   await field('location').fill('Addis Ababa');
-  await next(page, at('location'));
+  await next(at('location'));
 
   // ID type -> showIf
-  const total = async () => Number((await host.locator('.op-progress').textContent()).match(/of (\d+)/)[1]);
+  const total = async () => Number((await host.locator('.op-progress').textContent()).match(/(\d+)\D*$/)[1]);
   const before = await total();
   await radio('refer-me').check();
   if ((await total()) !== before + 1) fail(at('showIf'), 'step count did not grow by one');
-  await next(page, at('idType'));
+  await next(at('idType'));
   await field('referringPartner').waitFor();
-  await host.getByRole('button', { name: /^Skip/ }).click();
+  await button(s('skip')).click();
   if (!(await focusedIsHeading(page))) fail(at('skip'), 'focus did not move after Skip');
 
   await radio('data-analytics').check();
-  await next(page, at('course'));
+  await next(at('course'));
 
   await field('supportRequest').fill('I use a wheelchair.');
-  await checkScreen(page, at('textarea'));
-  await next(page, at('support'));
+  await checkScreen(page, at('textarea'), lang);
+  await next(at('support'));
 
-  // review
-  await host.getByRole('heading', { name: 'Check your answers' }).waitFor();
-  await checkScreen(page, at('review'));
-  await host.getByRole('button', { name: /Which course/ }).click();
+  // review: the date in the Ethiopian calendar, the phone in international format
+  await host.getByRole('heading', { name: s('reviewTitle') }).waitFor();
+  await checkScreen(page, at('review'), lang);
+  const review = await shadow(page, `return [...root.querySelectorAll('.op-review-item dd:first-of-type')].map((d) => d.textContent);`);
+  const months = PACKS[lang].strings.ethiopianMonths ?? PACKS.en.strings.ethiopianMonths;
+  const date = S(lang, 'ethiopianDateFormat', false, { day: '18', month: months[6], year: '1993' });
+  if (!review.includes(date)) fail(at('review'), `date not shown as "${date}": ${review.join(' | ')}`);
+  if (!review.includes('+251 911 234 567')) fail(at('review'), `phone not shown as +251 911 234 567: ${review.join(' | ')}`);
+  await host.getByRole('button', { name: new RegExp(escapeRe(Q(lang, 'course', simple))) }).click();
   if (!(await focusedIsHeading(page))) fail(at('edit'), 'focus did not move to the question when editing');
   await radio('virtual-assistant').check();
-  await next(page, at('edit'));
-  if (!(await host.getByRole('heading', { name: 'Check your answers' }).isVisible())) fail(at('edit'), 'Next after Edit did not return to the review');
+  await next(at('edit'));
+  if (!(await host.getByRole('heading', { name: s('reviewTitle') }).isVisible())) fail(at('edit'), 'Next after Edit did not return to the review');
 
-  // Settings is on every step and comes back to the same place.
-  await host.getByRole('button', { name: 'Settings' }).click();
-  await host.getByRole('heading', { name: 'How do you want to use this?' }).waitFor();
-  await checkScreen(page, at('settings'));
-  await host.getByRole('button', { name: mode.helpers.length ? /with these helpers/ : "Continue with my device's own tools" }).click(); // simple words: 'Go on with these helpers'
-  await host.getByRole('heading', { name: 'Check your answers' }).waitFor();
+  // Settings is on every step, shows the language switcher, and comes back to the same place.
+  await button(s('settings')).click();
+  await host.getByRole('heading', { name: s('setupTitle') }).waitFor();
+  if ((await host.locator('.op-lang button').count()) !== 3) fail(at('settings'), 'no language switcher in Settings');
+  await checkScreen(page, at('settings'), lang);
+  await button(mode.helpers.length ? s('continueWithHelpers') : s('useDeviceTools')).click();
+  await host.getByRole('heading', { name: s('reviewTitle') }).waitFor();
 
-  await host.getByRole('button', { name: 'Back', exact: true }).focus();
+  await button(s('back')).focus();
   await page.keyboard.press('Tab');
   const ring = await shadow(page, `const s = getComputedStyle(root.activeElement); return s.outlineStyle + ' ' + s.outlineWidth;`);
   if (ring !== 'solid 3px') fail(at('focus ring'), `keyboard focus outline is "${ring}"`);
 
-  await host.getByRole('button', { name: /^Send/ }).click();
-  await host.getByRole('heading', { name: /Thank you/ }).waitFor();
-  await checkScreen(page, at('done'));
+  await button(s('submit')).click();
+  await host.getByRole('heading', { name: s('doneTitle') }).waitFor();
+  await checkScreen(page, at('done'), lang);
 
   const events = await page.evaluate(() => window.__events);
   if (events.length !== 1) fail(at('complete'), `expected 1 openpath:complete event, got ${events.length}`);
   else {
-    if ('supportRequest' in events[0].answers) fail(at('complete'), 'the private support request was included in the event');
-    if (events[0].answers.course !== 'virtual-assistant') fail(at('complete'), 'edited answer missing from the event');
-    if ('referringPartner' in events[0].answers) fail(at('complete'), 'skipped answer should be absent');
+    const a = events[0].answers;
+    if ('supportRequest' in a) fail(at('complete'), 'the private support request was included in the event');
+    if (a.course !== 'virtual-assistant') fail(at('complete'), 'edited answer missing from the event');
+    if ('referringPartner' in a) fail(at('complete'), 'skipped answer should be absent');
+    if (a.phone !== '+251911234567') fail(at('complete'), `phone is ${a.phone}`);
+    if (JSON.stringify(a.dateOfBirth) !== JSON.stringify({ date: '2001-03-27', ethiopian: { year: 1993, month: 7, day: 18 } })) {
+      fail(at('complete'), `date of birth is ${JSON.stringify(a.dateOfBirth)}`);
+    }
   }
   if (await page.evaluate(() => localStorage.getItem('openpath:alx-onboarding'))) fail(at('complete'), 'localStorage was not cleared after submit');
-  if (!has('Read questions to me')) {
+  if (!has('helperReadAloud')) {
     const spoken = await page.evaluate(() => window.__speech.log.length);
     if (spoken) fail(at('rule'), `spoke ${spoken} time(s) although read-aloud was off`);
   }
   pageErrors.forEach((e) => fail(at('page'), `uncaught error: ${e}`));
   await context.close();
   return events[0];
+}
+
+// Answer by voice: consent the first time, then check the result went in.
+async function speak(page, where, lang, words, check) {
+  const host = page.locator('openpath-flow');
+  await page.evaluate((w) => window.__say.push(w), words);
+  const mic = host.getByRole('button', { name: S(lang, 'speakAnswer') });
+  if ((await mic.getAttribute('aria-pressed')) !== null) fail(where, 'mic button should not have aria-pressed');
+  await mic.click();
+  const allow = host.getByRole('button', { name: S(lang, 'consentAllow'), exact: true });
+  if (await allow.isVisible().catch(() => false)) {
+    await checkScreen(page, `${where} (consent)`, lang);
+    await allow.click();
+  }
+  const saidPrefix = S(lang, 'youSaid').split('{text}')[0].trim();
+  await host.locator('.op-voice-status').filter({ hasText: saidPrefix }).waitFor();
+  if (!(await check())) fail(where, `the spoken answer "${words}" was not filled in`);
 }
 
 // ---- run --------------------------------------------------------------------
@@ -347,11 +420,13 @@ console.log(`demo: ${BASE}/demo/  api: ${apiUp ? 'running (answers go to the ser
 
 const browser = await launch();
 try {
-  for (const mode of MODES) {
-    const before = failures.length;
-    const done = await walk(browser, mode);
-    if (apiUp && !done?.sessionId) fail(mode.label, 'the API is running but the complete event has no sessionId');
-    console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${mode.label}`);
+  for (const lang of LANGS) {
+    for (const mode of MODES) {
+      const before = failures.length;
+      const done = await walk(browser, mode, lang).catch((e) => fail(`${lang} / ${mode.label}`, `stopped: ${e.message.split('\n')[0]}`));
+      if (apiUp && done && !done.sessionId) fail(`${lang} / ${mode.label}`, 'the API is running but the complete event has no sessionId');
+      console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${lang} ${PACKS[lang].dir}  ${mode.label}`);
+    }
   }
 } finally {
   await browser.close();
@@ -362,4 +437,4 @@ if (failures.length) {
   console.error(`\n${failures.length} problem(s):\n  - ${failures.join('\n  - ')}`);
   process.exit(1);
 }
-console.log('All browser accessibility checks passed.');
+console.log(`All browser accessibility checks passed (${LANGS.join(', ')}).`);

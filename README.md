@@ -39,6 +39,9 @@ cd frontend && npm install && npm test        # unit, element and axe (jsdom) te
 npm run build && npm run test:browser         # real Chrome/Edge, whole form in en, am and ar (right to left),
                                               # with each helper on and all off: axe incl. contrast,
                                               # 320px/200%/400% reflow, dark mode, focus, targets
+                                              # (21 walks send ~320 API requests: start the API with
+                                              # RATE_LIMIT_MAX=2000, or stop it to test device-only mode;
+                                              # OPENPATH_LANGS=ar runs one language)
 npm run review:amharic                        # rebuild docs/amharic-review.md after changing Amharic text
 ```
 
