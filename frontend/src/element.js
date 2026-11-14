@@ -44,7 +44,7 @@ export class OpenPathFlow extends HTMLElement {
     if (this.shadowRoot) return;
     const shadow = this.attachShadow({ mode: 'open' });
     this.live = h('div', { class: 'op-sr', 'aria-live': 'polite' });
-    this.view = h('div', { class: 'op-card' }, h('p', { text: t(this.uiLang, 'loading') }));
+    this.view = h('div', { class: 'op-card' }, h('p', { text: this.tr('loading') }));
     this.root = h('div', { class: 'op-root', lang: this.uiLang }, this.view, this.live);
     shadow.append(h('style', { text: css }), this.root);
     this.ready = this.start();
@@ -160,8 +160,12 @@ export class OpenPathFlow extends HTMLElement {
     return this.store.state.step;
   }
 
+  get simple() {
+    return Boolean(this.prefs?.simple);
+  }
+
   tr(key, vars) {
-    return t(this.uiLang, key, vars);
+    return t(this.uiLang, key, vars, this.simple);
   }
 
   go(step, { focus = true, returnToReview } = {}) {
@@ -213,6 +217,7 @@ export class OpenPathFlow extends HTMLElement {
         flow: this.flow,
         answers,
         lang,
+        simple: this.simple,
         uid: this.uid,
         busy: this.busy,
         submitError: this.submitError,
@@ -232,6 +237,7 @@ export class OpenPathFlow extends HTMLElement {
       q,
       value: answers[q.id],
       lang,
+      simple: this.simple,
       error,
       uid: this.uid,
       onChange: (value) => {
@@ -241,7 +247,7 @@ export class OpenPathFlow extends HTMLElement {
         // place (no re-render, so focus stays where it is).
         const pos = this.nav.position(q.id, this.store.state.answers);
         const progress = this.view.querySelector('.op-progress');
-        if (progress) progress.textContent = t(lang, 'stepOf', { n: pos.index, total: pos.total });
+        if (progress) progress.textContent = this.tr('stepOf', { n: pos.index, total: pos.total });
       },
     });
 
@@ -253,21 +259,21 @@ export class OpenPathFlow extends HTMLElement {
       h(
         'div',
         { class: 'op-nav' },
-        back ? h('button', { type: 'button', class: 'op-button op-secondary', onclick: () => this.back(), text: t(lang, 'back') }) : null,
+        back ? h('button', { type: 'button', class: 'op-button op-secondary', onclick: () => this.back(), text: this.tr('back') }) : null,
         !q.required && q.type !== 'info'
-          ? h('button', { type: 'button', class: 'op-button op-secondary', onclick: () => this.skip(), text: t(lang, 'skip') })
+          ? h('button', { type: 'button', class: 'op-button op-secondary', onclick: () => this.skip(), text: this.tr('skip') })
           : null,
-        h('button', { type: 'submit', class: 'op-button op-primary', text: t(lang, 'next') }),
+        h('button', { type: 'submit', class: 'op-button op-primary', text: this.tr('next') }),
       ),
     );
-    this.view.append(h('p', { class: 'op-progress', text: t(lang, 'stepOf', { n: index, total }) }), form);
+    this.view.append(h('p', { class: 'op-progress', text: this.tr('stepOf', { n: index, total }) }), form);
     if (focusField) step.focusField();
     else if (focus) this.view.querySelector('.op-question')?.focus();
   }
 
   renderDone(focus) {
-    const heading = h('h2', { class: 'op-question', tabindex: '-1', text: t(this.uiLang, 'doneTitle') });
-    this.view.append(h('div', { class: 'op-step' }, heading, h('p', { class: 'op-body', text: t(this.uiLang, 'doneBody') })));
+    const heading = h('h2', { class: 'op-question', tabindex: '-1', text: this.tr('doneTitle') });
+    this.view.append(h('div', { class: 'op-step' }, heading, h('p', { class: 'op-body', text: this.tr('doneBody') })));
     if (focus) heading.focus();
   }
 
@@ -276,7 +282,7 @@ export class OpenPathFlow extends HTMLElement {
     const { answers } = this.store.state;
     const code = validateAnswer(q, answers[q.id]);
     if (code) {
-      const message = errorMessage(this.uiLang, q, code);
+      const message = errorMessage(this.uiLang, q, code, this.simple);
       this.error = { questionId: q.id, message };
       this.render({ focusField: true });
       this.announce(message);
@@ -306,15 +312,15 @@ export class OpenPathFlow extends HTMLElement {
   /** Answers are already in localStorage; also send them to the API if there is one. */
   save({ announce = false } = {}) {
     if (!this.api) {
-      if (announce) this.announce(t(this.uiLang, 'saved'));
+      if (announce) this.announce(this.tr('saved'));
       return this.saveChain;
     }
     this.saveChain = this.saveChain.then(async () => {
       try {
         await this.pushAnswers();
-        if (announce) this.announce(t(this.uiLang, 'saved'));
+        if (announce) this.announce(this.tr('saved'));
       } catch {
-        if (announce) this.announce(t(this.uiLang, 'savedLocal'));
+        if (announce) this.announce(this.tr('savedLocal'));
       }
     });
     return this.saveChain;
@@ -347,11 +353,11 @@ export class OpenPathFlow extends HTMLElement {
       const first = errors[0];
       const q = this.nav.question(first.field);
       if (!q) return;
-      const message = errorMessage(this.uiLang, q, first.code);
+      const message = errorMessage(this.uiLang, q, first.code, this.simple);
       this.error = { questionId: q.id, message };
       this.store.setStep(q.id, { returnToReview: true });
       this.render({ focusField: true });
-      this.announce(`${t(this.uiLang, 'fixBeforeSubmit')} ${message}`);
+      this.announce(`${this.tr('fixBeforeSubmit')} ${message}`);
       return;
     }
 
@@ -360,9 +366,9 @@ export class OpenPathFlow extends HTMLElement {
     const button = this.view.querySelector('.op-primary');
     if (button) {
       button.setAttribute('aria-disabled', 'true');
-      button.textContent = t(this.uiLang, 'submitting');
+      button.textContent = this.tr('submitting');
     }
-    this.announce(t(this.uiLang, 'submitting'));
+    this.announce(this.tr('submitting'));
     let sessionId = null;
     if (this.api) {
       try {
@@ -372,7 +378,7 @@ export class OpenPathFlow extends HTMLElement {
       } catch (e) {
         if (!(e instanceof ApiError && e.code === 'already_submitted')) {
           this.busy = false;
-          this.submitError = t(this.uiLang, 'submitFailed');
+          this.submitError = this.tr('submitFailed');
           this.render();
           this.view.querySelector('.op-primary')?.focus();
           this.announce(this.submitError);

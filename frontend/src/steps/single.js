@@ -7,7 +7,7 @@ export function renderSingle(ctx) {
       type: 'radio',
       value: o.value,
       checked: ctx.value === o.value,
-      label: o.label,
+      label: ctx.simple && o.simple ? o.simple : o.label,
       hintText: o.hint,
       index,
       onChange: () => ctx.onChange(o.value),

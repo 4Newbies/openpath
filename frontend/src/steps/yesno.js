@@ -12,7 +12,7 @@ export function renderYesNo(ctx) {
       type: 'radio',
       value: o.key,
       checked: ctx.value === o.value,
-      label: { en: t(ctx.lang, o.key), [ctx.lang]: t(ctx.lang, o.key) },
+      label: { en: t(ctx.lang, o.key, {}, ctx.simple), [ctx.lang]: t(ctx.lang, o.key, {}, ctx.simple) },
       index,
       onChange: () => ctx.onChange(o.value),
     }),

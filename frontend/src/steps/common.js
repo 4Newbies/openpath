@@ -1,10 +1,10 @@
 import { h, ids, sr } from '../dom.js';
 import { icon } from '../icons.js';
-import { pick, t } from '../messages.js';
+import { labelOf, pick, t } from '../messages.js';
 
 /**
  * Every step gets a context:
- * { q, value, lang, error (message or null), onChange(value), uid }
+ * { q, value, lang, simple, error (message or null), onChange(value), uid }
  * and returns { node, focusField() }.
  */
 export function idsFor(ctx) {
@@ -28,15 +28,16 @@ export function localized(tag, attrs, value, lang) {
  * With `labelFor`, the heading text is the field's real <label>.
  */
 export function heading(ctx, { labelFor } = {}) {
-  const { q, lang } = ctx;
+  const { q, lang, simple } = ctx;
   const i = idsFor(ctx);
-  const { text, lang: used } = pick(q.label, lang);
+  // Simple words mode shows the plain-words text and the question's icon.
+  const { text, lang: used } = labelOf(q, lang, simple);
   const textLang = used !== lang ? used : undefined;
-  const optional = !q.required && q.type !== 'info' ? [' ', h('span', { class: 'op-optional', text: t(lang, 'optional') })] : [];
+  const optional = !q.required && q.type !== 'info' ? [' ', h('span', { class: 'op-optional', text: t(lang, 'optional', {}, simple) })] : [];
   const inner = labelFor
     ? h('label', { for: labelFor }, h('span', { lang: textLang, text }), optional)
     : h('span', {}, h('span', { lang: textLang, text }), optional);
-  return h('h2', { id: i.heading, class: 'op-question', tabindex: '-1' }, icon(q.icon), inner);
+  return h('h2', { id: i.heading, class: 'op-question', tabindex: '-1' }, simple ? icon(q.icon) : null, inner);
 }
 
 export function hint(ctx) {
@@ -46,7 +47,7 @@ export function hint(ctx) {
 
 export function errorText(ctx) {
   const i = idsFor(ctx);
-  return i.error ? h('p', { id: i.error, class: 'op-error' }, sr(t(ctx.lang, 'errorPrefix')), ctx.error) : null;
+  return i.error ? h('p', { id: i.error, class: 'op-error' }, sr(t(ctx.lang, 'errorPrefix', {}, ctx.simple)), ctx.error) : null;
 }
 
 export function describedBy(ctx) {

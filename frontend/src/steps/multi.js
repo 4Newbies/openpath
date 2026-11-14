@@ -8,7 +8,7 @@ export function renderMulti(ctx) {
       type: 'checkbox',
       value: o.value,
       checked: selected.has(o.value),
-      label: o.label,
+      label: ctx.simple && o.simple ? o.simple : o.label,
       hintText: o.hint,
       index,
       onChange: () => {

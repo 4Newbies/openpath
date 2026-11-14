@@ -41,7 +41,7 @@ export function renderDate(ctx) {
       oninput: () => ctx.onChange(joinDate({ day: inputs.day.value, month: inputs.month.value, year: inputs.year.value })),
     });
     inputs[part] = input;
-    return h('div', { class: 'op-date-part' }, h('label', { for: id, text: t(lang, part) }), input);
+    return h('div', { class: 'op-date-part' }, h('label', { for: id, text: t(lang, part, {}, ctx.simple) }), input);
   };
 
   const fields = h('div', { class: 'op-date' }, box('day', 2), box('month', 2), box('year', 4));
