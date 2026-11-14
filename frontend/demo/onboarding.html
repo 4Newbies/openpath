@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Accessible onboarding – ALX</title>
+    <style>
+      body { margin: 0; padding: 1rem; background: #f3f4f6; color: #1b1b1b; font-family: system-ui, sans-serif; line-height: 1.5; }
+      main { max-width: 44rem; margin: 0 auto; }
+      a { color: #0b5cad; }
+      a:focus-visible { outline: 3px solid #1b1b1b; outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p><a href="/savanna/index.html">Back to Savanna</a></p>
+      <h1>Accessible onboarding</h1>
+      <script src="/openpath.js"></script>
+      <openpath-flow questions="/questions/onboarding.json" api="http://localhost:4000" lang="en"></openpath-flow>
+    </main>
+  </body>
+</html>

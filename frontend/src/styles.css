@@ -1,0 +1,304 @@
+/* <openpath-flow> styles. Lives inside the shadow root, so host page CSS
+   can't break it. Hosts theme it with --openpath-color and --openpath-font.
+   Contrast (on white): text #1b1b1b 16.9:1, hint #474747 9.3:1,
+   default accent #0b5cad 6.6:1, error #b3261e 6.5:1, borders #5c5c5c 6.7:1. */
+
+:host {
+  display: block;
+  /* Never smaller than 18px, even if the host page shrinks its root font size. */
+  font-size: max(18px, 1.125rem);
+}
+:host([hidden]) {
+  display: none;
+}
+
+.op-root {
+  --op-accent: var(--openpath-color, #0b5cad);
+  --op-accent-text: #fff;
+  --op-text: #1b1b1b;
+  --op-muted: #474747;
+  --op-bg: #fff;
+  --op-border: #5c5c5c;
+  --op-error: #b3261e;
+  --op-selected: #eef4fb;
+  --op-focus: #1b1b1b;
+  --op-border-width: 2px;
+
+  font-family: var(--openpath-font, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Ethiopic', sans-serif);
+  font-size: 1em;
+  line-height: 1.5;
+  color: var(--op-text);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+.op-root[data-larger-text] {
+  font-size: 1.25em;
+}
+.op-root[data-high-contrast] {
+  --op-accent: #000;
+  --op-text: #000;
+  --op-muted: #000;
+  --op-border: #000;
+  --op-error: #8b0000;
+  --op-selected: #fff3b0;
+  --op-border-width: 3px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.op-card {
+  background: var(--op-bg);
+  color: var(--op-text);
+  max-width: 40rem;
+  width: 100%;
+  margin-inline: auto;
+  padding: clamp(1rem, 4vw, 2rem);
+  border: 1px solid var(--op-border);
+  border-radius: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.op-title {
+  margin: 0 0 0.25em;
+  font-weight: 700;
+}
+.op-progress {
+  margin: 0 0 1em;
+  color: var(--op-muted);
+}
+
+.op-question {
+  display: flex;
+  gap: 0.5em;
+  align-items: flex-start;
+  margin: 0 0 0.5em;
+  font-size: 1.4em;
+  line-height: 1.3;
+  font-weight: 700;
+}
+.op-question label {
+  cursor: pointer;
+}
+.op-icon {
+  flex: none;
+  margin-top: 0.05em;
+  color: var(--op-accent);
+}
+.op-optional {
+  font-weight: 400;
+  font-size: 0.8em;
+  color: var(--op-muted);
+}
+
+.op-hint {
+  margin: 0 0 1em;
+  color: var(--op-muted);
+}
+.op-body {
+  margin: 0 0 1em;
+}
+
+.op-error {
+  margin: 0 0 1em;
+  padding-left: 0.6em;
+  border-left: 5px solid var(--op-error);
+  color: var(--op-error);
+  font-weight: 700;
+}
+
+.op-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.op-legend {
+  padding: 0;
+  max-width: 100%;
+}
+
+.op-input {
+  display: block;
+  width: 100%;
+  min-height: 2.75em;
+  padding: 0.5em 0.6em;
+  font: inherit;
+  color: var(--op-text);
+  background: var(--op-bg);
+  border: var(--op-border-width) solid var(--op-border);
+  border-radius: 0.3em;
+}
+textarea.op-input {
+  min-height: 7em;
+  resize: vertical;
+}
+.op-input[aria-invalid='true'] {
+  border-color: var(--op-error);
+  border-width: 3px;
+}
+
+.op-date {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+}
+.op-date-part label {
+  display: block;
+  margin-bottom: 0.25em;
+}
+.op-date-day,
+.op-date-month {
+  width: 4.5em;
+}
+.op-date-year {
+  width: 6.5em;
+}
+
+.op-options {
+  display: grid;
+  gap: 0.6em;
+}
+.op-options-inline {
+  grid-template-columns: repeat(auto-fit, minmax(8em, 1fr));
+}
+.op-option {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+  min-height: 2.75em;
+  padding: 0.5em 0.75em;
+  border: var(--op-border-width) solid var(--op-border);
+  border-radius: 0.3em;
+  background: var(--op-bg);
+}
+.op-option:has(input:checked) {
+  border-color: var(--op-accent);
+  background: var(--op-selected);
+  outline: 1px solid var(--op-accent);
+}
+.op-option input {
+  flex: none;
+  width: 1.4em;
+  height: 1.4em;
+  margin: 0.05em 0 0;
+  accent-color: var(--op-accent);
+}
+.op-option label {
+  flex: 1;
+  cursor: pointer;
+}
+/* Make the whole row clickable, not only the text. */
+.op-option label::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.op-option-hint {
+  display: block;
+  color: var(--op-muted);
+  font-size: 0.9em;
+}
+
+.op-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75em;
+  margin-top: 1.5em;
+}
+.op-button {
+  min-height: 2.75em;
+  min-width: 2.75em;
+  padding: 0.5em 1.2em;
+  font: inherit;
+  font-weight: 700;
+  border-radius: 0.3em;
+  border: var(--op-border-width) solid var(--op-accent);
+  cursor: pointer;
+}
+.op-primary {
+  background: var(--op-accent);
+  color: var(--op-accent-text);
+  margin-inline-start: auto;
+}
+.op-secondary {
+  background: var(--op-bg);
+  color: var(--op-accent);
+}
+.op-button[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.op-review {
+  margin: 0 0 1em;
+  padding: 0;
+}
+.op-review-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25em 1em;
+  padding: 0.75em 0;
+  border-bottom: 1px solid var(--op-border);
+}
+.op-review-item dt {
+  flex: 1 1 100%;
+  font-weight: 700;
+}
+.op-review-item dd {
+  margin: 0;
+}
+.op-review-item dd:first-of-type {
+  flex: 1 1 12em;
+}
+.op-review-empty {
+  color: var(--op-muted);
+  font-style: italic;
+}
+
+/* Visible 3px focus ring on everything that can take focus. */
+:focus-visible {
+  outline: 3px solid var(--op-focus);
+  outline-offset: 3px;
+}
+.op-option:has(input:focus-visible) {
+  outline: 3px solid var(--op-focus);
+  outline-offset: 3px;
+}
+.op-option input:focus-visible {
+  outline: none;
+}
+.op-question:focus {
+  outline: none;
+}
+.op-question:focus-visible {
+  outline: 3px solid var(--op-focus);
+  outline-offset: 3px;
+}
+
+.op-sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (forced-colors: active) {
+  .op-option:has(input:checked) {
+    outline: 3px solid Highlight;
+  }
+  .op-button {
+    border-color: ButtonText;
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "openpath-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "<openpath-flow>: a drop-in accessible one-question-per-screen form.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "demo": "vite build && node scripts/serve.mjs",
+    "serve": "node scripts/serve.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "axe-core": "^4.14.0",
+    "jsdom": "^29.1.1",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}
