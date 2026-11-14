@@ -182,7 +182,7 @@ const MODES = [
   { label: '640px (200% zoom)', width: 640, helpers: [] },
 ];
 
-async function walk(browser, mode, lang) {
+async function walk(browser, mode, lang, apiUp) {
   const at = (s) => `${lang} / ${mode.label} / ${s}`;
   const has = (h) => mode.helpers.includes(h);
   const simple = has('helperSimple');
@@ -204,7 +204,9 @@ async function walk(browser, mode, lang) {
   await page.goto(`${BASE}/demo/index.html`);
   await page.evaluate(() => {
     window.__events = [];
+    window.__queued = 0;
     document.addEventListener('openpath:complete', (e) => window.__events.push(e.detail));
+    document.addEventListener('openpath:queued', () => window.__queued++);
   });
   const host = page.locator('openpath-flow');
   const field = (name) => host.locator(`[name="${name}"]`);
@@ -372,6 +374,18 @@ async function walk(browser, mode, lang) {
   if (ring !== 'solid 3px') fail(at('focus ring'), `keyboard focus outline is "${ring}"`);
 
   await button(s('submit')).click();
+  if (!apiUp) {
+    // No server: the answers wait on the device and the learner is told so.
+    await host.getByRole('heading', { name: s('queuedTitle') }).waitFor();
+    await checkScreen(page, at('queued'), lang);
+    if ((await host.locator('.op-offline').textContent()) !== s('savedOffline')) fail(at('queued'), 'no "saved on this device" note');
+    if ((await page.evaluate(() => window.__queued)) !== 1) fail(at('queued'), 'no openpath:queued event');
+    const pending = await page.evaluate(() => JSON.parse(localStorage.getItem('openpath:alx-onboarding') || '{}').pendingSubmit);
+    if (pending !== true) fail(at('queued'), 'the queued submit is not kept on the device');
+    pageErrors.forEach((e) => fail(at('page'), `uncaught error: ${e}`));
+    await context.close();
+    return null;
+  }
   await host.getByRole('heading', { name: s('doneTitle') }).waitFor();
   await checkScreen(page, at('done'), lang);
 
@@ -425,14 +439,14 @@ if (!(await reachable(`${BASE}/demo/index.html`))) {
   for (let i = 0; i < 50 && !(await reachable(`${BASE}/demo/index.html`)); i++) await new Promise((r) => setTimeout(r, 100));
 }
 const apiUp = await reachable('http://localhost:4000/v1/health');
-console.log(`demo: ${BASE}/demo/  api: ${apiUp ? 'running (answers go to the server)' : 'not running (device-only mode)'}`);
+console.log(`demo: ${BASE}/demo/  api: ${apiUp ? 'running (answers go to the server)' : 'not running (answers wait on the device; checks the queued screen)'}`);
 
 const browser = await launch();
 try {
   for (const lang of LANGS) {
     for (const mode of MODES) {
       const before = failures.length;
-      const done = await walk(browser, mode, lang).catch((e) => fail(`${lang} / ${mode.label}`, `stopped: ${e.message.split('\n')[0]}`));
+      const done = await walk(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${mode.label}`, `stopped: ${e.message.split('\n')[0]}`));
       if (apiUp && done && !done.sessionId) fail(`${lang} / ${mode.label}`, 'the API is running but the complete event has no sessionId');
       console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${lang} ${PACKS[lang].dir}  ${mode.label}`);
     }
