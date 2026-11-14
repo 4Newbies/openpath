@@ -14,6 +14,48 @@ servers:
 tags:
   - name: sessions
 paths:
+  /flows:
+    get:
+      summary: The flows this API serves
+      description: >-
+        Every question file in the flows folder (FLOWS_DIR), keyed by flowId, for example
+        alx-onboarding, job-application and employer-accommodations. Each session belongs
+        to one flow, and its answers are validated against that flow's own question file.
+      responses:
+        '200':
+          description: The flows
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [flows]
+                properties:
+                  flows:
+                    type: array
+                    items:
+                      type: object
+                      required: [flowId, version, title, questions]
+                      properties:
+                        flowId: { type: string, example: job-application }
+                        version: { type: string }
+                        title: { type: object, additionalProperties: { type: string } }
+                        questions: { type: integer, description: Number of questions. }
+  /flows/{flowId}:
+    get:
+      summary: One flow's question file
+      parameters:
+        - { name: flowId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The question file (see shared/questions.schema.json)
+          content:
+            application/json:
+              schema: { type: object }
+        '404':
+          description: Unknown flow
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
   /sessions:
     post:
       tags: [sessions]

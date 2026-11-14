@@ -28,7 +28,9 @@ export function loadConfig(env = process.env) {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
-    questionsDir: env.QUESTIONS_DIR || path.resolve(here, '../../frontend/public/questions'),
+    // The flows folder: one question file per flow (onboarding, job-application,
+    // employer-accommodations ...). QUESTIONS_DIR is the older name.
+    flowsDir: env.FLOWS_DIR || env.QUESTIONS_DIR || path.resolve(here, '../../frontend/public/questions'),
     bodyLimit: env.BODY_LIMIT || '32kb',
     rateLimitWindowMs: Math.max(1000, int(env, 'RATE_LIMIT_WINDOW_MS', DEFAULT_RATE_LIMIT_WINDOW_MS)),
     rateLimitMax: int(env, 'RATE_LIMIT_MAX', DEFAULT_RATE_LIMIT_MAX),

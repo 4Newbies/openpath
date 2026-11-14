@@ -10,12 +10,18 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const read = (p) => JSON.parse(fs.readFileSync(path.resolve(here, p), 'utf8'));
 const schema = read('../../shared/questions.schema.json');
 const onboarding = read('../../frontend/public/questions/onboarding.json');
+const otherFlows = ['job-application', 'employer-accommodations'].map((f) => read(`../../frontend/public/questions/${f}.json`));
 const validate = new Ajv2020({ allErrors: true, strict: false }).compile(schema);
 
 describe('questions.schema.json', () => {
   it('accepts the default onboarding file', () => {
     expect(validate(onboarding), JSON.stringify(validate.errors)).toBe(true);
     expect(validateFlow(onboarding)).toEqual([]);
+  });
+
+  it.each(otherFlows.map((f) => [f.flowId, f]))('accepts the %s flow', (_, flow) => {
+    expect(validate(flow), JSON.stringify(validate.errors)).toBe(true);
+    expect(validateFlow(flow)).toEqual([]);
   });
 
   const q = (f, id) => f.questions.find((x) => x.id === id);

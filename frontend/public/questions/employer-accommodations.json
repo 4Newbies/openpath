@@ -1,0 +1,90 @@
+{
+  "$schema": "../../../shared/questions.schema.json",
+  "version": "1.0.0",
+  "flowId": "employer-accommodations",
+  "title": { "en": "Post a job and the support you offer", "am": "ሥራ እና የሚሰጡትን ድጋፍ ያስታውቁ" },
+  "questions": [
+    {
+      "id": "intro",
+      "type": "info",
+      "icon": "info",
+      "label": { "en": "About this form", "am": "ስለዚህ ቅጽ" },
+      "hint": {
+        "en": "Tell job seekers about the job and the support you offer. Your answers become a job listing that people using OpenPath can find.",
+        "am": "ስለ ሥራው እና ስለሚሰጡት ድጋፍ ለሥራ ፈላጊዎች ይንገሩ። መልሶችዎ የOpenPath ተጠቃሚዎች የሚያገኙት የሥራ ማስታወቂያ ይሆናሉ።"
+      }
+    },
+    {
+      "id": "jobTitle",
+      "type": "text",
+      "icon": "course",
+      "required": true,
+      "maxLength": 120,
+      "label": { "en": "What is the job title?", "am": "የሥራው መጠሪያ ምንድን ነው?" },
+      "hint": { "en": "For example Data entry clerk.", "am": "ለምሳሌ የመረጃ መዝጋቢ።" }
+    },
+    {
+      "id": "organisation",
+      "type": "text",
+      "icon": "partner",
+      "required": true,
+      "autocomplete": "organization",
+      "maxLength": 120,
+      "label": { "en": "What is the name of your organisation?", "am": "የድርጅትዎ ስም ማን ነው?" }
+    },
+    {
+      "id": "location",
+      "type": "text",
+      "icon": "location",
+      "required": true,
+      "autocomplete": "address-level2",
+      "maxLength": 120,
+      "label": { "en": "Where is the job? Give the city or town.", "am": "ሥራው የት ነው? ከተማውን ይጥቀሱ።" },
+      "hint": { "en": "For example Addis Ababa.", "am": "ለምሳሌ አዲስ አበባ።" }
+    },
+    {
+      "id": "employmentType",
+      "type": "single",
+      "icon": "calendar",
+      "required": true,
+      "label": { "en": "What type of job is it?", "am": "የሥራው ዓይነት ምንድን ነው?" },
+      "options": [
+        { "value": "full-time", "label": { "en": "Full time", "am": "ሙሉ ቀን" } },
+        { "value": "part-time", "label": { "en": "Part time", "am": "የትርፍ ሰዓት" } },
+        { "value": "contract", "label": { "en": "Contract", "am": "በኮንትራት" } },
+        { "value": "temporary", "label": { "en": "Temporary", "am": "ጊዜያዊ" } },
+        { "value": "internship", "label": { "en": "Internship", "am": "የልምምድ ሥራ" } }
+      ]
+    },
+    {
+      "id": "description",
+      "type": "text",
+      "icon": "info",
+      "required": false,
+      "multiline": true,
+      "maxLength": 1000,
+      "label": { "en": "Describe the job in a few sentences.", "am": "ሥራውን በጥቂት ዓረፍተ ነገሮች ይግለጹ።" },
+      "hint": { "en": "Plain words help everyone.", "am": "ቀላል ቃላት ሁሉንም ይረዳሉ።" }
+    },
+    {
+      "id": "accommodations",
+      "type": "multi",
+      "icon": "access",
+      "required": false,
+      "label": { "en": "Which support do you offer?", "am": "የትኞቹን ድጋፎች ይሰጣሉ?" },
+      "hint": {
+        "en": "Choose all you offer. Job seekers can look for jobs with the support they need.",
+        "am": "የሚሰጡትን ሁሉ ይምረጡ። ሥራ ፈላጊዎች የሚያስፈልጋቸውን ድጋፍ የሚሰጡ ሥራዎችን መፈለግ ይችላሉ።"
+      },
+      "options": [
+        { "value": "screen-reader-application", "label": { "en": "Screen-reader-friendly application", "am": "ለስክሪን አንባቢ ምቹ የሆነ ማመልከቻ" } },
+        { "value": "sign-language-interview", "label": { "en": "Sign language interpreter at interview", "am": "በቃለ መጠይቅ ላይ የምልክት ቋንቋ አስተርጓሚ" } },
+        { "value": "step-free-workplace", "label": { "en": "Step-free workplace", "am": "ደረጃ የሌለው የሥራ ቦታ" } },
+        { "value": "flexible-hours", "label": { "en": "Flexible hours", "am": "ተለዋዋጭ የሥራ ሰዓት" } },
+        { "value": "remote-work", "label": { "en": "Remote work possible", "am": "ከቤት ሆኖ መሥራት ይቻላል" } },
+        { "value": "written-instructions", "label": { "en": "Written instructions", "am": "የጽሑፍ መመሪያዎች" } },
+        { "value": "extra-time-assessments", "label": { "en": "Extra time in assessments", "am": "በፈተናዎች ላይ ተጨማሪ ጊዜ" } }
+      ]
+    }
+  ]
+}

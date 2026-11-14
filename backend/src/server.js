@@ -5,7 +5,7 @@ import { createMemoryStore } from './store/memory.js';
 import { createPgStore } from './store/pg.js';
 
 const config = loadConfig();
-const flows = loadFlows(config.questionsDir);
+const flows = loadFlows(config.flowsDir);
 
 const MEMORY_WARNING = [
   '',

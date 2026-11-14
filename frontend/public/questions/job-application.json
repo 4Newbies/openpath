@@ -1,0 +1,138 @@
+{
+  "$schema": "../../../shared/questions.schema.json",
+  "version": "1.0.0",
+  "flowId": "job-application",
+  "title": { "en": "Apply for a job", "am": "ለሥራ ማመልከቻ" },
+  "questions": [
+    {
+      "id": "intro",
+      "type": "info",
+      "icon": "info",
+      "label": { "en": "Apply for this job", "am": "ለዚህ ሥራ ያመልክቱ" },
+      "simple": { "en": "How to apply", "am": "እንዴት እንደሚያመለክቱ" },
+      "hint": {
+        "en": "A few short questions. Nothing here asks about your health or a disability. Questions marked optional can be skipped.",
+        "am": "ጥቂት አጫጭር ጥያቄዎች። እዚህ ስለ ጤናዎ ወይም ስለ አካል ጉዳት የሚጠይቅ ነገር የለም። «አማራጭ» የተባሉ ጥያቄዎችን መዝለል ይችላሉ።"
+      }
+    },
+    {
+      "id": "fullName",
+      "type": "text",
+      "icon": "person",
+      "required": true,
+      "voice": true,
+      "autocomplete": "name",
+      "maxLength": 120,
+      "label": { "en": "What is your full name?", "am": "ሙሉ ስምዎ ማን ነው?" },
+      "simple": { "en": "Your name", "am": "ስምዎ" }
+    },
+    {
+      "id": "phone",
+      "type": "phone",
+      "icon": "phone",
+      "required": true,
+      "voice": true,
+      "country": "ET",
+      "autocomplete": "tel-national",
+      "label": { "en": "What phone number can the employer call?", "am": "አሠሪው በየትኛው ስልክ ቁጥር ሊደውልልዎ ይችላል?" },
+      "simple": { "en": "Your phone number", "am": "ስልክ ቁጥርዎ" }
+    },
+    {
+      "id": "experienceYears",
+      "type": "single",
+      "icon": "course",
+      "required": true,
+      "voice": true,
+      "label": { "en": "How much work experience do you have?", "am": "ምን ያህል የሥራ ልምድ አለዎት?" },
+      "simple": { "en": "How long have you worked?", "am": "ለምን ያህል ጊዜ ሠርተዋል?" },
+      "options": [
+        { "value": "none", "label": { "en": "None yet", "am": "እስካሁን የለኝም" } },
+        { "value": "under-1", "label": { "en": "Less than 1 year", "am": "ከ1 ዓመት በታች" } },
+        { "value": "1-3", "label": { "en": "1 to 3 years", "am": "ከ1 እስከ 3 ዓመት" } },
+        { "value": "over-3", "label": { "en": "More than 3 years", "am": "ከ3 ዓመት በላይ" } }
+      ]
+    },
+    {
+      "id": "experience",
+      "type": "text",
+      "icon": "course",
+      "required": false,
+      "voice": true,
+      "multiline": true,
+      "maxLength": 500,
+      "label": { "en": "Tell us briefly about work you have done.", "am": "ስለሠሩት ሥራ በአጭሩ ይንገሩን።" },
+      "simple": { "en": "What work have you done?", "am": "ምን ሥራ ሠርተዋል?" },
+      "hint": {
+        "en": "Paid or unpaid work, volunteering and study all count. Skip this if you prefer.",
+        "am": "የሚከፈልበትም ሆነ የማይከፈልበት ሥራ፣ በጎ ፈቃድ እና ትምህርት ሁሉም ይቆጠራሉ። ከፈለጉ ይዝለሉት።"
+      }
+    },
+    {
+      "id": "startDate",
+      "type": "single",
+      "icon": "calendar",
+      "required": true,
+      "voice": true,
+      "label": { "en": "When could you start?", "am": "መቼ መጀመር ይችላሉ?" },
+      "options": [
+        { "value": "now", "label": { "en": "Now", "am": "አሁን" } },
+        { "value": "two-weeks", "label": { "en": "Within 2 weeks", "am": "በ2 ሳምንት ውስጥ" } },
+        { "value": "one-month", "label": { "en": "Within a month", "am": "በአንድ ወር ውስጥ" } },
+        { "value": "later", "label": { "en": "Later", "am": "ከዚያ በኋላ" } }
+      ]
+    },
+    {
+      "id": "workHours",
+      "type": "multi",
+      "icon": "calendar",
+      "required": true,
+      "voice": true,
+      "label": { "en": "Which hours can you work?", "am": "በየትኞቹ ሰዓታት መሥራት ይችላሉ?" },
+      "hint": { "en": "Choose all that fit.", "am": "የሚስማሙዎትን ሁሉ ይምረጡ።" },
+      "options": [
+        { "value": "full-time", "label": { "en": "Full time", "am": "ሙሉ ቀን" } },
+        { "value": "part-time", "label": { "en": "Part time", "am": "የትርፍ ሰዓት" } },
+        { "value": "mornings", "label": { "en": "Mornings", "am": "ጠዋት" } },
+        { "value": "evenings", "label": { "en": "Evenings", "am": "ምሽት" } },
+        { "value": "weekends", "label": { "en": "Weekends", "am": "ቅዳሜና እሁድ" } }
+      ]
+    },
+    {
+      "id": "interviewSupport",
+      "type": "multi",
+      "icon": "lock",
+      "required": false,
+      "private": true,
+      "voice": true,
+      "label": { "en": "Do you need any support for the interview?", "am": "ለቃለ መጠይቁ ምንም ዓይነት ድጋፍ ያስፈልግዎታል?" },
+      "simple": { "en": "Any help for the interview?", "am": "ለቃለ መጠይቁ እርዳታ ይፈልጋሉ?" },
+      "hint": {
+        "en": "Optional. Choose what would help. Do not include medical details. Only the hiring team's support staff see this, and it is kept apart from your application.",
+        "am": "አማራጭ ነው። የሚረዳዎትን ይምረጡ። የሕክምና ዝርዝር አያካትቱ። ይህን የሚያዩት የቅጥር ቡድኑ የድጋፍ ሠራተኞች ብቻ ናቸው፤ ከማመልከቻዎም ተለይቶ ይቀመጣል።"
+      },
+      "options": [
+        { "value": "sign-language-interpreter", "label": { "en": "Sign language interpreter", "am": "የምልክት ቋንቋ አስተርጓሚ" } },
+        { "value": "extra-time", "label": { "en": "Extra time", "am": "ተጨማሪ ጊዜ" } },
+        { "value": "step-free-access", "label": { "en": "Step-free access", "am": "ደረጃ የሌለው መግቢያ" } },
+        { "value": "written-questions", "label": { "en": "Questions in writing", "am": "ጥያቄዎች በጽሑፍ" } },
+        { "value": "remote-interview", "label": { "en": "Interview by phone or video", "am": "ቃለ መጠይቅ በስልክ ወይም በቪዲዮ" } },
+        { "value": "other", "label": { "en": "Something else", "am": "ሌላ ነገር" } }
+      ]
+    },
+    {
+      "id": "interviewSupportOther",
+      "type": "text",
+      "icon": "lock",
+      "required": false,
+      "private": true,
+      "multiline": true,
+      "maxLength": 300,
+      "showIf": { "id": "interviewSupport", "equals": "other" },
+      "label": { "en": "What else would help at the interview?", "am": "በቃለ መጠይቁ ላይ ሌላ ምን ይረዳዎታል?" },
+      "hint": {
+        "en": "Describe the support you need, not a health condition.",
+        "am": "የሚፈልጉትን ድጋፍ ይግለጹ እንጂ የጤና ሁኔታን አይግለጹ።"
+      }
+    }
+  ]
+}

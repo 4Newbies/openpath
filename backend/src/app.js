@@ -68,7 +68,8 @@ export function createApp({ store, flows, config, log = console }) {
     const privateAnswers = {};
     for (const q of flow.questions) {
       if (!(q.id in clean)) continue;
-      if (q.private) privateAnswers[q.id] = String(clean[q.id]);
+      // Private answers are stored as text: as typed, or JSON for a list of choices.
+      if (q.private) privateAnswers[q.id] = typeof clean[q.id] === 'string' ? clean[q.id] : JSON.stringify(clean[q.id]);
       else profile[q.id] = clean[q.id];
     }
     return { profile, privateAnswers };
@@ -85,6 +86,21 @@ export function createApp({ store, flows, config, log = console }) {
     return clean;
   }
 
+  // Stored answers back in their answer shape (private lists are kept as JSON text).
+  function storedAnswers(s) {
+    const flow = flows.get(s.flowId);
+    const priv = {};
+    for (const [id, body] of Object.entries(s.private ?? {})) {
+      const q = flow?.questions.find((x) => x.id === id);
+      try {
+        priv[id] = q && q.type !== 'text' ? JSON.parse(body) : body;
+      } catch {
+        priv[id] = body;
+      }
+    }
+    return { ...s.profile, ...priv };
+  }
+
   const publicView = (s) => ({
     id: s.id,
     resumeCode: s.resumeCode,
@@ -93,7 +109,7 @@ export function createApp({ store, flows, config, log = console }) {
     lang: s.lang,
     status: s.status,
     step: s.step,
-    answers: { ...s.profile, ...s.private },
+    answers: storedAnswers(s),
     createdAt: s.createdAt,
     updatedAt: s.updatedAt,
     submittedAt: s.submittedAt,
@@ -102,6 +118,19 @@ export function createApp({ store, flows, config, log = console }) {
   const conflict = () => new ApiError(409, 'already_submitted', 'These answers were already submitted and can no longer be changed.');
 
   // ---- routes --------------------------------------------------------------
+  // The flows this API serves, each validated against its own question file.
+  v1.get('/flows', (req, res) => {
+    res.json({
+      flows: [...flows.values()].map((f) => ({ flowId: f.flowId, version: f.version, title: f.title, questions: f.questions.length })),
+    });
+  });
+
+  v1.get('/flows/:flowId', (req, res) => {
+    const flow = flows.get(req.params.flowId);
+    if (!flow) throw new ApiError(404, 'unknown_flow', 'This question flow is not known to the server.', 'flowId');
+    res.json(flow);
+  });
+
   v1.get('/health', async (req, res) => {
     await store.ping();
     res.json({ ok: true });
@@ -180,7 +209,7 @@ export function createApp({ store, flows, config, log = console }) {
     const flow = flowFor(session);
     const body = bodyOf(req);
     // Submit the answers sent with the request, or the last saved ones.
-    const answers = body.answers !== undefined ? body.answers : { ...session.profile, ...session.private };
+    const answers = body.answers !== undefined ? body.answers : storedAnswers(session);
     const clean = checkAnswers(flow, answers, 'submit');
     try {
       const saved = await store.submit(session.id, split(flow, clean));

@@ -71,6 +71,34 @@ for (const [name, makeStore] of stores) {
         expect(bad.body.error).toMatchObject({ code: 'invalid_client_key', field: 'clientKey' });
       });
 
+      it('serves several flows, each validated against its own question file', async () => {
+        const list = await request(app).get('/v1/flows').expect(200);
+        expect(list.body.flows.map((f) => f.flowId).sort()).toEqual(['alx-onboarding', 'employer-accommodations', 'job-application']);
+        const one = await request(app).get('/v1/flows/job-application').expect(200);
+        expect(one.body.questions.some((q) => q.id === 'interviewSupport')).toBe(true);
+        await request(app).get('/v1/flows/nope').expect(404);
+
+        const job = (await request(app).post('/v1/sessions').send({ flowId: 'job-application' }).expect(201)).body;
+        const s = await request(app).get(`/v1/sessions/${job.id}`).expect(200);
+        expect(s.body.flowId).toBe('job-application');
+        // An onboarding question is not part of the job application.
+        const wrong = await request(app).put(`/v1/sessions/${job.id}/answers`).send({ answers: { location: 'Adama' } }).expect(400);
+        expect(wrong.body.error).toMatchObject({ code: 'unknown_question', field: 'location' });
+        const answers = {
+          fullName: 'Hana Tesfaye',
+          phone: '0911 234 567',
+          experienceYears: '1-3',
+          startDate: 'now',
+          workHours: ['full-time'],
+          interviewSupport: ['extra-time', 'other'],
+          interviewSupportOther: 'A quiet room',
+        };
+        await request(app).post(`/v1/sessions/${job.id}/submit`).send({ answers }).expect(200);
+        const done = await request(app).get(`/v1/sessions/${job.id}`).expect(200);
+        expect(done.body.answers.interviewSupport).toEqual(['extra-time', 'other']); // private list kept as a list
+        expect(done.body.answers.phone).toBe('+251911234567');
+      });
+
       it('rejects unknown flows and languages with the standard error shape', async () => {
         const r = await request(app).post('/v1/sessions').send({ flowId: 'nope' }).expect(400);
         expect(r.body).toEqual({ error: { code: 'unknown_flow', message: expect.any(String), field: 'flowId' } });
