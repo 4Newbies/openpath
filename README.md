@@ -90,7 +90,7 @@ npm run review:amharic                        # rebuild docs/amharic-review.md a
 | `frontend/src/` | `<openpath-flow>` (`element.js`: loader, store, navigator, steps, review) and `<openpath-jobs>` (`jobs.js`) |
 | `frontend/demo/` | `index.html` (plain host page), `onboarding.html` (opened from Savanna), `jobs.html` and `employer.html` |
 | `frontend/public/savanna/` | Savanna static pages, unchanged except one link in `index.html` |
-| `backend/` | Express API under `/v1`, Postgres store, `openapi.yaml` |
+| `backend/` | Express API under `/v1`, Postgres store, `openapi.yaml`; optional speech-to-text in `src/speech.js` |
 | `client/`, `server/` | Earlier prototype, untouched |
 
 ## Accessibility helpers
@@ -114,7 +114,7 @@ can't support are not offered.
 | Helper | What it does |
 |--------|--------------|
 | Read questions to me | A **Listen** button on every step reads the question, hint and options; each step is also read once when the learner moves to it. **Stop** (or Escape) stops it, and it stops on every step change. |
-| I want to speak my answers | A **Speak your answer** button (a real `<button>` whose label changes to **Stop listening** while it listens) on questions with `"voice": true`. Asks for consent once. What was said goes into the field, which stays editable, and focus returns to it; choice questions match the words to an option. It never moves on by itself. |
+| I want to speak my answers | A **Speak your answer** button (a real `<button>` whose label changes to **Stop listening** while it listens) on questions with `"voice": true`. Asks for consent once for each place the voice is sent to. What was said goes into the field, which stays editable, and focus returns to it; choice questions match the words to an option. It never moves on by itself. |
 | Simple words | Shows each question's `simple` text and simple option labels, the question's icon (decorative), and short, plain interface text and errors (from each language pack's `simple` strings). |
 | Bigger text | Larger text throughout (shown as soon as it's ticked). |
 | High contrast | Black on white (or white and yellow on black in dark mode), thicker borders. |
@@ -143,12 +143,26 @@ Few devices have an Amharic voice, so recorded `am` audio is the dependable way 
 
 ### Voice input
 
-Uses the browser's `SpeechRecognition` (or `webkitSpeechRecognition`). Where it isn't
-supported the mic button is not shown at all. Before first use the learner sees:
+For each language the form uses, in order:
+
+1. the **server's speech-to-text**, when the API has a provider for this language
+   (see [Speech providers](#speech-providers-free-default-optional-services-self-hosted));
+2. the browser's own **`SpeechRecognition`** (or `webkitSpeechRecognition`);
+3. otherwise **no mic button** at all.
+
+Before first use the learner is told where their voice goes, for example
 *"Your voice is sent over the internet to your browser's speech service (Google, if you use Chrome) to turn it into text. Allow?"*
-(**Allow** / **No, I will type**); the answer is remembered. There are clear messages
-when the microphone is blocked, nothing was heard, or the device is offline. The voice
-code is only loaded once the learner turns voice on.
+or, with the server's provider, *"Your voice is recorded and sent over the internet to Addis Scribe to turn it into text. This site does not keep the recording. Allow?"*
+(**Allow** / **No, I will type**). The provider's name comes from the server. The answer is remembered for
+that destination; if the voice would go somewhere else (another language, another provider), the form asks again.
+
+With the browser recogniser, listening ends when the learner stops talking. With the
+server, the form records until the learner presses **Stop listening** (it says so when
+it starts), or for at most 30 seconds, then sends the clip and fills in the text. Either way
+the text goes into the field to check and edit, and the form never moves on by itself.
+Escape, or moving to another step, throws a recording away without sending it. There are clear
+messages when the microphone is blocked, nothing was heard, the device is offline, or too
+many people on the same network are using voice. The voice code is only loaded once the learner turns voice on.
 
 ### Your own providers
 
@@ -163,14 +177,50 @@ OpenPath.setSpeechProvider({
 });
 
 OpenPath.setVoiceProvider({
-  isAvailable() { return true; },
-  listen(lang) { return promise; },  // resolve with the text heard; reject with an Error whose
-                                     // .code is permission | no_speech | offline | no_microphone | aborted
-  stop() {},                         // stop listening; listen() then settles
+  isAvailable(lang) { return true; },
+  listen(lang, { onRecorded } = {}) { return promise; },
+                                     // resolve with the text heard; reject with an Error whose .code is
+                                     // permission | no_speech | offline | no_microphone | busy | aborted.
+                                     // Call onRecorded() (optional) when recording ends and the text is on its way.
+  stop() {},                         // stop listening; listen() then settles with what was heard
+  cancel() {},                       // optional: throw the recording away (Escape, step change)
 });
 ```
 
-`lang` is the form's language code (`"en"`, `"am"`, `"ar"` ...). Pass `null` to go back to the browser's own provider.
+`lang` is the form's language code (`"en"`, `"am"`, `"ar"` ...). A provider registered here is
+used for every language, before the server and the browser. Its consent question is the browser one.
+Pass `null` to go back to the built-in choice.
+
+## Speech providers: free default, optional services, self-hosted
+
+Voice input needs something to turn speech into text. The API picks one with
+`SPEECH_PROVIDER`; keys are read only from the environment (see `.env.example`).
+
+| `SPEECH_PROVIDER` | Who turns speech into text | Languages (default) | Cost |
+|-------------------|----------------------------|---------------------|------|
+| `none` (default) | Nobody on the server. The form uses the **browser's own recogniser** (in Chrome that is Google's service; Firefox has none, so no mic). | Whatever the browser does; Amharic is rarely supported | Free |
+| `addis` | **Addis Scribe** (`ADDIS_SCRIBE_API_URL`, `ADDIS_SCRIBE_API_KEY`): the raw audio is posted with the key as a Bearer token, as the earlier `server/` prototype did | `am` | Paid service |
+| `azure` | **Microsoft Azure Speech**, short-audio REST API (`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`) | `am,en,ar` | Paid service, has a free tier |
+| `selfhosted` | **Your own Whisper server** with the OpenAI-compatible `POST /v1/audio/transcriptions` (faster-whisper-server, whisper.cpp server, LocalAI, vLLM ...): `SPEECH_SELFHOSTED_URL`, optional `SPEECH_SELFHOSTED_API_KEY` and `SPEECH_SELFHOSTED_MODEL` (default `whisper-1`) | `am,en,ar` | Your hardware; audio stays on your network |
+
+- **`GET /v1/speech/capabilities`** tells the form which languages the server transcribes and
+  the provider's **label**, which the consent question names. The labels are "Addis Scribe",
+  "Microsoft Azure Speech", or a self-hosted server's host; set `SPEECH_PROVIDER_LABEL` to change it
+  (for example "the ALX speech server"). Set `SPEECH_LANGUAGES` (e.g. `am,en,ar=ar-SA`) to
+  choose the languages; the server is used only for those, and other languages fall back to the browser.
+- **`POST /v1/speech/transcribe?lang=am`** takes the audio as the request body (`audio/wav`,
+  `audio/webm`, `audio/ogg`, `audio/mp4` or `audio/mpeg`; Azure takes WAV and Ogg only) and
+  returns `{ "text": "..." }`. Clips are at most **30 seconds** and `SPEECH_MAX_BYTES` (1 MiB).
+  The form converts recordings to 16 kHz mono WAV when the browser can, so every provider takes them.
+- **Privacy:** the audio is held in memory for one request and passed to the provider. It is never
+  written to disk, the database or a log, and neither is the text. Only the provider and the kind of failure are logged
+  (e.g. `speech provider "azure" failed: provider_error (HTTP 401)`). What the provider itself
+  keeps is set by your contract with it; with `selfhosted` the audio never leaves your servers.
+- **Rate limit:** voice answers have their own per-IP limit, `SPEECH_RATE_LIMIT_MAX` (default
+  300 per `RATE_LIMIT_WINDOW_MS`), on top of the API-wide one, because each one costs money or GPU time.
+- A wrong setup (unknown provider, missing key or URL) stops the API at start with a clear message,
+  and the API prints the provider and languages it uses when it starts. If the provider fails at runtime,
+  the learner is asked to type; nothing is made up.
 
 ## Career Gateway
 

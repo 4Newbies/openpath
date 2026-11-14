@@ -77,6 +77,174 @@ export function createBrowserVoice(win = globalThis) {
   };
 }
 
+// ---- server speech-to-text ----------------------------------------------------
+// Records a short clip with MediaRecorder and posts it to the API
+// (POST /v1/speech/transcribe), which passes it to the provider the server
+// names in GET /v1/speech/capabilities. Recording ends when the learner presses
+// "Stop listening", or after maxSeconds. The clip is only kept in memory until
+// it has been sent.
+
+const MEDIA_ERRORS = {
+  NotAllowedError: 'permission',
+  SecurityError: 'permission',
+  NotFoundError: 'no_microphone',
+  OverconstrainedError: 'no_microphone',
+};
+
+// What MediaRecorder can make, in order of preference (Safari only does mp4).
+const RECORDER_TYPES = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/mp4'];
+
+/** 16-bit mono PCM WAV from samples in [-1, 1]. */
+export function encodeWav(samples, rate) {
+  const view = new DataView(new ArrayBuffer(44 + samples.length * 2));
+  const ascii = (at, s) => [...s].forEach((c, i) => view.setUint8(at + i, c.charCodeAt(0)));
+  ascii(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  ascii(8, 'WAVE');
+  ascii(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  ascii(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+  return new Blob([view.buffer], { type: 'audio/wav' });
+}
+
+/**
+ * The recording as 16 kHz mono WAV, which every provider takes (Azure only
+ * takes WAV or Ogg; Safari records mp4). Rejects when the browser can't decode
+ * it; the caller then sends the recording as it is.
+ */
+export async function toWav(blob, { win = globalThis, rate = 16000, maxSeconds = 30 } = {}) {
+  const Offline = win.OfflineAudioContext || win.webkitOfflineAudioContext;
+  if (!Offline) throw new Error('no OfflineAudioContext');
+  const ctx = new Offline(1, 1, rate); // decodeAudioData resamples to the context's rate
+  const bytes = await blob.arrayBuffer();
+  const decoded = await new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(bytes, resolve, reject); // older Safari: callbacks only
+    p?.then?.(resolve, reject);
+  });
+  const length = Math.min(decoded.length, Math.round(rate * maxSeconds));
+  const mono = new Float32Array(length);
+  for (let c = 0; c < decoded.numberOfChannels; c++) {
+    const data = decoded.getChannelData(c);
+    for (let i = 0; i < length; i++) mono[i] += data[i] / decoded.numberOfChannels;
+  }
+  return encodeWav(mono, rate);
+}
+
+/**
+ * Voice provider that records in the browser and transcribes on the server.
+ * listen(lang, { onRecorded }) -> Promise<string>; onRecorded() is called when
+ * recording has ended and the clip is being sent. stop() ends recording and
+ * sends what was said; cancel() throws it away without sending anything.
+ */
+export function createServerVoice({ api, win = globalThis, maxSeconds = 30 } = {}) {
+  let active = null;
+  const stopTracks = (stream) => stream?.getTracks?.().forEach((t) => t.stop());
+
+  async function record(me, lang, onRecorded) {
+    let stream;
+    try {
+      stream = await win.navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      throw voiceError(MEDIA_ERRORS[e?.name] ?? 'failed');
+    }
+    if (me.cancelled) {
+      stopTracks(stream);
+      throw voiceError('aborted');
+    }
+
+    const type = RECORDER_TYPES.find((t) => win.MediaRecorder.isTypeSupported?.(t));
+    let chunks = [];
+    let timer;
+    try {
+      const recorder = new win.MediaRecorder(stream, type ? { mimeType: type } : undefined);
+      me.recorder = recorder;
+      recorder.ondataavailable = (e) => e.data?.size && chunks.push(e.data);
+      const stopped = new Promise((resolve) => (recorder.onstop = resolve));
+      recorder.start();
+      timer = win.setTimeout(() => recorder.state !== 'inactive' && recorder.stop(), maxSeconds * 1000);
+      await stopped;
+    } catch {
+      throw voiceError('failed');
+    } finally {
+      win.clearTimeout(timer);
+      stopTracks(stream); // the microphone light goes off as soon as recording ends
+    }
+    if (me.cancelled) {
+      chunks = [];
+      throw voiceError('aborted');
+    }
+    const mime = String(me.recorder.mimeType || type || chunks[0]?.type || 'audio/webm').split(';')[0];
+    let audio = new Blob(chunks, { type: mime });
+    chunks = [];
+    if (!audio.size) {
+      throw voiceError('no_speech');
+    }
+    onRecorded?.();
+    try {
+      audio = await toWav(audio, { win, maxSeconds });
+    } catch {
+      /* send the recording as it is */
+    }
+    if (me.cancelled) throw voiceError('aborted');
+
+    me.controller = new AbortController();
+    let reply;
+    try {
+      reply = await api.transcribe(audio, lang, { signal: me.controller.signal });
+    } catch (e) {
+      if (me.cancelled || e?.name === 'AbortError') throw voiceError('aborted');
+      if (e?.status === 0) throw voiceError('offline');
+      if (e?.status === 429) throw voiceError('busy');
+      throw voiceError('failed');
+    } finally {
+      audio = null;
+    }
+    const text = String(reply?.text ?? '').trim();
+    if (!text) throw voiceError('no_speech');
+    return text;
+  }
+
+  return {
+    isAvailable: () => Boolean(win.MediaRecorder && win.navigator?.mediaDevices?.getUserMedia),
+
+    async listen(lang, { onRecorded } = {}) {
+      if (win.navigator && win.navigator.onLine === false) throw voiceError('offline');
+      const me = { cancelled: false, recorder: null, controller: null };
+      active = me;
+      try {
+        return await record(me, lang, onRecorded);
+      } finally {
+        if (active === me) active = null;
+      }
+    },
+
+    /** End recording; listen() then sends the clip and settles with the text. */
+    stop() {
+      if (active?.recorder?.state === 'recording') active.recorder.stop();
+      else if (active && !active.recorder) this.cancel(); // still asking for the microphone
+    },
+
+    /** Throw the recording away: nothing is sent (or the upload is cancelled). */
+    cancel() {
+      if (!active) return;
+      active.cancelled = true;
+      if (active.recorder?.state === 'recording') active.recorder.stop();
+      active.controller?.abort();
+    },
+  };
+}
+
 // ---- matching spoken words to options ---------------------------------------
 
 const norm = (s) =>

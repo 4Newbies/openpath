@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadSpeechConfig } from './speech.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,5 +42,7 @@ export function loadConfig(env = process.env) {
     // Without a key it is open in development and switched off in production.
     jobsApiKey: env.JOBS_API_KEY || '',
     production: env.NODE_ENV === 'production',
+    // Optional server speech-to-text (SPEECH_PROVIDER, see speech.js). Off by default.
+    speech: loadSpeechConfig(env),
   };
 }

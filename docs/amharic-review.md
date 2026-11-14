@@ -274,6 +274,9 @@ Buttons, messages and help text around the questions and in the job list.
 | youSaidChoice | You said: {text}. Chosen: {option}. Change it or press Next. | ያሉት፦ {text}። የተመረጠው፦ {option}። ይቀይሩት ወይም «ቀጣይ»ን ይጫኑ። | ያሉት፦ {text}። የመረጥነው፦ {option}። ይቀይሩ ወይም «ቀጣይ»ን ይጫኑ። |  |
 | noMatch | You said: {text}. That does not match an answer, so nothing was chosen. Please choose an answer. | ያሉት፦ {text}። ይህ ከማንኛውም መልስ ጋር አይመሳሰልም፤ ስለዚህ ምንም አልተመረጠም። እባክዎ መልስ ይምረጡ። | ያሉት፦ {text}። ይህን መልስ አላገኘንም። እባክዎ አንዱን ይምረጡ። |  |
 | consentText | Your voice is sent over the internet to your browser's speech service (Google, if you use Chrome) to turn it into text. Allow? | ድምፅዎ ወደ ጽሑፍ እንዲቀየር በኢንተርኔት ወደ አሳሽዎ የንግግር አገልግሎት ይላካል (Chromeን ከተጠቀሙ ወደ Google)። ይፈቅዳሉ? | ድምፅዎ ጽሑፍ እንዲሆን በኢንተርኔት ወደ የንግግር አገልግሎት ይሄዳል (Chromeን ከተጠቀሙ Google)። ይስማማሉ? |  |
+| consentServer | Your voice is recorded and sent over the internet to {provider} to turn it into text. This site does not keep the recording. Allow? | ድምፅዎ ተቀድቶ ወደ ጽሑፍ እንዲቀየር በኢንተርኔት ወደ {provider} ይላካል። ይህ ድረ-ገጽ ቅጂውን አያስቀምጥም። ይፈቅዳሉ? | ድምፅዎ ተቀድቶ ጽሑፍ እንዲሆን በኢንተርኔት ወደ {provider} ይሄዳል። ቅጂውን አናስቀምጥም። ይስማማሉ? |  |
+| listeningServer | Listening. When you have finished, press Stop listening. | በማዳመጥ ላይ። ሲጨርሱ «ማዳመጥ አቁም»ን ይጫኑ። | በማዳመጥ ላይ። ሲጨርሱ «ማዳመጥ አቁም»ን ይጫኑ። |  |
+| transcribing | Turning your voice into text… | ድምፅዎን ወደ ጽሑፍ በመቀየር ላይ… | ጽሑፍ በማዘጋጀት ላይ… |  |
 | consentAllow | Allow | ፍቀድ | አዎ፣ እሺ |  |
 | consentDeny | No, I will type | አይ፣ እጽፋለሁ | – |  |
 | voiceDenied | OK. You can type your answers. | እሺ። መልሶችዎን መጻፍ ይችላሉ። | እሺ። እባክዎ ይጻፉ። |  |
@@ -282,6 +285,7 @@ Buttons, messages and help text around the questions and in the job list.
 | voice_offline | Voice input needs an internet connection. Please type your answer. | በድምፅ ለመመለስ የኢንተርኔት ግንኙነት ያስፈልጋል። እባክዎ መልስዎን ይጻፉ። | ለዚህ ኢንተርኔት ያስፈልጋል። እባክዎ ይጻፉ። |  |
 | voice_no_microphone | No microphone was found. Please type your answer. | ማይክሮፎን አልተገኘም። እባክዎ መልስዎን ይጻፉ። | ማይክሮፎን የለም። እባክዎ ይጻፉ። |  |
 | voice_failed | Voice input did not work. Please type your answer. | በድምፅ መመለስ አልሰራም። እባክዎ መልስዎን ይጻፉ። | አልሰራም። እባክዎ ይጻፉ። |  |
+| voice_busy | Too many people are using voice input right now. Please type your answer, or try again later. | አሁን ብዙ ሰዎች በድምፅ እየመለሱ ነው። እባክዎ መልስዎን ይጻፉ ወይም ቆይተው እንደገና ይሞክሩ። | ድምፅ አሁን ተይዟል። እባክዎ ይጻፉ ወይም ቆይተው ይሞክሩ። |  |
 | language | Language | ቋንቋ | – |  |
 | dateFormat | {day} {month} {year} | {month} {day}፣ {year} | – |  |
 | choose | Choose | ይምረጡ | – |  |

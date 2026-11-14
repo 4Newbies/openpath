@@ -7,7 +7,7 @@ import { errorMessage, FALLBACK_LANG, labelOf, langAttrs, packInfo, pick, t, tLi
 import { createNavigator, REVIEW } from './navigator.js';
 import { earlierAnswer, forgetEntries, forgetProfile, hasProfile, saveProfile } from './profile.js';
 import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
-import { getSpeech, getVoice, loadVoiceModule, voiceAvailable } from './providers.js';
+import { getSpeech, getVoice, loadVoiceModule, serverLang, speechServerFrom, voiceAvailable, voiceKind } from './providers.js';
 import { renderReview } from './review.js';
 import { renderSetup } from './setup.js';
 import { switchCalendar } from './steps/date.js';
@@ -158,6 +158,13 @@ export class OpenPathFlow extends HTMLElement {
         () => this.setOffline(false),
         (e) => isUnreachable(e) && this.setOffline(true),
       );
+      // Which languages the server can turn into text, and who does it. Wait
+      // briefly only when voice input may be offered on the first screen.
+      const caps = this.api.speechCapabilities().then(
+        (c) => (this.speechServer = speechServerFrom(c, this.api)),
+        () => null,
+      );
+      if (!this.prefs.chosen || this.prefs.voice) await Promise.race([caps, new Promise((r) => setTimeout(r, 1500))]);
       // "Send" was pressed offline last time: keep waiting, and try again now.
       if (this.store.state.pendingSubmit) {
         this.queued = true;
@@ -354,7 +361,7 @@ export class OpenPathFlow extends HTMLElement {
     const lang = this.uiLang;
     return {
       readAloud: getSpeech().isAvailable(lang) || this.flow.questions.some((q) => q.audio?.[lang]),
-      voice: voiceAvailable(),
+      voice: voiceAvailable(lang, this.speechServer),
     };
   }
 
@@ -366,8 +373,25 @@ export class OpenPathFlow extends HTMLElement {
       q.voice === true &&
       ['text', 'phone', 'single', 'multi', 'yesno'].includes(q.type) &&
       this.prefs.voiceConsent !== 'deny' &&
-      voiceAvailable()
+      voiceAvailable(this.uiLang, this.speechServer)
     );
+  }
+
+  /**
+   * Which voice input this language uses, and where the voice goes: the
+   * server's provider when it transcribes this language, otherwise the
+   * browser's recogniser (or the host's provider).
+   */
+  voiceTarget() {
+    const kind = voiceKind(this.uiLang, this.speechServer);
+    return kind === 'server'
+      ? { kind, consentFor: `server:${this.speechServer.label}`, provider: this.speechServer.label }
+      : { kind, consentFor: 'browser' };
+  }
+
+  /** Consent covers one destination: a new one (another language, another provider) asks again. */
+  voiceConsented() {
+    return this.prefs.voiceConsent === 'allow' && (this.prefs.voiceConsentFor ?? 'browser') === this.voiceTarget().consentFor;
   }
 
   /** The mic button and a status line under it. Its text label says what it
@@ -390,17 +414,20 @@ export class OpenPathFlow extends HTMLElement {
 
   micClicked(q) {
     if (this.listening) {
-      this.listenProvider?.stop(); // listen() then settles with what was heard
+      if (!this.transcribing) this.listenProvider?.stop(); // listen() then settles with what was heard
       return;
     }
-    if (this.prefs.voiceConsent === 'allow') this.startListening(q);
+    if (this.voiceConsented()) this.startListening(q);
     else this.showConsent(q);
   }
 
   showConsent(q) {
     const block = this.view.querySelector('.op-voice');
     const textId = `op-${this.uid}-consent`;
-    const text = h('p', { id: textId, class: 'op-consent-text', tabindex: '-1', text: this.tr('consentText') });
+    const target = this.voiceTarget();
+    // Name where the audio goes: the provider the server names, or the browser's service.
+    const message = target.kind === 'server' ? this.tr('consentServer', { provider: target.provider }) : this.tr('consentText');
+    const text = h('p', { id: textId, class: 'op-consent-text', tabindex: '-1', text: message });
     block.textContent = '';
     block.append(
       h(
@@ -415,7 +442,7 @@ export class OpenPathFlow extends HTMLElement {
             class: 'op-button op-primary',
             text: this.tr('consentAllow'),
             onclick: () => {
-              this.setPrefs({ voiceConsent: 'allow' });
+              this.setPrefs({ voiceConsent: 'allow', voiceConsentFor: target.consentFor });
               this.render();
               this.view.querySelector('.op-mic')?.focus();
               this.startListening(q);
@@ -441,7 +468,10 @@ export class OpenPathFlow extends HTMLElement {
     const b = this.view.querySelector('.op-mic');
     if (!b) return;
     b.classList.toggle('op-mic-on', on);
-    setText(b, this.tr(on ? 'stopListening' : 'speakAnswer'));
+    // While a recording is turned into text the button can't do anything.
+    if (this.transcribing) b.setAttribute('aria-disabled', 'true');
+    else b.removeAttribute('aria-disabled');
+    setText(b, this.tr(this.transcribing ? 'transcribing' : on ? 'stopListening' : 'speakAnswer'));
   }
 
   setVoiceStatus(q, text) {
@@ -455,31 +485,43 @@ export class OpenPathFlow extends HTMLElement {
     this.stopSpeech(); // don't let read-aloud talk into the microphone
     const token = {};
     this.listenToken = token;
+    const target = this.voiceTarget();
     let mod;
     try {
       mod = await loadVoiceModule();
-      this.listenProvider = await getVoice();
+      this.listenProvider = await getVoice(target.kind, this.speechServer);
     } catch {
       return this.setVoiceStatus(q, this.tr('voice_failed'));
     }
     if (this.listenToken !== token) return;
     this.listening = true;
+    this.transcribing = false;
     this.setMic(true);
-    this.announce(this.tr('listening'));
+    // A server recording doesn't end by itself when the learner stops talking.
+    this.announce(this.tr(target.kind === 'server' ? 'listeningServer' : 'listening'));
+    const lang = target.kind === 'server' ? serverLang(this.uiLang, this.speechServer) : this.uiLang;
+    const onRecorded = () => {
+      if (this.listenToken !== token) return;
+      this.transcribing = true;
+      this.setMic(true);
+      this.setVoiceStatus(q, this.tr('transcribing'));
+    };
     let text;
     try {
-      text = String((await this.listenProvider.listen(this.uiLang)) ?? '').trim();
+      text = String((await this.listenProvider.listen(lang, { onRecorded })) ?? '').trim();
       if (!text) throw Object.assign(new Error('no_speech'), { code: 'no_speech' });
     } catch (e) {
       if (this.listenToken !== token) return; // stopped by a step change or Escape
       this.listening = false;
+      this.transcribing = false;
       this.setMic(false);
       if (e?.code === 'aborted') return this.setVoiceStatus(q, this.tr('stopped'));
-      const known = ['permission', 'no_speech', 'offline', 'no_microphone'];
+      const known = ['permission', 'no_speech', 'offline', 'no_microphone', 'busy'];
       return this.setVoiceStatus(q, this.tr(`voice_${known.includes(e?.code) ? e.code : 'failed'}`));
     }
     if (this.listenToken !== token) return;
     this.listening = false;
+    this.transcribing = false;
     this.setMic(false);
     this.useSpokenAnswer(q, text, mod);
   }
@@ -488,7 +530,10 @@ export class OpenPathFlow extends HTMLElement {
     if (!this.listening) return;
     this.listenToken = null;
     this.listening = false;
-    this.listenProvider?.stop();
+    this.transcribing = false;
+    // Escape or a step change: throw a server recording away unsent.
+    if (typeof this.listenProvider?.cancel === 'function') this.listenProvider.cancel();
+    else this.listenProvider?.stop();
     this.setMic(false);
   }
 

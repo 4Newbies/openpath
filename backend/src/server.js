@@ -55,6 +55,12 @@ const server = app.listen(config.port, () => {
       ? `[openpath] rate limit: ${config.rateLimitMax} requests per IP address per ${Math.round(config.rateLimitWindowMs / 60000)} min (RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)`
       : '[openpath] rate limit: off (RATE_LIMIT_MAX=0)',
   );
+  const sp = config.speech;
+  console.log(
+    sp.provider === 'none'
+      ? '[openpath] speech-to-text: off (SPEECH_PROVIDER=none); forms use the browser recogniser'
+      : `[openpath] speech-to-text: ${sp.provider} ("${sp.label}") for ${Object.keys(sp.languages).join(', ')}`,
+  );
 });
 
 function shutdown() {

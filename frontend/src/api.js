@@ -26,16 +26,19 @@ export function newClientKey(cryptoImpl = globalThis.crypto) {
 export function createApi(base, { fetchImpl } = {}) {
   const root = base.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1';
 
-  async function call(method, path, body) {
+  // raw: a Blob sent as it is, with its own type (audio for speech-to-text).
+  async function call(method, path, body, { raw, signal } = {}) {
     let res;
     try {
       res = await (fetchImpl ?? globalThis.fetch)(root + path, {
         method,
         credentials: 'omit',
-        headers: body ? { 'Content-Type': 'application/json' } : {},
-        body: body ? JSON.stringify(body) : undefined,
+        headers: raw ? { 'Content-Type': raw.type } : body ? { 'Content-Type': 'application/json' } : {},
+        body: raw ?? (body ? JSON.stringify(body) : undefined),
+        signal,
       });
     } catch (e) {
+      if (e?.name === 'AbortError') throw e;
       throw new ApiError(0, { error: { code: 'network', message: e.message } });
     }
     let data = null;
@@ -57,5 +60,8 @@ export function createApi(base, { fetchImpl } = {}) {
     getSession: (id) => call('GET', `/sessions/${enc(id)}`),
     saveAnswers: (id, answers, step) => call('PUT', `/sessions/${enc(id)}/answers`, { answers, step }),
     submit: (id, answers) => call('POST', `/sessions/${enc(id)}/submit`, { answers }),
+    // Server speech-to-text (optional): which languages, and who does it.
+    speechCapabilities: () => call('GET', '/speech/capabilities'),
+    transcribe: (audio, lang, { signal } = {}) => call('POST', `/speech/transcribe?lang=${enc(lang)}`, null, { raw: audio, signal }),
   };
 }

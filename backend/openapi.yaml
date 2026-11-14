@@ -13,6 +13,8 @@ servers:
   - url: http://localhost:4000/v1
 tags:
   - name: sessions
+  - name: speech
+    description: Optional server speech-to-text (SPEECH_PROVIDER). Off by default.
 paths:
   /flows:
     get:
@@ -251,6 +253,95 @@ paths:
         '429': { $ref: '#/components/responses/RateLimited' }
         '500':
           description: The employer form's job could not be saved (job_not_saved); nothing was submitted, try again
+  /speech/capabilities:
+    get:
+      tags: [speech]
+      summary: Which languages the server can turn into text, and who does it
+      description: >-
+        The form calls this to choose a voice provider per language: the server when it lists
+        the form's language, otherwise the browser's own recogniser, otherwise no microphone
+        button. `label` names where the audio goes (for the consent question): a service name
+        such as "Addis Scribe" or "Microsoft Azure Speech", the host of a self-hosted server,
+        or SPEECH_PROVIDER_LABEL. With SPEECH_PROVIDER=none, label is null and languages is empty.
+      responses:
+        '200':
+          description: The speech capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [label, languages, formats, maxSeconds, maxBytes]
+                properties:
+                  label: { type: [string, 'null'], example: Addis Scribe }
+                  languages: { type: array, items: { type: string }, example: [am] }
+                  formats:
+                    type: array
+                    description: Audio types POST /speech/transcribe accepts with this provider.
+                    items: { type: string, enum: [audio/wav, audio/webm, audio/ogg, audio/mp4, audio/mpeg] }
+                  maxSeconds: { type: integer, const: 30 }
+                  maxBytes: { type: integer, example: 1048576, description: SPEECH_MAX_BYTES }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /speech/transcribe:
+    post:
+      tags: [speech]
+      summary: Turn a short audio clip into text
+      description: >-
+        Send the audio as the request body (not JSON or multipart), with its type in
+        Content-Type and the language in `lang`. At most 30 seconds (checked exactly for WAV)
+        and SPEECH_MAX_BYTES (default 1 MiB). The form sends 16 kHz mono WAV when the browser
+        can convert the recording, otherwise what MediaRecorder made.
+        The audio is held in memory for this request only and passed to the provider; neither
+        the audio nor the text is stored or logged. The text is a suggestion: the form puts it
+        in the field for the learner to check and edit, and never moves on by itself.
+        Rate limited per IP address by SPEECH_RATE_LIMIT_MAX, on top of the API-wide limit.
+      parameters:
+        - name: lang
+          in: query
+          required: true
+          description: A language code listed by GET /speech/capabilities.
+          schema: { type: string, example: am }
+      requestBody:
+        required: true
+        content:
+          audio/wav: { schema: { type: string, format: binary } }
+          audio/webm: { schema: { type: string, format: binary } }
+          audio/ogg: { schema: { type: string, format: binary } }
+          audio/mp4: { schema: { type: string, format: binary } }
+          audio/mpeg: { schema: { type: string, format: binary } }
+      responses:
+        '200':
+          description: >-
+            What was said. Empty text means nothing was heard.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [text]
+                properties:
+                  text: { type: string, example: ዮናስ አበበ }
+        '400':
+          description: >-
+            invalid_lang (missing or not a language code), unsupported_language (the provider
+            does not do this language), empty_audio, or invalid_audio (a WAV file that can't be read)
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '404':
+          description: speech_off - SPEECH_PROVIDER is none
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '413':
+          description: payload_too_large (over SPEECH_MAX_BYTES) or audio_too_long (over 30 seconds)
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '415':
+          description: unsupported_media_type - not an audio type this provider accepts
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '422':
+          description: speech_rejected - the provider could not read this audio
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '502':
+          description: speech_failed - the provider is down, or its key is wrong
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '504':
+          description: speech_timeout - the provider took longer than SPEECH_TIMEOUT_MS
           content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 components:
   parameters:

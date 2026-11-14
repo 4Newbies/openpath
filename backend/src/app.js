@@ -8,13 +8,16 @@ import { isOpen, jobForSearch, jobFromEmployerAnswers, jobsJsonLd, validateJobPo
 import { ApiError, answerError, errorBody, errorHandler } from './errors.js';
 import { newResumeCode, newSessionId, SESSION_ID_RE } from './ids.js';
 import { StoreConflict, StoreDuplicate } from './store/memory.js';
+import { AUDIO_TYPES, createSpeechProvider, MAX_SECONDS, wavSeconds } from './speech.js';
 
 
 /**
  * Build the Express app.
- * @param {{ store, flows: Map<string, object>, config }} deps
+ * @param {{ store, flows: Map<string, object>, config, speech? }} deps
+ *   speech: a speech-to-text provider (see speech.js); by default the one
+ *   SPEECH_PROVIDER names, or none.
  */
-export function createApp({ store, flows, config, log = console }) {
+export function createApp({ store, flows, config, log = console, speech = createSpeechProvider(config.speech) }) {
   const app = express();
   app.disable('x-powered-by');
   if (config.trustProxy) app.set('trust proxy', config.trustProxy);
@@ -286,6 +289,74 @@ export function createApp({ store, flows, config, log = console }) {
     if (errors.length) throw new ApiError(400, 'invalid_job', `This is not a valid JobPosting: ${errors.join('; ')}.`);
     const { created } = await store.saveJob(job);
     res.status(created ? 201 : 200).json(withContext(job));
+  });
+
+  // ---- speech-to-text (optional, SPEECH_PROVIDER) ---------------------------
+  // The audio is only held in memory for this request and passed to the
+  // provider. Neither the audio nor the text is stored or logged.
+  const speechConfig = config.speech ?? {};
+  const maxBytes = speechConfig.maxBytes ?? 1024 * 1024;
+
+  v1.get('/speech/capabilities', (req, res) => {
+    res.json({
+      label: speech?.label ?? null,
+      languages: speech?.languages ?? [],
+      formats: speech?.accepts ?? [],
+      maxSeconds: MAX_SECONDS,
+      maxBytes,
+    });
+  });
+
+  // Speech costs money (or a GPU) per request: a separate, tighter limit per IP address.
+  const speechLimit =
+    speechConfig.rateLimitMax > 0
+      ? rateLimit({
+          windowMs: config.rateLimitWindowMs,
+          limit: speechConfig.rateLimitMax,
+          standardHeaders: 'draft-8',
+          legacyHeaders: false,
+          handler: (req, res) =>
+            res.status(429).json(errorBody('rate_limited', 'Too many voice answers from this network. Please type your answer, or try again later.')),
+        })
+      : (req, res, next) => next();
+
+  // "audio/webm;codecs=opus" -> "audio/webm"
+  const MIME_ALIASES = { 'audio/x-wav': 'audio/wav', 'audio/wave': 'audio/wav', 'audio/vnd.wave': 'audio/wav', 'audio/mp3': 'audio/mpeg', 'audio/x-m4a': 'audio/mp4' };
+  const baseMime = (h) => {
+    const m = String(h ?? '').split(';')[0].trim().toLowerCase();
+    return MIME_ALIASES[m] ?? m;
+  };
+
+  v1.post('/speech/transcribe', speechLimit, express.raw({ type: () => true, limit: maxBytes }), async (req, res) => {
+    if (!speech) throw new ApiError(404, 'speech_off', 'Speech-to-text is not set up on this server.');
+    const lang = req.query.lang;
+    if (typeof lang !== 'string' || !LANG_RE.test(lang)) {
+      throw new ApiError(400, 'invalid_lang', 'Send the language as ?lang=, a code such as "am" or "en".', 'lang');
+    }
+    if (!speech.languages.includes(lang)) throw new ApiError(400, 'unsupported_language', 'The speech service here cannot transcribe this language.', 'lang');
+    const mime = baseMime(req.get('content-type'));
+    if (!AUDIO_TYPES.includes(mime) || !speech.accepts.includes(mime)) {
+      throw new ApiError(415, 'unsupported_media_type', `Send the audio as the request body, as one of: ${speech.accepts.join(', ')}.`);
+    }
+    const audio = req.body;
+    if (!Buffer.isBuffer(audio) || audio.length === 0) throw new ApiError(400, 'empty_audio', 'The request has no audio.');
+    if (mime === 'audio/wav') {
+      const seconds = wavSeconds(audio);
+      if (seconds === null) throw new ApiError(400, 'invalid_audio', 'This is not a WAV file that can be read.');
+      if (seconds > MAX_SECONDS + 0.5) throw new ApiError(413, 'audio_too_long', `Audio clips can be at most ${MAX_SECONDS} seconds long.`);
+    }
+    req.body = null; // nothing else keeps a reference to the audio
+    try {
+      const signal = speechConfig.timeoutMs > 0 ? AbortSignal.timeout(speechConfig.timeoutMs) : undefined;
+      const { text } = await speech.transcribe({ audio, mime, lang, signal });
+      res.json({ text: typeof text === 'string' ? text.trim() : '' });
+    } catch (e) {
+      // Only the provider and the kind of failure: never the audio or any text.
+      log.warn(`[openpath] speech provider "${speech.id}" failed: ${e?.code ?? 'error'}${e?.status ? ` (HTTP ${e.status})` : ''}`);
+      if (e?.code === 'timeout') throw new ApiError(504, 'speech_timeout', 'The speech service took too long. Please try again or type your answer.');
+      if (e?.code === 'provider_rejected') throw new ApiError(422, 'speech_rejected', 'The speech service could not read this audio. Please try again or type your answer.');
+      throw new ApiError(502, 'speech_failed', 'The speech service is not working right now. Please type your answer.');
+    }
   });
 
   app.use('/v1', v1);

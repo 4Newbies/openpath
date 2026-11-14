@@ -314,7 +314,7 @@ describe('voice input', () => {
     expect(savedPrefs().voiceConsent).toBe('allow');
     await tick();
     await tick();
-    expect(voice.listen).toHaveBeenCalledWith('en');
+    expect(voice.listen.mock.calls[0][0]).toBe('en');
     expect($(el, 'input').value).toBe('Hana Tesfaye');
     expect(active(el)).toBe($(el, 'input'));
     expect($(el, '.op-voice-status').textContent).toBe('You said: Hana Tesfaye. Edit it or press Next.');
