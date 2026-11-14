@@ -4,8 +4,38 @@ import { h, setText } from './dom.js';
 // everything off, so screen reader, voice typing and switch users can go
 // straight on with their own tools.
 
+/**
+ * The language switcher, used here and in <openpath-jobs>: only when the host
+ * offers several languages. Each language is written in itself, with its own
+ * lang, and the current one is pressed. Null when there is nothing to switch.
+ */
+export function renderLanguageSwitcher({ tr, languages = [], current, onLanguage }) {
+  if (languages.length < 2) return null;
+  return h(
+    'fieldset',
+    { class: 'op-group op-lang' },
+    h('legend', { class: 'op-legend op-subheading', text: tr('language') }),
+    h(
+      'div',
+      { class: 'op-lang-list' },
+      languages.map((l) =>
+        h('button', {
+          type: 'button',
+          class: 'op-button op-secondary op-small',
+          lang: l.code,
+          dir: l.dir,
+          'data-lang': l.code,
+          'aria-pressed': l.code === current ? 'true' : 'false',
+          onclick: () => l.code !== current && onLanguage(l.code),
+          text: l.name,
+        }),
+      ),
+    ),
+  );
+}
+
 // When the host offers several languages, a language switcher comes right
-// after the heading: each language is written in itself, with its own lang.
+// after the heading.
 // "My details on this device" says whether a name and phone are kept here
 // and, when they are, offers "Forget my details" (for shared computers).
 export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContinue, onPreview, languages = [], current, onLanguage, detailsKept = false, onForgetDetails }) {
@@ -35,30 +65,7 @@ export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContin
 
   const chosen = () => Object.fromEntries(Object.entries(boxes).map(([k, el]) => [k, el.checked]));
   const heading = h('h2', { id: headingId, class: 'op-question', tabindex: '-1', text: tr('setupTitle') });
-  const languageSwitcher =
-    languages.length > 1
-      ? h(
-          'fieldset',
-          { class: 'op-group op-lang' },
-          h('legend', { class: 'op-legend op-subheading', text: tr('language') }),
-          h(
-            'div',
-            { class: 'op-lang-list' },
-            languages.map((l) =>
-              h('button', {
-                type: 'button',
-                class: 'op-button op-secondary op-small',
-                lang: l.code,
-                dir: l.dir,
-                'data-lang': l.code,
-                'aria-pressed': l.code === current ? 'true' : 'false',
-                onclick: () => l.code !== current && onLanguage(l.code),
-                text: l.name,
-              }),
-            ),
-          ),
-        )
-      : null;
+  const languageSwitcher = renderLanguageSwitcher({ tr, languages, current, onLanguage });
   const detailsNote = h('p', { class: 'op-hint op-details-note', text: tr(detailsKept ? 'profileKept' : 'profileNotKept') });
   const forget =
     detailsKept && onForgetDetails

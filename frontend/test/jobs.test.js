@@ -187,3 +187,41 @@ describe('<openpath-jobs>', () => {
     await vi.waitFor(() => expect(el.shadowRoot.activeElement?.dataset.job).toBe('sample-virtual-assistant-gondar'));
   });
 });
+
+describe('the language switcher in the job list', () => {
+  const langButtons = (el) => $$(el, '.op-lang button');
+
+  it('is not shown when the host offers one language', async () => {
+    const el = await mountJobs({ lang: 'en' });
+    expect($(el, '.op-lang')).toBeNull();
+  });
+
+  it('comes right after the "Jobs" heading, each language written in itself, the current one pressed', async () => {
+    const el = await mountJobs({ lang: 'en', languages: 'en,am,ar' });
+    const switcher = $(el, '.op-lang');
+    expect(switcher.previousElementSibling.classList.contains('op-jobs-heading')).toBe(true);
+    expect(switcher.querySelector('legend').textContent).toBe('Language');
+    expect(langButtons(el).map((b) => [b.textContent, b.lang, b.getAttribute('aria-pressed')])).toEqual([
+      ['English', 'en', 'true'],
+      ['አማርኛ', 'am', 'false'],
+      ['العربية', 'ar', 'false'],
+    ]);
+  });
+
+  it('switches the whole list, keeps focus on the chosen language, and is remembered for Apply', async () => {
+    const el = await mountJobs({ lang: 'en', languages: 'en,am,ar' }, { api: false });
+    langButtons(el).find((b) => b.lang === 'am').click();
+    await vi.waitFor(() => expect($(el, '.op-jobs-heading').textContent).toBe('ሥራዎች'));
+    expect(el.shadowRoot.activeElement.lang).toBe('am');
+    expect(el.shadowRoot.activeElement.getAttribute('aria-pressed')).toBe('true');
+    expect($(el, '.op-root').getAttribute('lang')).toBe('am');
+    expect(JSON.parse(localStorage.getItem('openpath:prefs')).lang).toBe('am');
+
+    langButtons(el).find((b) => b.lang === 'ar').click();
+    await vi.waitFor(() => expect($(el, '.op-root').getAttribute('dir')).toBe('rtl'));
+    expect($(el, '.op-jobs-heading').textContent).toBe('الوظائف');
+
+    $(el, '.op-job button').click();
+    expect($(el, 'openpath-flow').getAttribute('lang')).toBe('ar');
+  });
+});

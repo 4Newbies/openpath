@@ -190,7 +190,7 @@ http://localhost:5173/demo/employer.html (employers).
 |-----------|--------------|
 | `src` | URL of the jobs: schema.org/JobPosting JSON (a list, one job, or JSON-LD with `@graph`). |
 | `api` | Also lists the API's jobs (`GET /v1/jobs`; the API's version of a job wins) and saves applications there. Without it the file alone is used; if the API is down the file still shows. |
-| `lang`, `languages` | Language, as for `<openpath-flow>`. The learner's choice and helpers from "How do you want to use this?" are followed. |
+| `lang`, `languages` | Language, as for `<openpath-flow>`. With several `languages` the list has its own language switcher under the "Jobs" heading; the choice is saved like the form's, so *Apply* opens in it. The learner's choice and helpers from "How do you want to use this?" are followed. |
 | `apply-flow` | Question file opened by *Apply* (default `job-application`), from `flows-path` (default: the `questions/` folder next to `openpath.js`). |
 | `heading-level` | Level of the "Jobs" heading (default 2); job titles are one level below. |
 

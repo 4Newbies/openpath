@@ -6,7 +6,8 @@ import { createApi } from './api.js';
 import { h, setText } from './dom.js';
 import { folderUrl, resolveLanguages } from './language.js';
 import { FALLBACK_LANG, langAttrs, packInfo, t, tList } from './messages.js';
-import { loadPrefs } from './prefs.js';
+import { loadPrefs, savePrefs } from './prefs.js';
+import { renderLanguageSwitcher } from './setup.js';
 import css from './styles.css?inline';
 import jobsCss from './jobs.css?inline';
 
@@ -94,14 +95,27 @@ export class OpenPathJobs extends HTMLElement {
     await this.load();
   }
 
+  /**
+   * The learner picked a language in the list's own switcher. It is saved like
+   * the form's choice, so "Apply" and other OpenPath forms on this site follow it.
+   */
+  async switchLanguage(code) {
+    savePrefs({ ...loadPrefs(), lang: code });
+    await this.useLanguage();
+    this.render();
+    // Focus stays on the language just chosen (now pressed).
+    this.view.querySelector(`.op-lang [data-lang="${code}"]`)?.focus();
+  }
+
   /** Follow the learner's helpers and language from "How do you want to use this?". */
   async useLanguage() {
     this.prefs = loadPrefs();
     this.root.toggleAttribute('data-larger-text', Boolean(this.prefs.largerText));
     this.root.toggleAttribute('data-high-contrast', Boolean(this.prefs.highContrast));
     this.root.toggleAttribute('data-simple', Boolean(this.prefs.simple));
-    const { lang } = await resolveLanguages(this, this.prefs);
+    const { lang, switcher } = await resolveLanguages(this, this.prefs);
     this.activeLang = lang;
+    this.switcherLangs = switcher;
     this.root.setAttribute('lang', lang);
     this.root.setAttribute('dir', packInfo(lang).dir);
   }
@@ -318,6 +332,7 @@ export class OpenPathJobs extends HTMLElement {
     this.listNode = h('ul', { class: 'op-jobs-list', 'aria-labelledby': titleId });
     this.view.append(
       h(`h${this.level}`, { id: titleId, class: 'op-jobs-heading', tabindex: '-1', text: this.tr('jobsTitle') }),
+      renderLanguageSwitcher({ tr: (k, v) => this.tr(k, v), languages: this.switcherLangs, current: this.uiLang, onLanguage: (code) => this.switchLanguage(code) }),
       this.jobs.length ? this.renderFilter() : null,
       h('p', { class: 'op-jobs-count', text: this.countText() }),
       this.listNode,
