@@ -2,9 +2,10 @@ import { validateAnswer, validateAnswers } from '../../shared/flow.js';
 import { ApiError, createApi } from './api.js';
 import { h } from './dom.js';
 import { loadFlow } from './loader.js';
-import { errorMessage, pick, t } from './messages.js';
+import { errorMessage, labelOf, pick, t } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
 import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
+import { getSpeech } from './providers.js';
 import { renderReview } from './review.js';
 import { renderSetup } from './setup.js';
 import { renderStep } from './steps/index.js';
@@ -47,7 +48,15 @@ export class OpenPathFlow extends HTMLElement {
     this.view = h('div', { class: 'op-card' }, h('p', { text: this.tr('loading') }));
     this.root = h('div', { class: 'op-root', lang: this.uiLang }, this.view, this.live);
     shadow.append(h('style', { text: css }), this.root);
+    // Escape stops read-aloud and voice input. Nothing else is taken over.
+    this.root.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && (this.speaking || this.listening)) this.stopHelpers({ announce: true });
+    });
     this.ready = this.start();
+  }
+
+  disconnectedCallback() {
+    this.stopHelpers();
   }
 
   attributeChangedCallback(name) {
@@ -70,6 +79,8 @@ export class OpenPathFlow extends HTMLElement {
     if (this.api && this.store.state.sessionId) await this.checkSession();
     const step = this.nav.resolve(this.store.state.step, this.store.state.answers);
     if (step !== this.store.state.step) this.store.setStep(step);
+    // Browser voices load late; wait briefly only when read-aloud may be offered.
+    if (!this.prefs.chosen || this.prefs.readAloud) await getSpeech().whenReady?.(1000);
     // First visit: ask how the learner wants to use the form.
     if (!this.prefs.chosen) this.openSetup({ focus: false });
     else this.go(step, { focus: false });
@@ -99,12 +110,92 @@ export class OpenPathFlow extends HTMLElement {
 
   /** Which optional helpers this browser (or a host provider) can offer. */
   helperAvailability() {
-    return { readAloud: false, voice: false };
+    const lang = this.uiLang;
+    return {
+      readAloud: getSpeech().isAvailable(lang) || this.flow.questions.some((q) => q.audio?.[lang]),
+      voice: false,
+    };
+  }
+
+  // ---- read-aloud ------------------------------------------------------------
+
+  /** What "Listen" reads on the current screen: question, hint and options. */
+  speechContent() {
+    const lang = this.uiLang;
+    const tr = (k, v) => this.tr(k, v);
+    const join = (...parts) => parts.filter(Boolean).join('. ').replace(/\.\./g, '.');
+    if (this.step === SETUP) return { text: join(tr('setupTitle'), tr('setupIntro')) };
+    if (this.step === DONE) return { text: join(tr('doneTitle'), tr('doneBody')) };
+    if (this.step === REVIEW) {
+      const items = this.view.querySelectorAll('.op-review-item');
+      return { text: join(tr('reviewTitle'), tr('reviewIntro'), ...[...items].map((i) => `${i.querySelector('dt').textContent}: ${i.querySelector('dd').textContent}`)) };
+    }
+    const q = this.nav.question(this.step);
+    const options =
+      q.type === 'yesno' ? [tr('yes'), tr('no')] : (q.options ?? []).map((o) => labelOf(o, lang, this.simple).text);
+    return {
+      text: join(labelOf(q, lang, this.simple).text, pick(q.hint, lang).text, options.length ? `${tr('choices')} ${options.join(', ')}` : ''),
+      audioUrl: q.audio?.[lang],
+    };
+  }
+
+  canSpeak() {
+    if (!this.prefs?.readAloud) return false;
+    const { audioUrl } = this.speechContent();
+    return getSpeech().isAvailable(this.uiLang, { audioUrl });
+  }
+
+  speakCurrent() {
+    if (!this.canSpeak()) return;
+    const { text, audioUrl } = this.speechContent();
+    const token = {};
+    this.speechToken = token;
+    this.setSpeaking(true);
+    Promise.resolve()
+      .then(() => getSpeech().speak(text, this.uiLang, { audioUrl }))
+      .catch(() => {})
+      .finally(() => {
+        if (this.speechToken === token) this.setSpeaking(false);
+      });
+  }
+
+  toggleSpeech() {
+    if (this.speaking) this.stopSpeech();
+    else this.speakCurrent();
+  }
+
+  stopSpeech() {
+    if (!this.speaking) return;
+    this.speechToken = null;
+    getSpeech().stop();
+    this.setSpeaking(false);
+  }
+
+  setSpeaking(on) {
+    this.speaking = on;
+    // Update the button in place so keyboard focus stays on it.
+    const b = this.view.querySelector('.op-listen');
+    if (b) b.textContent = this.tr(on ? 'stopReading' : 'listen');
+  }
+
+  stopHelpers({ announce = false } = {}) {
+    const wasListening = this.listening;
+    this.stopSpeech();
+    this.stopListening?.();
+    if (announce && wasListening) this.announce(this.tr('stopped'));
+  }
+
+  // Read the new screen once, but only when the learner turned read-aloud on
+  // and moved there themselves (never on page load, never by default).
+  autoSpeak(focus) {
+    if (focus && this.prefs?.readAloud) this.speakCurrent();
   }
 
   openSetup({ focus = true } = {}) {
+    this.stopHelpers();
     this.setupOpen = true;
     this.render({ focus });
+    this.autoSpeak(focus);
     this.emit('openpath:step', { flowId: this.flow.flowId, stepId: SETUP, index: 0, total: this.nav.position(null, this.store.state.answers).total });
   }
 
@@ -169,15 +260,27 @@ export class OpenPathFlow extends HTMLElement {
   }
 
   go(step, { focus = true, returnToReview } = {}) {
+    this.stopHelpers(); // speech and listening stop on every step change
     this.setupOpen = false;
     if (step !== this.step || returnToReview !== undefined) this.store.setStep(step, returnToReview === undefined ? {} : { returnToReview });
     if (step !== REVIEW) this.submitError = null;
     this.render({ focus });
+    this.autoSpeak(focus);
     const { index, total } = step === REVIEW ? { index: 0, total: this.nav.position(step, this.store.state.answers).total } : this.nav.position(step, this.store.state.answers);
     this.emit('openpath:step', { flowId: this.flow.flowId, stepId: step, index, total });
   }
 
-  render({ focus = false, focusField = false } = {}) {
+  render(opts = {}) {
+    this.renderView(opts);
+    // "Listen" goes first in the tools row, only when read-aloud is on and works here.
+    if (this.canSpeak()) {
+      this.view.querySelector('.op-tools').prepend(
+        h('button', { type: 'button', class: 'op-button op-secondary op-small op-listen', onclick: () => this.toggleSpeech(), text: this.tr(this.speaking ? 'stopReading' : 'listen') }),
+      );
+    }
+  }
+
+  renderView({ focus = false, focusField = false } = {}) {
     const lang = this.uiLang;
     const { answers } = this.store.state;
     this.view.textContent = '';
@@ -188,10 +291,10 @@ export class OpenPathFlow extends HTMLElement {
       h('p', { class: 'op-title', lang: title.lang !== lang ? title.lang : undefined, text: title.text }),
     );
     this.view.append(header);
+    const tools = h('div', { class: 'op-tools' });
+    header.append(tools);
     if (this.step !== DONE && this.step !== SETUP) {
-      header.append(
-        h('div', { class: 'op-tools' }, h('button', { type: 'button', class: 'op-button op-secondary op-small', onclick: () => this.openSetup(), text: this.tr('settings') })),
-      );
+      tools.append(h('button', { type: 'button', class: 'op-button op-secondary op-small', onclick: () => this.openSetup(), text: this.tr('settings') }));
     }
 
     if (this.step === DONE) return this.renderDone(focus);
@@ -394,6 +497,7 @@ export class OpenPathFlow extends HTMLElement {
     this.store.clear();
     this.done = true; // not persisted: a reload starts a fresh form
     this.render({ focus: true });
+    this.autoSpeak(true);
     this.emit('openpath:complete', { flowId: this.flow.flowId, sessionId, answers: publicAnswers });
   }
 }

@@ -11,8 +11,10 @@ const OPTION_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const DEFAULT_MAX_LENGTH = 500;
 const QUESTION_KEYS = new Set([
   'id', 'type', 'label', 'simple', 'hint', 'icon', 'required', 'voice', 'options',
-  'showIf', 'autocomplete', 'maxLength', 'multiline', 'private', 'setsPreference',
+  'showIf', 'autocomplete', 'maxLength', 'multiline', 'private', 'setsPreference', 'audio',
 ]);
+// Audio file URLs: http(s) or a relative path; never javascript:, data: or other schemes.
+const AUDIO_URL_RE = /^(https?:\/\/\S+|(?![a-zA-Z][a-zA-Z0-9+.-]*:)(?!\/\/)\S+)$/;
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
@@ -84,6 +86,16 @@ export function validateFlow(flow) {
     }
     if (q.autocomplete !== undefined && (typeof q.autocomplete !== 'string' || !/^[a-z0-9 -]{1,64}$/.test(q.autocomplete))) {
       errors.push(`${where}.autocomplete must be an HTML autocomplete token`);
+    }
+    if (q.audio !== undefined) {
+      if (!isObj(q.audio) || Object.keys(q.audio).length === 0) {
+        errors.push(`${where}.audio must be an object like { "en": "audio/q1.mp3" }`);
+      } else {
+        for (const [k, v] of Object.entries(q.audio)) {
+          if (k !== 'en' && k !== 'am') errors.push(`${where}.audio.${k} is not a supported language (use en or am)`);
+          else if (typeof v !== 'string' || !AUDIO_URL_RE.test(v)) errors.push(`${where}.audio.${k} must be an http(s) URL or a relative path`);
+        }
+      }
     }
     if (q.maxLength !== undefined && !(Number.isInteger(q.maxLength) && q.maxLength >= 1 && q.maxLength <= 2000)) {
       errors.push(`${where}.maxLength must be a whole number from 1 to 2000`);

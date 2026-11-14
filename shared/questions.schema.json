@@ -36,6 +36,21 @@
         "am": { "type": "string", "minLength": 1 }
       }
     },
+    "audioUrl": {
+      "description": "Audio file URL: http(s) or a path relative to the page. No other schemes (javascript:, data: ...).",
+      "type": "string",
+      "pattern": "^(https?://\\S+|(?![a-zA-Z][a-zA-Z0-9+.-]*:)(?!//)\\S+)$"
+    },
+    "audio": {
+      "description": "Recorded audio of the question for read-aloud, per language. Played instead of a synthetic voice; loaded only when played.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "en": { "$ref": "#/$defs/audioUrl" },
+        "am": { "$ref": "#/$defs/audioUrl" }
+      }
+    },
     "option": {
       "type": "object",
       "additionalProperties": false,
@@ -68,6 +83,7 @@
         "simple": { "$ref": "#/$defs/localized", "description": "Plain-words version of the label." },
         "hint": { "$ref": "#/$defs/localized" },
         "icon": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$" },
+        "audio": { "$ref": "#/$defs/audio" },
         "required": { "type": "boolean", "default": false },
         "voice": { "type": "boolean", "default": false, "description": "Allow voice input for this question (not implemented yet)." },
         "options": {
