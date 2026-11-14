@@ -3,7 +3,7 @@
 // want to use this?" step is only shown once.
 
 export const PREFS_KEY = 'openpath:prefs';
-export const HELPERS = ['readAloud', 'voice', 'simple', 'largerText', 'highContrast'];
+export const HELPERS = ['readAloud', 'voice', 'simple', 'largerText', 'highContrast', 'dark'];
 
 // Answers of an access question (setsPreference: "access") that switch a helper.
 export const ACCESS_TO_HELPER = {
@@ -22,6 +22,7 @@ export function defaultPrefs() {
     simple: false,
     largerText: false,
     highContrast: false,
+    dark: false, // "Dark colours": light text on a dark background
     voiceConsent: null, // null = not asked yet, 'allow' or 'deny'
     // Where the learner allowed their voice to go: 'browser', or 'server:<provider label>'.
     // Consent for one place is not consent for another, so a new place asks again.

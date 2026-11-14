@@ -47,6 +47,7 @@ export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContin
     ['simple', 'helperSimple', true],
     ['largerText', 'helperLarger', true],
     ['highContrast', 'helperContrast', true],
+    ['dark', 'helperDark', true],
   ].filter(([, , ok]) => ok);
 
   const boxes = {};

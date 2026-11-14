@@ -4,7 +4,7 @@ import { isOpen, jobsJsonLd, readJobs, textIn } from '../../shared/jobs.js';
 import { readBenefits, SUPPORT_TAGS } from '../../shared/support-tags.js';
 import { createApi } from './api.js';
 import { h, setText } from './dom.js';
-import { folderUrl, resolveLanguages } from './language.js';
+import { folderUrl, resolveLanguages, themeFor } from './language.js';
 import { FALLBACK_LANG, langAttrs, packInfo, t, tList } from './messages.js';
 import { loadPrefs, savePrefs } from './prefs.js';
 import { renderLanguageSwitcher } from './setup.js';
@@ -32,6 +32,7 @@ function storage() {
  * api:         also lists the API's jobs (GET /v1/jobs) and saves applications there.
  * apply-flow:  the question file opened by "Apply" (default job-application),
  *              from flows-path (default: the "questions" folder next to openpath.js).
+ * theme:       "light" (default), "dark" or "auto", as for <openpath-flow>.
  * heading-level: level of the "Jobs" heading (default 2); job titles are one below.
  *
  * The jobs are also written into the host page as JSON-LD, so search engines
@@ -44,7 +45,7 @@ function storage() {
  */
 export class OpenPathJobs extends HTMLElement {
   static get observedAttributes() {
-    return ['lang', 'languages'];
+    return ['lang', 'languages', 'theme'];
   }
 
   constructor() {
@@ -84,6 +85,7 @@ export class OpenPathJobs extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, value) {
+    if (name === 'theme') return this.root?.setAttribute('data-theme', themeFor(this, this.prefs));
     if (!this.loaded || oldValue === value) return;
     this.useLanguage().then(() => this.render());
   }
@@ -113,6 +115,7 @@ export class OpenPathJobs extends HTMLElement {
     this.root.toggleAttribute('data-larger-text', Boolean(this.prefs.largerText));
     this.root.toggleAttribute('data-high-contrast', Boolean(this.prefs.highContrast));
     this.root.toggleAttribute('data-simple', Boolean(this.prefs.simple));
+    this.root.setAttribute('data-theme', themeFor(this, this.prefs));
     const { lang, switcher } = await resolveLanguages(this, this.prefs);
     this.activeLang = lang;
     this.switcherLangs = switcher;
@@ -402,7 +405,7 @@ export class OpenPathJobs extends HTMLElement {
     const flow = document.createElement('openpath-flow');
     flow.setAttribute('flow', this.getAttribute('apply-flow') || 'job-application');
     flow.setAttribute('flows-path', folderUrl(this, 'flows-path', 'questions/'));
-    for (const a of ['api', 'languages', 'lang-path']) if (this.hasAttribute(a)) flow.setAttribute(a, this.getAttribute(a));
+    for (const a of ['api', 'languages', 'lang-path', 'theme']) if (this.hasAttribute(a)) flow.setAttribute(a, this.getAttribute(a));
     flow.setAttribute('lang', this.uiLang);
     // Which job this application is for. The private filter is never passed on.
     flow.context = { jobId: job.identifier, jobTitle: title.text, organisation: org.text };

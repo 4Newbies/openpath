@@ -2,7 +2,7 @@ import { cleanAnswer, validateAnswer, validateAnswers } from '../../shared/flow.
 import { ApiError, createApi, isUnreachable, newClientKey } from './api.js';
 import { h, setText } from './dom.js';
 import { loadFlow } from './loader.js';
-import { folderUrl, resolveLanguages } from './language.js';
+import { folderUrl, resolveLanguages, themeFor } from './language.js';
 import { errorMessage, FALLBACK_LANG, labelOf, langAttrs, packInfo, pick, t, tList } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
 import { earlierAnswer, forgetEntries, forgetProfile, hasProfile, saveProfile } from './profile.js';
@@ -29,6 +29,8 @@ const RETRY_MS = 20000;
  * lang:      starting language (default en). Packs other than English are fetched
  *            from lang-path (default: the "lang" folder next to openpath.js).
  * languages: optional; shows a language switcher on the first screen and in Settings.
+ * theme:     "light" (default), "dark", or "auto" (follow the device's dark mode).
+ *            The learner can also choose "Dark colours" in Settings.
  * flow:      a flow by name instead of a questions URL: flow="job-application" loads
  *            job-application.json from flows-path (default: "questions" next to openpath.js).
  * .context:  optional property, e.g. { jobId, jobTitle }: sent with the session and
@@ -46,7 +48,7 @@ const RETRY_MS = 20000;
  */
 export class OpenPathFlow extends HTMLElement {
   static get observedAttributes() {
-    return ['lang', 'languages', 'lang-path'];
+    return ['lang', 'languages', 'lang-path', 'theme'];
   }
 
   constructor() {
@@ -118,6 +120,7 @@ export class OpenPathFlow extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, value) {
+    if (name === 'theme') return this.root && this.applyPreferences();
     if (!this.flow || oldValue === value) return;
     // A host that sets lang later means it: it replaces a saved choice.
     if (name === 'lang' && this.prefs?.lang) this.setPrefs({ lang: null });
@@ -400,6 +403,7 @@ export class OpenPathFlow extends HTMLElement {
   applyPreferences(prefs = this.prefs) {
     this.root.toggleAttribute('data-larger-text', Boolean(prefs?.largerText));
     this.root.toggleAttribute('data-high-contrast', Boolean(prefs?.highContrast));
+    this.root.setAttribute('data-theme', themeFor(this, prefs));
     this.root.toggleAttribute('data-simple', Boolean(prefs?.simple));
   }
 
@@ -831,7 +835,7 @@ export class OpenPathFlow extends HTMLElement {
         onContinue: (choices) => this.closeSetup(choices),
         // Bigger text and high contrast show straight away (no re-render, focus stays).
         onPreview: (key, on) => {
-          if (key === 'largerText' || key === 'highContrast') this.applyPreferences({ ...this.prefs, [key]: on });
+          if (key === 'largerText' || key === 'highContrast' || key === 'dark') this.applyPreferences({ ...this.prefs, [key]: on });
         },
       });
       this.view.append(setup.node);

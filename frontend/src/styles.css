@@ -39,11 +39,25 @@
   font-size: 1.25em;
 }
 
-/* Dark mode follows the device setting. Hosts can set --openpath-color-dark
-   (a light colour, used with dark text on buttons). Contrast on #1b1b1f:
-   text 15.6:1, muted 10.4:1, accent 9.0:1, error 10.8:1, borders 6.6:1. */
+/* Colours: light by default. data-theme on .op-root is "dark" (the host's
+   theme="dark" or the learner's "Dark colours") or "auto" (theme="auto":
+   follow the device). The device's dark mode alone never changes the form.
+   Hosts can set --openpath-color-dark (a light colour, used with dark text
+   on buttons). Contrast on #1b1b1f: text 15.6:1, muted 10.4:1, accent 9.0:1,
+   error 10.8:1, borders 6.6:1. */
+.op-root[data-theme='dark'] {
+  --op-accent: var(--openpath-color-dark, #8cb8ff);
+  --op-accent-text: #111;
+  --op-text: #f2f2f2;
+  --op-muted: #c8c8c8;
+  --op-bg: #1b1b1f;
+  --op-border: #9a9a9a;
+  --op-error: #ffb4ab;
+  --op-selected: #23344d;
+  --op-focus: #f2f2f2;
+}
 @media (prefers-color-scheme: dark) {
-  .op-root {
+  .op-root[data-theme='auto'] {
     --op-accent: var(--openpath-color-dark, #8cb8ff);
     --op-accent-text: #111;
     --op-text: #f2f2f2;
@@ -56,7 +70,8 @@
   }
 }
 
-/* High contrast: chosen by the learner, or asked for by the device. */
+/* High contrast: chosen by the learner, or asked for by the device
+   (prefers-contrast is still followed automatically). */
 .op-root[data-high-contrast] {
   --op-accent: #000;
   --op-accent-text: #fff;
@@ -83,8 +98,33 @@
     --op-border-width: 3px;
   }
 }
+/* High contrast in dark colours: white and yellow on black. */
+.op-root[data-theme='dark'][data-high-contrast] {
+  --op-accent: #ffeb3b;
+  --op-accent-text: #000;
+  --op-text: #fff;
+  --op-muted: #fff;
+  --op-bg: #000;
+  --op-border: #fff;
+  --op-error: #ff9e9e;
+  --op-selected: #333000;
+  --op-focus: #ffeb3b;
+}
+@media (prefers-contrast: more) {
+  .op-root[data-theme='dark'] {
+    --op-accent: #ffeb3b;
+    --op-accent-text: #000;
+    --op-text: #fff;
+    --op-muted: #fff;
+    --op-bg: #000;
+    --op-border: #fff;
+    --op-error: #ff9e9e;
+    --op-selected: #333000;
+    --op-focus: #ffeb3b;
+  }
+}
 @media (prefers-color-scheme: dark) {
-  .op-root[data-high-contrast] {
+  .op-root[data-theme='auto'][data-high-contrast] {
     --op-accent: #ffeb3b;
     --op-accent-text: #000;
     --op-text: #fff;
@@ -97,7 +137,7 @@
   }
 }
 @media (prefers-color-scheme: dark) and (prefers-contrast: more) {
-  .op-root {
+  .op-root[data-theme='auto'] {
     --op-accent: #ffeb3b;
     --op-accent-text: #000;
     --op-text: #fff;

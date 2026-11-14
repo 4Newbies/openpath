@@ -176,6 +176,7 @@
     "forgetMyDetails": "احذف بياناتي",
     "formFailed": "تعذّر تحميل هذا النموذج. يُرجى المحاولة لاحقًا.",
     "chooseLanguage": "اختر لغتك",
+    "helperDark": "ألوان داكنة",
     "errors": {
       "required_text": "يُرجى كتابة إجابة لهذا السؤال.",
       "required_single": "يُرجى اختيار إجابة واحدة.",

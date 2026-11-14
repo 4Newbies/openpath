@@ -85,14 +85,14 @@ describe('first step: how do you want to use this?', () => {
     // Voice is not offered: jsdom has no SpeechRecognition. Read-aloud is,
     // because a question in this flow has an English audio file.
     const labels = $$(el, '.op-helpers label').map((l) => l.textContent);
-    expect(labels).toEqual(['Read questions to me', 'Simple words', 'Bigger text', 'High contrast']);
+    expect(labels).toEqual(['Read questions to me', 'Simple words', 'Bigger text', 'High contrast', 'Dark colours']);
   });
 
   it('does not offer read-aloud when there is no voice and no audio file', async () => {
     const noAudio = structuredClone(flow);
     delete noAudio.questions[2].audio;
     const el = await mount(noAudio, {}, { prefs: null });
-    expect($$(el, '.op-helpers label').map((l) => l.textContent)).toEqual(['Simple words', 'Bigger text', 'High contrast']);
+    expect($$(el, '.op-helpers label').map((l) => l.textContent)).toEqual(['Simple words', 'Bigger text', 'High contrast', 'Dark colours']);
   });
 
   it('device tools: turns every helper off, saves the choice and is skipped next time', async () => {
@@ -111,7 +111,7 @@ describe('first step: how do you want to use this?', () => {
     setVoiceProvider(fakeVoice('x'));
     const el = await mount(flow, {}, { prefs: null });
     expect($$(el, '.op-helpers label').map((l) => l.textContent)).toEqual([
-      'Read questions to me', 'I want to speak my answers', 'Simple words', 'Bigger text', 'High contrast',
+      'Read questions to me', 'I want to speak my answers', 'Simple words', 'Bigger text', 'High contrast', 'Dark colours',
     ]);
     for (const v of ['simple', 'largerText']) pick($(el, `.op-helpers input[value=${v}]`));
     button(el, 'Continue with these helpers').click();

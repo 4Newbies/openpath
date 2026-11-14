@@ -53,3 +53,11 @@ export async function resolveLanguages(el, prefs) {
   await Promise.all(codes.map((c) => loadPack(c, base)));
   return { lang: hasPack(wanted) ? wanted : FALLBACK_LANG, switcher: list.filter(hasPack).map(packInfo) };
 }
+
+/** "light" (default), "dark" or "auto" (follow the device): the host's theme
+ *  attribute, unless the learner chose "Dark colours". */
+export function themeFor(el, prefs) {
+  if (prefs?.dark) return 'dark';
+  const attr = (el.getAttribute('theme') ?? '').trim();
+  return attr === 'dark' || attr === 'auto' ? attr : 'light';
+}

@@ -182,7 +182,10 @@ const MODES = [
   { label: 'read aloud', width: 1280, helpers: ['helperReadAloud'] },
   { label: 'voice input', width: 1280, helpers: ['helperVoice'] },
   { label: 'bigger text + high contrast, 320px', width: 320, helpers: ['helperLarger', 'helperContrast'] },
-  { label: 'dark mode, 320px', width: 320, helpers: [], colorScheme: 'dark' },
+  // The device is set to dark mode, the host page says nothing: the form stays light.
+  { label: 'device in dark mode (form stays light), 320px', width: 320, helpers: [], colorScheme: 'dark', expectBg: 'rgb(255, 255, 255)' },
+  // The learner chooses "Dark colours": axe checks contrast in the dark theme.
+  { label: 'dark colours (learner), 320px', width: 320, helpers: ['helperDark'], expectBg: 'rgb(27, 27, 31)' },
   { label: '640px (200% zoom)', width: 640, helpers: [] },
 ];
 
@@ -245,6 +248,10 @@ async function walk(browser, mode, lang, apiUp) {
 
   // intro (info)
   await checkScreen(page, at('info'), lang);
+  if (mode.expectBg) {
+    const bg = await shadow(page, `return getComputedStyle(root.querySelector('.op-card')).backgroundColor;`);
+    if (bg !== mode.expectBg) fail(at('theme'), `form background is ${bg}, expected ${mode.expectBg}`);
+  }
   if (has('helperReadAloud')) {
     await page.waitForFunction(() => window.__speech.log.length > 0);
     const said = await page.evaluate(() => window.__speech.log[0]);
@@ -505,7 +512,7 @@ async function careerContext(browser, mode, lang, extra = {}) {
       localStorage.setItem('openpath:prefs', JSON.stringify(prefs));
       if (profile) localStorage.setItem('openpath:profile', JSON.stringify(profile));
     },
-    [{ chosen: true, lang, largerText: Boolean(mode.big), highContrast: Boolean(mode.big) }, extra.profile ?? null],
+    [{ chosen: true, lang, largerText: Boolean(mode.big), highContrast: Boolean(mode.big), dark: Boolean(mode.dark) }, extra.profile ?? null],
   );
   const pageErrors = [];
   const requests = [];
@@ -524,6 +531,7 @@ async function careerContext(browser, mode, lang, extra = {}) {
 
 const CAREER_MODES = [
   { label: '1280px', width: 1280 },
+  { label: 'dark colours (learner), 1280px', width: 1280, dark: true },
   { label: '640px (200% zoom)', width: 640 },
   { label: 'bigger text + high contrast, 320px (400% zoom)', width: 320, big: true },
 ];
