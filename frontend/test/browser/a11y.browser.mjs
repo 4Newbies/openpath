@@ -98,11 +98,11 @@ async function checkScreen(page, where) {
 
   const problems = await shadow(page, `
     const out = [];
-    for (const el of root.querySelectorAll('button, input:not([type=radio]):not([type=checkbox]), textarea, .op-option')) {
+    for (const el of root.querySelectorAll('button, input:not([type=radio]):not([type=checkbox]), select, textarea, .op-option')) {
       const r = el.getBoundingClientRect();
       if (r.width < 44 || r.height < 44) out.push('target ' + (el.className || el.tagName) + ' is ' + Math.round(r.width) + 'x' + Math.round(r.height));
     }
-    for (const el of root.querySelectorAll('p, label, button, input, textarea, dt, dd, legend, h2')) {
+    for (const el of root.querySelectorAll('p, label, button, input, select, textarea, dt, dd, legend, h2')) {
       if (el.closest('.op-sr')) continue;
       const fs = parseFloat(getComputedStyle(el).fontSize);
       if (fs < 18) out.push('text ' + el.tagName + ' "' + el.textContent.trim().slice(0, 30) + '" is ' + fs + 'px');
@@ -251,12 +251,12 @@ async function walk(browser, mode) {
   await checkScreen(page, at('phone'));
   await next(page, at('phone'));
 
-  // date
-  await checkError(page, at('date'), { field: 'input[text]' });
+  // date of birth, Ethiopian calendar: three native selects
+  await checkError(page, at('date'), { field: 'select[select-one]' });
   await checkScreen(page, at('date with error'));
-  await host.getByLabel('Day').fill('27');
-  await host.getByLabel('Month').fill('3');
-  await host.getByLabel('Year').fill('2001');
+  await host.getByLabel('Day').selectOption('18');
+  await host.getByLabel('Month').selectOption('7');
+  await host.getByLabel('Year').selectOption('1993');
   await next(page, at('date'));
 
   // language (single)

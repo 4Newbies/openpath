@@ -18,7 +18,7 @@ const silent = { error() {}, warn() {}, log() {} };
 const complete = {
   fullName: 'Hana Tesfaye',
   phone: '+251 911 234 567',
-  dateOfBirth: '2001-03-27',
+  dateOfBirth: { date: '2001-03-27', ethiopian: { year: 1993, month: 7, day: 18 } },
   language: 'am',
   location: 'Addis Ababa',
   idType: 'refer-me',
@@ -97,7 +97,9 @@ for (const [name, makeStore] of stores) {
         const { id } = (await create()).body;
         const cases = [
           [{ phone: 'call me' }, 'invalid_phone', 'phone'],
-          [{ dateOfBirth: '2001-02-30' }, 'invalid_date', 'dateOfBirth'],
+          [{ dateOfBirth: { ethiopian: { year: 2016, month: 13, day: 6 } } }, 'invalid_date', 'dateOfBirth'],
+          [{ dateOfBirth: { date: '2001-03-28', ethiopian: { year: 1993, month: 7, day: 18 } } }, 'calendar_mismatch', 'dateOfBirth'],
+          [{ dateOfBirth: '2001-03-27' }, 'invalid_type', 'dateOfBirth'],
           [{ language: 'klingon' }, 'invalid_option', 'language'],
           [{ language: ['am'] }, 'invalid_type', 'language'],
           [{ hacker: 'x' }, 'unknown_question', 'hacker'],

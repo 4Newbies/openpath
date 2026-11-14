@@ -1,9 +1,12 @@
 // Shared rules for OpenPath question files and answers.
 // Used unchanged by the browser tag (frontend/) and the API (backend/), so
 // both sides agree on what a valid file and a valid answer are.
-// Plain ES module, no dependencies.
+// Plain ES module, no dependencies (shared/ethiopian.js is ours).
+
+import { ethiopianToIso, isValidEthiopianDate } from './ethiopian.js';
 
 export const QUESTION_TYPES = ['text', 'phone', 'date', 'single', 'multi', 'yesno', 'info'];
+export const CALENDARS = ['gregorian', 'ethiopian'];
 
 const ID_RE = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
 const FLOW_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -13,7 +16,7 @@ export const LANG_RE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 const DEFAULT_MAX_LENGTH = 500;
 const QUESTION_KEYS = new Set([
   'id', 'type', 'label', 'simple', 'hint', 'icon', 'required', 'voice', 'options',
-  'showIf', 'autocomplete', 'maxLength', 'multiline', 'private', 'setsPreference', 'audio',
+  'showIf', 'autocomplete', 'maxLength', 'multiline', 'private', 'setsPreference', 'audio', 'calendar',
 ]);
 // Audio file URLs: http(s) or a relative path; never javascript:, data: or other schemes.
 const AUDIO_URL_RE = /^(https?:\/\/\S+|(?![a-zA-Z][a-zA-Z0-9+.-]*:)(?!\/\/)\S+)$/;
@@ -103,6 +106,10 @@ export function validateFlow(flow) {
       errors.push(`${where}.maxLength must be a whole number from 1 to 2000`);
     }
     if (q.multiline !== undefined && q.type !== 'text') errors.push(`${where}.multiline only applies to text questions`);
+    if (q.calendar !== undefined) {
+      if (q.type !== 'date') errors.push(`${where}.calendar only applies to date questions`);
+      else if (!CALENDARS.includes(q.calendar)) errors.push(`${where}.calendar must be "gregorian" or "ethiopian"`);
+    }
     if (q.setsPreference !== undefined && !(q.setsPreference === 'access' && q.type === 'multi')) {
       errors.push(`${where}.setsPreference must be "access" on a multi question`);
     }
@@ -177,6 +184,25 @@ export function visibleQuestions(flow, answers) {
   return flow.questions.filter((q) => isVisible(q, answers, flow));
 }
 
+/**
+ * An Ethiopian-calendar date answer is stored as
+ *   { "date": "2001-03-27", "ethiopian": { "year": 1993, "month": 7, "day": 18 } }
+ * The ISO Gregorian date and the original Ethiopian date must agree.
+ */
+function ethiopianDateError(value) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return 'invalid_type';
+  if (!isValidEthiopianDate(value.ethiopian)) return 'invalid_date';
+  if (typeof value.date !== 'string' || value.date !== ethiopianToIso(value.ethiopian)) return 'calendar_mismatch';
+  return dateError(value.date);
+}
+
+/** True for an Ethiopian date answer with nothing chosen yet. */
+function emptyEthiopian(value) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const e = value.ethiopian;
+  return !value.date && (!e || ['year', 'month', 'day'].every((k) => e[k] === undefined || e[k] === null || e[k] === ''));
+}
+
 function dateError(value) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!m) return 'invalid_date';
@@ -191,13 +217,15 @@ function dateError(value) {
 /**
  * Check one answer. Returns null when fine, otherwise an error code:
  * required, invalid_type, too_long, invalid_phone, invalid_date,
- * future_date, invalid_option, not_answerable.
+ * future_date, calendar_mismatch, invalid_option, not_answerable.
  * Required-ness is only checked when `checkRequired` is true (on Next and
  * on submit), so progress can be saved half-done.
  */
 export function validateAnswer(question, value, { checkRequired = true } = {}) {
   if (question.type === 'info') return value === undefined || value === null ? null : 'not_answerable';
-  if (isEmpty(value)) return checkRequired && question.required ? 'required' : null;
+  if (isEmpty(value) || (question.calendar === 'ethiopian' && emptyEthiopian(value))) {
+    return checkRequired && question.required ? 'required' : null;
+  }
 
   switch (question.type) {
     case 'text': {
@@ -212,6 +240,7 @@ export function validateAnswer(question, value, { checkRequired = true } = {}) {
       return digits >= 7 && digits <= 15 ? null : 'invalid_phone';
     }
     case 'date':
+      if (question.calendar === 'ethiopian') return ethiopianDateError(value);
       return typeof value === 'string' ? dateError(value.trim()) : 'invalid_type';
     case 'single':
       if (typeof value !== 'string') return 'invalid_type';
@@ -226,6 +255,17 @@ export function validateAnswer(question, value, { checkRequired = true } = {}) {
     default:
       return 'invalid_type';
   }
+}
+
+/** The answer as stored: trimmed text; only the known fields of a date object. */
+function cleanValue(q, value) {
+  if (typeof value === 'string') return value.trim();
+  if (q.type === 'date' && q.calendar === 'ethiopian') {
+    if (emptyEthiopian(value)) return undefined;
+    const { year, month, day } = value.ethiopian;
+    return { date: value.date, ethiopian: { year, month, day } };
+  }
+  return value;
 }
 
 /**
@@ -250,7 +290,8 @@ export function validateAnswers(flow, answers, { mode = 'save' } = {}) {
     const code = validateAnswer(q, has ? answers[q.id] : undefined, { checkRequired: mode === 'submit' });
     if (code) errors.push({ field: q.id, code });
     else if (has && !isEmpty(answers[q.id]) && q.type !== 'info') {
-      clean[q.id] = typeof answers[q.id] === 'string' ? answers[q.id].trim() : answers[q.id];
+      const value = cleanValue(q, answers[q.id]);
+      if (value !== undefined) clean[q.id] = value;
     }
   }
   return { errors, clean };

@@ -23,6 +23,7 @@ export const ANSWER_MESSAGES = {
   invalid_phone: 'Enter a phone number with 7 to 15 digits.',
   invalid_date: 'Enter a real date, with day, month and year.',
   future_date: 'The date cannot be in the future.',
+  calendar_mismatch: 'The Gregorian date and the Ethiopian date in this answer do not match.',
   invalid_option: 'Choose one of the listed options.',
   not_answerable: 'This screen does not take an answer.',
   unknown_question: 'There is no question with this id in the flow.',

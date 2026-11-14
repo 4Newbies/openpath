@@ -103,7 +103,7 @@ describe('validateAnswers', () => {
   const complete = {
     fullName: ' Hana ',
     phone: '0911234567',
-    dateOfBirth: '2001-03-27',
+    dateOfBirth: { date: '2001-03-27', ethiopian: { year: 1993, month: 7, day: 18 } },
     language: 'am',
     location: 'Adama',
     idType: 'passport',

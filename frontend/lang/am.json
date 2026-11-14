@@ -84,6 +84,23 @@
       "የለም"
     ],
     "dateFormat": "{month} {day}፣ {year}",
+    "choose": "ይምረጡ",
+    "ethiopianMonths": [
+      "መስከረም",
+      "ጥቅምት",
+      "ኅዳር",
+      "ታኅሣሥ",
+      "ጥር",
+      "የካቲት",
+      "መጋቢት",
+      "ሚያዝያ",
+      "ግንቦት",
+      "ሰኔ",
+      "ሐምሌ",
+      "ነሐሴ",
+      "ጳጉሜን"
+    ],
+    "ethiopianDateFormat": "{month} {day} ቀን {year} ዓ.ም.",
     "errors": {
       "required_text": "እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ።",
       "required_single": "እባክዎ አንድ መልስ ይምረጡ።",
@@ -93,7 +110,10 @@
       "invalid_date": "እባክዎ ትክክለኛ ቀን ያስገቡ፦ ቀን፣ ወር እና ዓመት፤ ለምሳሌ 27 3 2001።",
       "future_date": "ቀኑ ወደፊት ሊሆን አይችልም።",
       "invalid_option": "እባክዎ ከተዘረዘሩት መልሶች አንዱን ይምረጡ።",
-      "invalid_type": "እባክዎ ይህን መልስ ያረጋግጡና እንደገና ይሞክሩ።"
+      "invalid_type": "እባክዎ ይህን መልስ ያረጋግጡና እንደገና ይሞክሩ።",
+      "required_date": "እባክዎ ቀን፣ ወር እና ዓመት ያስገቡ።",
+      "invalid_date_ethiopian": "እባክዎ ትክክለኛ ቀን ይምረጡ፦ ቀን፣ ወር እና ዓመት። ጳጉሜን 5 ቀን ነው፤ በአራት ዓመት አንድ ጊዜ 6 ቀን ይሆናል።",
+      "calendar_mismatch": "በዚህ ቀን ላይ ችግር ተፈጥሯል። እባክዎ እንደገና ይምረጡት።"
     }
   },
   "simple": {
@@ -132,7 +152,9 @@
       "invalid_date": "እባክዎ ቀኑን ያረጋግጡ።",
       "future_date": "ይህ ቀን ገና አልደረሰም።",
       "invalid_option": "እባክዎ ከዝርዝሩ ይምረጡ።",
-      "invalid_type": "እባክዎ ይህን መልስ ያረጋግጡ።"
+      "invalid_type": "እባክዎ ይህን መልስ ያረጋግጡ።",
+      "required_date": "እባክዎ ቀን፣ ወር እና ዓመት ይምረጡ።",
+      "invalid_date_ethiopian": "እባክዎ ቀኑን ያረጋግጡ።"
     }
   },
   "note": "Draft Amharic. Needs review by a native speaker before production use. See docs/amharic-review.md."

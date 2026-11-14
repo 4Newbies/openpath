@@ -285,6 +285,12 @@ textarea.op-input {
 .op-date-year {
   inline-size: 6.5em;
 }
+/* Ethiopian date lists: as wide as their longest choice. */
+.op-date select.op-input {
+  inline-size: auto;
+  min-inline-size: 5em;
+  max-inline-size: 100%;
+}
 
 .op-options {
   display: grid;

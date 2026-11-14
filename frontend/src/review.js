@@ -17,6 +17,12 @@ export function displayAnswer(q, value, lang, simple = false) {
     case 'yesno':
       return t(lang, value ? 'yes' : 'no', {}, simple);
     case 'date': {
+      if (q.calendar === 'ethiopian') {
+        // Shown in the calendar the learner used, in their language.
+        const e = value?.ethiopian;
+        const month = e && tList(lang, 'ethiopianMonths')[e.month - 1];
+        return month && e.day && e.year ? t(lang, 'ethiopianDateFormat', { day: e.day, month, year: e.year }) : t(lang, 'notAnswered', {}, simple);
+      }
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
       const month = m && tList(lang, 'gregorianMonths')[Number(m[2]) - 1];
       return month ? t(lang, 'dateFormat', { day: Number(m[3]), month, year: m[1] }) : value;

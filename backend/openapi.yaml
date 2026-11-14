@@ -149,18 +149,34 @@ components:
       description: 128 random bits, base64url. Treat it as a secret.
     Answers:
       type: object
-      description: Map of question id to answer. text/phone/date/single are strings (date is YYYY-MM-DD), multi is an array of option values, yesno is a boolean.
+      description: >-
+        Map of question id to answer. text/phone/single are strings, multi is an array of
+        option values, yesno is a boolean. A date is "YYYY-MM-DD"; a date question with
+        "calendar": "ethiopian" takes { date: "YYYY-MM-DD" (Gregorian), ethiopian: { year, month, day } }
+        and the two dates must agree (otherwise calendar_mismatch).
       additionalProperties:
         oneOf:
           - type: string
           - type: boolean
           - type: array
             items: { type: string }
+          - $ref: '#/components/schemas/EthiopianDate'
       example:
         fullName: Hana Tesfaye
         phone: '+251 911 234 567'
-        dateOfBirth: '2001-03-27'
-        access: [larger-text]
+        dateOfBirth: { date: '2001-03-27', ethiopian: { year: 1993, month: 7, day: 18 } }
+    EthiopianDate:
+      type: object
+      required: [date, ethiopian]
+      properties:
+        date: { type: string, format: date, description: The same day in the Gregorian calendar. }
+        ethiopian:
+          type: object
+          required: [year, month, day]
+          properties:
+            year: { type: integer }
+            month: { type: integer, minimum: 1, maximum: 13, description: '13 is Pagume (5 days, 6 when year mod 4 is 3).' }
+            day: { type: integer, minimum: 1, maximum: 30 }
     Session:
       type: object
       properties:
@@ -188,7 +204,7 @@ components:
               description: |
                 Machine-readable code, e.g. unknown_flow, invalid_lang, invalid_body,
                 invalid_json, invalid_step, unknown_question, invalid_type, too_long,
-                invalid_phone, invalid_date, future_date, invalid_option, required,
+                invalid_phone, invalid_date, future_date, calendar_mismatch, invalid_option, required,
                 not_found, already_submitted, payload_too_large, rate_limited, internal.
             message: { type: string, description: Plain-language message safe to show to a person. }
             field: { type: string, description: The question id or body field the error is about. }

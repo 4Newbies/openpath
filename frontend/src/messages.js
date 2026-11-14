@@ -125,10 +125,11 @@ export function t(lang, key, vars = {}, simple = false) {
 /** Plain-language message for an answer error code from shared/flow.js. */
 export function errorMessage(lang, question, code, simple = false, vars = {}) {
   if (code === 'required') {
-    const kind = question.type === 'multi' ? 'multi' : ['single', 'yesno'].includes(question.type) ? 'single' : 'text';
-    return t(lang, `errors.required_${kind}`, vars, simple);
+    const kinds = { multi: 'multi', single: 'single', yesno: 'single', date: 'date' };
+    return t(lang, `errors.required_${kinds[question.type] ?? 'text'}`, vars, simple);
   }
-  return t(lang, `errors.${code}`, { max: question.maxLength ?? 500, ...vars }, simple);
+  const key = code === 'invalid_date' && question.calendar === 'ethiopian' ? 'invalid_date_ethiopian' : code;
+  return t(lang, `errors.${key}`, { max: question.maxLength ?? 500, ...vars }, simple);
 }
 
 /**

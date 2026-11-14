@@ -22,7 +22,7 @@ const row = (...cells) => `| ${cells.map(cell).join(' | ')} |`;
 const ERRORS_BY_TYPE = {
   text: ['required_text', 'too_long'],
   phone: ['required_text', 'invalid_phone'],
-  date: ['required_text', 'invalid_date', 'future_date', 'calendar_mismatch'],
+  date: ['required_date', 'invalid_date', 'invalid_date_ethiopian', 'future_date', 'calendar_mismatch'],
   single: ['required_single', 'invalid_option'],
   multi: ['required_multi', 'invalid_option'],
   yesno: ['required_single'],
@@ -74,7 +74,9 @@ export function buildReview() {
   for (const q of flow.questions) {
     for (const code of ERRORS_BY_TYPE[q.type]) {
       if (code.startsWith('required') && !q.required) continue;
-      if (code === 'calendar_mismatch' && q.calendar !== 'ethiopian') continue;
+      const ethiopian = q.calendar === 'ethiopian';
+      if ((code === 'calendar_mismatch' || code === 'invalid_date_ethiopian') && !ethiopian) continue;
+      if (code === 'invalid_date' && ethiopian) continue;
       out.push(row(q.id, code, en.strings.errors[code], am.strings.errors[code], am.simple?.errors?.[code], ''));
     }
   }

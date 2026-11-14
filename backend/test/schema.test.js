@@ -27,6 +27,8 @@ describe('questions.schema.json', () => {
     'not a language code': (f) => (f.title.French = 'Rejoindre'),
     'unknown question field': (f) => (q(f, 'fullName').colour = 'red'),
     'required info screen': (f) => (q(f, 'intro').required = true),
+    'calendar on a text question': (f) => (q(f, 'fullName').calendar = 'ethiopian'),
+    'unknown calendar': (f) => (q(f, 'dateOfBirth').calendar = 'julian'),
     'audio with a javascript: URL': (f) => (q(f, 'fullName').audio = { en: 'javascript:alert(1)' }),
     'audio under a non-language key': (f) => (q(f, 'fullName').audio = { French: 'a.mp3' }),
   };
