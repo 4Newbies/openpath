@@ -16,7 +16,6 @@ const flows = loadFlows(path.resolve(here, '../../frontend/public/questions'));
 const silent = { error() {}, warn() {}, log() {} };
 
 const complete = {
-  access: ['larger-text'],
   fullName: 'Hana Tesfaye',
   phone: '+251 911 234 567',
   dateOfBirth: '2001-03-27',
@@ -78,12 +77,12 @@ for (const [name, makeStore] of stores) {
     describe('PUT /v1/sessions/:id/answers', () => {
       it('saves partial progress and is idempotent', async () => {
         const { id } = (await create()).body;
-        const body = { answers: { fullName: '  Hana  ', access: ['high-contrast'] }, step: 'phone' };
+        const body = { answers: { fullName: '  Hana  ', language: 'am' }, step: 'phone' };
         const first = await request(app).put(`/v1/sessions/${id}/answers`).send(body).expect(200);
         expect(first.body).toMatchObject({ id, status: 'open', step: 'phone' });
         await request(app).put(`/v1/sessions/${id}/answers`).send(body).expect(200);
         const got = await request(app).get(`/v1/sessions/${id}`).expect(200);
-        expect(got.body.answers).toEqual({ fullName: 'Hana', access: ['high-contrast'] });
+        expect(got.body.answers).toEqual({ fullName: 'Hana', language: 'am' });
       });
 
       it('replaces the whole answer set, so a cleared answer is removed', async () => {
@@ -100,7 +99,7 @@ for (const [name, makeStore] of stores) {
           [{ phone: 'call me' }, 'invalid_phone', 'phone'],
           [{ dateOfBirth: '2001-02-30' }, 'invalid_date', 'dateOfBirth'],
           [{ language: 'klingon' }, 'invalid_option', 'language'],
-          [{ access: 'larger-text' }, 'invalid_type', 'access'],
+          [{ language: ['am'] }, 'invalid_type', 'language'],
           [{ hacker: 'x' }, 'unknown_question', 'hacker'],
           [{ intro: 'x' }, 'not_answerable', 'intro'],
           [{ fullName: 'x'.repeat(121) }, 'too_long', 'fullName'],

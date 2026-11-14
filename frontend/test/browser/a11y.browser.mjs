@@ -218,10 +218,6 @@ async function walk(browser, mode) {
   }
   await next(page, at('info'));
 
-  // access (multi, optional)
-  await checkScreen(page, at('multi'));
-  await next(page, at('multi'));
-
   // full name (text)
   await checkError(page, at('text'), { field: 'input[text]' });
   await checkScreen(page, at('text with error'));

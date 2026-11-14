@@ -18,21 +18,22 @@ describe('questions.schema.json', () => {
     expect(validateFlow(onboarding)).toEqual([]);
   });
 
+  const q = (f, id) => f.questions.find((x) => x.id === id);
   const broken = {
     'missing title': (f) => delete f.title,
-    'unknown type': (f) => (f.questions[2].type = 'slider'),
-    'choice without options': (f) => delete f.questions[5].options,
-    'text with options': (f) => (f.questions[2].options = [{ value: 'a', label: { en: 'A' } }]),
+    'unknown type': (f) => (q(f, 'phone').type = 'slider'),
+    'choice without options': (f) => delete q(f, 'language').options,
+    'text with options': (f) => (q(f, 'fullName').options = [{ value: 'a', label: { en: 'A' } }]),
     'unsupported language': (f) => (f.title.fr = 'Rejoindre'),
-    'unknown question field': (f) => (f.questions[2].colour = 'red'),
-    'required info screen': (f) => (f.questions[0].required = true),
-    'audio with a javascript: URL': (f) => (f.questions[2].audio = { en: 'javascript:alert(1)' }),
-    'audio in an unsupported language': (f) => (f.questions[2].audio = { fr: 'a.mp3' }),
+    'unknown question field': (f) => (q(f, 'fullName').colour = 'red'),
+    'required info screen': (f) => (q(f, 'intro').required = true),
+    'audio with a javascript: URL': (f) => (q(f, 'fullName').audio = { en: 'javascript:alert(1)' }),
+    'audio in an unsupported language': (f) => (q(f, 'fullName').audio = { fr: 'a.mp3' }),
   };
 
   it('schema and validator both accept audio files per language', () => {
     const f = structuredClone(onboarding);
-    f.questions[2].audio = { en: '/audio/name.en.mp3', am: 'https://cdn.example.org/name.am.mp3' };
+    q(f, 'fullName').audio = { en: '/audio/name.en.mp3', am: 'https://cdn.example.org/name.am.mp3' };
     expect(validate(f), JSON.stringify(validate.errors)).toBe(true);
     expect(validateFlow(f)).toEqual([]);
   });

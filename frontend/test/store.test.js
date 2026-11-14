@@ -14,13 +14,19 @@ describe('store: save and restore', () => {
   });
 
   it('restores answers, step, preferences and session on load', () => {
-    const a = createStore(defaultFlow);
+    // A flow with an access question (setsPreference), which the default flow no longer has.
+    const withAccess = structuredClone(defaultFlow);
+    withAccess.questions.splice(1, 0, {
+      id: 'access', type: 'multi', setsPreference: 'access', label: { en: 'Access' },
+      options: [{ value: 'larger-text', label: { en: 'Larger text' } }],
+    });
+    const a = createStore(withAccess);
     a.setAnswer('access', ['larger-text']);
     a.setAnswer('fullName', 'Hana');
     a.setStep('dateOfBirth');
     a.setSession('s1', 'ABCD-EFGH');
 
-    const b = createStore(defaultFlow);
+    const b = createStore(withAccess);
     expect(b.restored).toBe(true);
     expect(b.state.answers).toEqual({ access: ['larger-text'], fullName: 'Hana' });
     expect(b.state.step).toBe('dateOfBirth');
