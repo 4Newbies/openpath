@@ -283,7 +283,12 @@ export class OpenPathFlow extends HTMLElement {
   speechContent() {
     const lang = this.uiLang;
     const tr = (k, v) => this.tr(k, v);
-    const join = (...parts) => parts.filter(Boolean).join('. ').replace(/\.\./g, '.');
+    // Sentences joined with a full stop, unless one already ends with . ? ! or ። ፧
+    const join = (...parts) =>
+      parts
+        .filter(Boolean)
+        .map((p) => p.trim())
+        .reduce((out, p) => (out ? `${out}${/[.?!።፧]$/.test(out) ? '' : '.'} ${p}` : p), '');
     if (this.step === SETUP) return { text: join(tr('setupTitle'), tr('setupIntro')) };
     if (this.step === DONE) return { text: join(tr('doneTitle'), tr('doneBody')) };
     if (this.step === REVIEW) {

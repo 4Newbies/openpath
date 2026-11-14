@@ -5,6 +5,7 @@
 import axe from 'axe-core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { QUESTION_TYPES } from '../../shared/flow.js';
+import { resetProviders, setSpeechProvider, setVoiceProvider } from '../src/providers.js';
 import { $, button, mount } from './helpers.js';
 
 const options = [
@@ -54,6 +55,29 @@ describe('axe: each question type', () => {
       }
     });
   }
+
+  for (const type of QUESTION_TYPES) {
+    it(`${type}: no serious or critical issues with every helper on (icon, Listen, mic, consent)`, async () => {
+      setSpeechProvider({ isAvailable: () => true, speak: () => new Promise(() => {}), stop() {} });
+      setVoiceProvider({ isAvailable: () => true, listen: () => new Promise(() => {}), stop() {} });
+      const el = await mount(flowOf([{ ...questionOf(type), ...(type === 'info' ? {} : { voice: true }) }]), {}, {
+        prefs: { chosen: true, readAloud: true, voice: true, simple: true, largerText: true, highContrast: true },
+      });
+      expect(await serious()).toEqual([]);
+      const mic = $(el, '.op-mic');
+      if (mic) {
+        mic.click(); // shows the consent box
+        expect($(el, '.op-consent')).not.toBeNull();
+        expect(await serious()).toEqual([]);
+      }
+      resetProviders();
+    });
+  }
+
+  it('the "How do you want to use this?" step', async () => {
+    await mount(flowOf([questionOf('text')]), {}, { prefs: null });
+    expect(await serious()).toEqual([]);
+  });
 
   it('optional text question with Skip, multiline and the review and done screens', async () => {
     const el = await mount(

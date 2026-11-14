@@ -26,7 +26,16 @@ describe('questions.schema.json', () => {
     'unsupported language': (f) => (f.title.fr = 'Rejoindre'),
     'unknown question field': (f) => (f.questions[2].colour = 'red'),
     'required info screen': (f) => (f.questions[0].required = true),
+    'audio with a javascript: URL': (f) => (f.questions[2].audio = { en: 'javascript:alert(1)' }),
+    'audio in an unsupported language': (f) => (f.questions[2].audio = { fr: 'a.mp3' }),
   };
+
+  it('schema and validator both accept audio files per language', () => {
+    const f = structuredClone(onboarding);
+    f.questions[2].audio = { en: '/audio/name.en.mp3', am: 'https://cdn.example.org/name.am.mp3' };
+    expect(validate(f), JSON.stringify(validate.errors)).toBe(true);
+    expect(validateFlow(f)).toEqual([]);
+  });
   for (const [name, breakIt] of Object.entries(broken)) {
     it(`schema and validator both reject: ${name}`, () => {
       const f = structuredClone(onboarding);
