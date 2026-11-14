@@ -8,6 +8,7 @@ import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from
 import { getSpeech, getVoice, loadVoiceModule, voiceAvailable } from './providers.js';
 import { renderReview } from './review.js';
 import { renderSetup } from './setup.js';
+import { switchCalendar } from './steps/date.js';
 import { renderStep } from './steps/index.js';
 import { createStore } from './store.js';
 import css from './styles.css?inline';
@@ -602,6 +603,15 @@ export class OpenPathFlow extends HTMLElement {
         const progress = this.view.querySelector('.op-progress');
         if (progress) progress.textContent = this.tr('stepOf', { n: pos.index, total: pos.total });
       },
+      // Date questions: the learner switched calendar. Show the other fields,
+      // keep focus on the switch and say which calendar is in use now.
+      onSwitch: (calendar, message) => {
+        this.store.setAnswer(q.id, switchCalendar(this.store.state.answers[q.id], calendar));
+        this.error = null;
+        this.render();
+        this.view.querySelector('.op-calendar-switch')?.focus();
+        this.announce(message);
+      },
     });
 
     // The text field always stays; the mic is an extra way to fill it.
@@ -638,7 +648,7 @@ export class OpenPathFlow extends HTMLElement {
     const { answers } = this.store.state;
     const code = validateAnswer(q, answers[q.id]);
     if (code) {
-      const message = errorMessage(this.uiLang, q, code, this.simple);
+      const message = errorMessage(this.uiLang, q, code, this.simple, {}, answers[q.id]);
       this.error = { questionId: q.id, message };
       this.render({ focusField: true });
       this.announce(message);
@@ -714,7 +724,7 @@ export class OpenPathFlow extends HTMLElement {
       const first = errors[0];
       const q = this.nav.question(first.field);
       if (!q) return;
-      const message = errorMessage(this.uiLang, q, first.code, this.simple);
+      const message = errorMessage(this.uiLang, q, first.code, this.simple, {}, answers[q.id]);
       this.error = { questionId: q.id, message };
       this.store.setStep(q.id, { returnToReview: true });
       this.render({ focusField: true });

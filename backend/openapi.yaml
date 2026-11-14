@@ -151,27 +151,30 @@ components:
       type: object
       description: >-
         Map of question id to answer. text/phone/single are strings, multi is an array of
-        option values, yesno is a boolean. A date is "YYYY-MM-DD"; a date question with
-        "calendar": "ethiopian" takes { date: "YYYY-MM-DD" (Gregorian), ethiopian: { year, month, day } }
-        and the two dates must agree (otherwise calendar_mismatch).
+        option values, yesno is a boolean. A date is stored as the ISO Gregorian date plus the
+        calendar the learner used: { date: "YYYY-MM-DD", calendar: "gregorian" } or
+        { date, calendar: "ethiopian", ethiopian: { year, month, day } } (the two dates must agree,
+        otherwise calendar_mismatch). A plain "YYYY-MM-DD" is accepted as a Gregorian date.
       additionalProperties:
         oneOf:
           - type: string
           - type: boolean
           - type: array
             items: { type: string }
-          - $ref: '#/components/schemas/EthiopianDate'
+          - $ref: '#/components/schemas/DateAnswer'
       example:
         fullName: Hana Tesfaye
         phone: '+251 911 234 567'
-        dateOfBirth: { date: '2001-03-27', ethiopian: { year: 1993, month: 7, day: 18 } }
-    EthiopianDate:
+        dateOfBirth: { date: '2001-03-27', calendar: ethiopian, ethiopian: { year: 1993, month: 7, day: 18 } }
+    DateAnswer:
       type: object
-      required: [date, ethiopian]
+      required: [date, calendar]
       properties:
-        date: { type: string, format: date, description: The same day in the Gregorian calendar. }
+        date: { type: string, format: date, description: The day in the Gregorian calendar. }
+        calendar: { type: string, enum: [gregorian, ethiopian], description: The calendar the learner used. }
         ethiopian:
           type: object
+          description: Only when calendar is ethiopian.
           required: [year, month, day]
           properties:
             year: { type: integer }

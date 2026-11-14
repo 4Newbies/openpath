@@ -1,4 +1,4 @@
-import { formatPhone, isEmpty, normalizePhone, phoneCountry, visibleQuestions } from '../../shared/flow.js';
+import { answerCalendar, formatPhone, isEmpty, normalizePhone, phoneCountry, visibleQuestions } from '../../shared/flow.js';
 import { h, sr } from './dom.js';
 import { labelOf, langAttrs, t, tList } from './messages.js';
 
@@ -22,15 +22,16 @@ export function displayAnswer(q, value, lang, simple = false) {
       return e164 ? formatPhone(e164, country) : String(value);
     }
     case 'date': {
-      if (q.calendar === 'ethiopian') {
+      if (answerCalendar(value) === 'ethiopian') {
         // Shown in the calendar the learner used, in their language.
         const e = value?.ethiopian;
         const month = e && tList(lang, 'ethiopianMonths')[e.month - 1];
         return month && e.day && e.year ? t(lang, 'ethiopianDateFormat', { day: e.day, month, year: e.year }) : t(lang, 'notAnswered', {}, simple);
       }
-      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      const iso = typeof value === 'string' ? value : value?.date;
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '');
       const month = m && tList(lang, 'gregorianMonths')[Number(m[2]) - 1];
-      return month ? t(lang, 'dateFormat', { day: Number(m[3]), month, year: m[1] }) : value;
+      return month ? t(lang, 'dateFormat', { day: Number(m[3]), month, year: m[1] }) : String(iso ?? t(lang, 'notAnswered', {}, simple));
     }
     default:
       return String(value);

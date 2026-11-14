@@ -303,6 +303,15 @@ async function walk(browser, mode, lang) {
   await host.getByLabel(s('day'), { exact: true }).selectOption('18');
   await host.getByLabel(s('month'), { exact: true }).selectOption('7');
   await host.getByLabel(s('year'), { exact: true }).selectOption('1993');
+  // The calendar switch shows the same day in the other calendar, and back.
+  await button(s('useGregorian')).click();
+  const boxes = await shadow(page, `return [...root.querySelectorAll('.op-date input')].map((i) => i.value).join('/');`);
+  if (boxes !== '27/03/2001') fail(at('calendar switch'), `Gregorian boxes show ${boxes}`);
+  if ((await shadow(page, `return root.activeElement && root.activeElement.className;`))?.includes('op-calendar-switch') !== true) {
+    fail(at('calendar switch'), 'focus did not stay on the calendar switch');
+  }
+  await checkScreen(page, at('date, Gregorian'), lang);
+  await button(s('useEthiopian')).click();
   await next(at('date'));
 
   // language (single)
@@ -374,7 +383,7 @@ async function walk(browser, mode, lang) {
     if (a.course !== 'virtual-assistant') fail(at('complete'), 'edited answer missing from the event');
     if ('referringPartner' in a) fail(at('complete'), 'skipped answer should be absent');
     if (a.phone !== '+251911234567') fail(at('complete'), `phone is ${a.phone}`);
-    if (JSON.stringify(a.dateOfBirth) !== JSON.stringify({ date: '2001-03-27', ethiopian: { year: 1993, month: 7, day: 18 } })) {
+    if (JSON.stringify(a.dateOfBirth) !== JSON.stringify({ date: '2001-03-27', calendar: 'ethiopian', ethiopian: { year: 1993, month: 7, day: 18 } })) {
       fail(at('complete'), `date of birth is ${JSON.stringify(a.dateOfBirth)}`);
     }
   }

@@ -102,6 +102,12 @@
     ],
     "ethiopianDateFormat": "{month} {day} ቀን {year} ዓ.ም.",
     "phonePrefix": "የአገር መለያ ቁጥር {code} ቀድሞ ተጨምሯል።",
+    "useGregorian": "የግሪጎሪያን (የፈረንጅ) አቆጣጠር ተጠቀም",
+    "useEthiopian": "የኢትዮጵያ አቆጣጠር ተጠቀም",
+    "calendarNowGregorian": "አሁን የግሪጎሪያን አቆጣጠር እየተጠቀሙ ነው።",
+    "calendarNowEthiopian": "አሁን የኢትዮጵያ አቆጣጠር እየተጠቀሙ ነው።",
+    "dateExampleEthiopian": "በኢትዮጵያ አቆጣጠር። ለምሳሌ፦ መጋቢት 18 ቀን 1993 ዓ.ም.",
+    "dateExampleGregorian": "በግሪጎሪያን አቆጣጠር። ለምሳሌ፦ 27 3 2001 (ቀን፣ ወር፣ ዓመት)።",
     "errors": {
       "required_text": "እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ።",
       "required_single": "እባክዎ አንድ መልስ ይምረጡ።",
@@ -145,6 +151,7 @@
     "voice_offline": "ለዚህ ኢንተርኔት ያስፈልጋል። እባክዎ ይጻፉ።",
     "voice_no_microphone": "ማይክሮፎን የለም። እባክዎ ይጻፉ።",
     "voice_failed": "አልሰራም። እባክዎ ይጻፉ።",
+    "dateExampleGregorian": "በግሪጎሪያን አቆጣጠር። እንዲህ፦ 27 3 2001።",
     "errors": {
       "required_text": "እባክዎ መልስ ይጻፉ።",
       "required_single": "እባክዎ አንዱን ይምረጡ።",

@@ -104,6 +104,12 @@
     ],
     "ethiopianDateFormat": "{day} {month} {year} (التقويم الإثيوبي)",
     "phonePrefix": "رمز الدولة {code} مضاف مسبقًا.",
+    "useGregorian": "استخدم التقويم الميلادي",
+    "useEthiopian": "استخدم التقويم الإثيوبي",
+    "calendarNowGregorian": "تستخدم الآن التقويم الميلادي.",
+    "calendarNowEthiopian": "تستخدم الآن التقويم الإثيوبي.",
+    "dateExampleEthiopian": "التقويم الإثيوبي. مثلًا: 18 مجابيت 1993.",
+    "dateExampleGregorian": "التقويم الميلادي. مثلًا: 27 3 2001 (اليوم، الشهر، السنة).",
     "errors": {
       "required_text": "يُرجى كتابة إجابة لهذا السؤال.",
       "required_single": "يُرجى اختيار إجابة واحدة.",

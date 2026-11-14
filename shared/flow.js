@@ -242,22 +242,39 @@ export function visibleQuestions(flow, answers) {
 }
 
 /**
- * An Ethiopian-calendar date answer is stored as
- *   { "date": "2001-03-27", "ethiopian": { "year": 1993, "month": 7, "day": 18 } }
- * The ISO Gregorian date and the original Ethiopian date must agree.
+ * Date answers are stored as the ISO Gregorian date plus the calendar the
+ * learner used (the question's "calendar" is only the starting choice; the
+ * learner can switch):
+ *   { "date": "2001-03-27", "calendar": "gregorian" }
+ *   { "date": "2001-03-27", "calendar": "ethiopian", "ethiopian": { "year": 1993, "month": 7, "day": 18 } }
+ * For Ethiopian dates the ISO date and the Ethiopian date must agree.
+ * A plain "2001-03-27" is still accepted as a Gregorian date.
  */
-function ethiopianDateError(value) {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return 'invalid_type';
+const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+/** The calendar a date answer was given in. */
+export function answerCalendar(value) {
+  if (!isPlainObject(value)) return 'gregorian';
+  return value.calendar ?? (value.ethiopian ? 'ethiopian' : 'gregorian');
+}
+
+function dateAnswerError(value) {
+  if (typeof value === 'string') return dateError(value.trim());
+  if (!isPlainObject(value)) return 'invalid_type';
+  const calendar = answerCalendar(value);
+  if (!CALENDARS.includes(calendar)) return 'invalid_type';
+  if (calendar === 'gregorian') return typeof value.date === 'string' ? dateError(value.date.trim()) : 'invalid_date';
   if (!isValidEthiopianDate(value.ethiopian)) return 'invalid_date';
   if (typeof value.date !== 'string' || value.date !== ethiopianToIso(value.ethiopian)) return 'calendar_mismatch';
   return dateError(value.date);
 }
 
-/** True for an Ethiopian date answer with nothing chosen yet. */
-function emptyEthiopian(value) {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+/** True for a date answer object with nothing filled in yet (maybe only a calendar choice). */
+function emptyDateObject(value) {
+  if (!isPlainObject(value)) return false;
   const e = value.ethiopian;
-  return !value.date && (!e || ['year', 'month', 'day'].every((k) => e[k] === undefined || e[k] === null || e[k] === ''));
+  const blank = (v) => v === undefined || v === null || v === '';
+  return (blank(value.date) || String(value.date).trim() === '') && (!e || ['year', 'month', 'day'].every((k) => blank(e[k])));
 }
 
 function dateError(value) {
@@ -280,7 +297,7 @@ function dateError(value) {
  */
 export function validateAnswer(question, value, { checkRequired = true } = {}) {
   if (question.type === 'info') return value === undefined || value === null ? null : 'not_answerable';
-  if (isEmpty(value) || (question.calendar === 'ethiopian' && emptyEthiopian(value))) {
+  if (isEmpty(value) || (question.type === 'date' && emptyDateObject(value))) {
     return checkRequired && question.required ? 'required' : null;
   }
 
@@ -298,8 +315,7 @@ export function validateAnswer(question, value, { checkRequired = true } = {}) {
       return digits >= 7 && digits <= 15 ? null : 'invalid_phone';
     }
     case 'date':
-      if (question.calendar === 'ethiopian') return ethiopianDateError(value);
-      return typeof value === 'string' ? dateError(value.trim()) : 'invalid_type';
+      return dateAnswerError(value);
     case 'single':
       if (typeof value !== 'string') return 'invalid_type';
       return question.options.some((o) => o.value === value) ? null : 'invalid_option';
@@ -324,12 +340,14 @@ export function cleanAnswer(q, value) {
   if (q.type === 'phone' && phoneCountry(q) !== 'any' && typeof value === 'string') {
     return normalizePhone(value, phoneCountry(q)) ?? value.trim();
   }
-  if (typeof value === 'string') return value.trim();
-  if (q.type === 'date' && q.calendar === 'ethiopian') {
-    if (emptyEthiopian(value)) return undefined;
+  if (q.type === 'date') {
+    if (typeof value === 'string') return { date: value.trim(), calendar: 'gregorian' };
+    if (emptyDateObject(value)) return undefined;
+    if (answerCalendar(value) === 'gregorian') return { date: value.date.trim(), calendar: 'gregorian' };
     const { year, month, day } = value.ethiopian;
-    return { date: value.date, ethiopian: { year, month, day } };
+    return { date: value.date, calendar: 'ethiopian', ethiopian: { year, month, day } };
   }
+  if (typeof value === 'string') return value.trim();
   return value;
 }
 

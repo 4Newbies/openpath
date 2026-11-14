@@ -6,7 +6,7 @@
 // normal mode -> [lang, en]. A missing string falls back to English, a
 // missing key to the key itself. Question text comes from the question file.
 
-import { PHONE_COUNTRIES, phoneCountry } from '../../shared/flow.js';
+import { answerCalendar, PHONE_COUNTRIES, phoneCountry } from '../../shared/flow.js';
 import en from '../lang/en.json';
 
 export const FALLBACK_LANG = 'en';
@@ -124,13 +124,14 @@ export function t(lang, key, vars = {}, simple = false) {
 }
 
 /** Plain-language message for an answer error code from shared/flow.js. */
-export function errorMessage(lang, question, code, simple = false, vars = {}) {
+export function errorMessage(lang, question, code, simple = false, vars = {}, value = undefined) {
   if (code === 'required') {
     const kinds = { multi: 'multi', single: 'single', yesno: 'single', date: 'date' };
     return t(lang, `errors.required_${kinds[question.type] ?? 'text'}`, vars, simple);
   }
   let key = code;
-  if (code === 'invalid_date' && question.calendar === 'ethiopian') key = 'invalid_date_ethiopian';
+  const calendar = value === undefined ? question.calendar : answerCalendar(value);
+  if (code === 'invalid_date' && calendar === 'ethiopian') key = 'invalid_date_ethiopian';
   // Phone errors give an example number for the question's country.
   const country = question.type === 'phone' ? PHONE_COUNTRIES[phoneCountry(question)] : null;
   if (code === 'invalid_phone' && question.type === 'phone' && !country) key = 'invalid_phone_any';

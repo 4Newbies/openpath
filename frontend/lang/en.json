@@ -105,6 +105,12 @@
     ],
     "ethiopianDateFormat": "{day} {month} {year} (Ethiopian calendar)",
     "phonePrefix": "The country code {code} is already added.",
+    "useGregorian": "Use Gregorian calendar",
+    "useEthiopian": "Use Ethiopian calendar",
+    "calendarNowGregorian": "Now using the Gregorian calendar.",
+    "calendarNowEthiopian": "Now using the Ethiopian calendar.",
+    "dateExampleEthiopian": "Ethiopian calendar. For example: 18 Megabit 1993.",
+    "dateExampleGregorian": "Gregorian calendar. For example: 27 3 2001 (day, month, year).",
     "errors": {
       "required_text": "Please type an answer to this question.",
       "required_single": "Please choose one answer.",
@@ -148,6 +154,7 @@
     "voice_offline": "You need internet for this. Please type.",
     "voice_no_microphone": "No microphone found. Please type.",
     "voice_failed": "This did not work. Please type.",
+    "dateExampleGregorian": "Gregorian calendar. Like this: 27 3 2001.",
     "errors": {
       "required_text": "Please write an answer.",
       "required_single": "Please pick one.",

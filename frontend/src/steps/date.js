@@ -1,18 +1,33 @@
-import { ethiopianToday, ethiopianToIso } from '../../../shared/ethiopian.js';
-import { h } from '../dom.js';
+import { ethiopianToday, ethiopianToIso, isoToEthiopian } from '../../../shared/ethiopian.js';
+import { answerCalendar } from '../../../shared/flow.js';
+import { h, ids } from '../dom.js';
 import { t, tList } from '../messages.js';
-import { group, idsFor } from './common.js';
+import { describedBy, group, idsFor } from './common.js';
 
-// Gregorian dates: three separate boxes (day, month, year) instead of a
-// date picker. They work with every screen reader, accept paste and typing,
-// and don't need a calendar widget.
+// Date questions in either calendar. The question's "calendar" setting is
+// where the learner starts; a button under the fields switches between
+// "Use Gregorian calendar" and "Use Ethiopian calendar". The answer stores
+// the ISO Gregorian date plus the calendar used:
+//   { date: "2001-03-27", calendar: "gregorian" }
+//   { date: "2001-03-27", calendar: "ethiopian", ethiopian: { year: 1993, month: 7, day: 18 } }
 //
-// Ethiopian dates ("calendar": "ethiopian"): three native <select>s, each
-// with its own label, inside the same fieldset + legend. 13 months; Pagume
-// has 5 days, or 6 when the year mod 4 is 3 (checked on Next).
+// Gregorian: three boxes (day, month, year) instead of a date picker. They
+// work with every screen reader, accept paste and typing, and need no widget.
+// Ethiopian: three native <select>s, each with its own label. 13 months;
+// Pagume has 5 days, or 6 when the year mod 4 is 3 (checked on Next).
+// Both sit in one fieldset whose legend is the question.
+
+/** The calendar this question is answered in now. */
+export function currentCalendar(q, value) {
+  if (value && typeof value === 'object' && value.calendar) return value.calendar;
+  if (value && typeof value === 'object' && value.ethiopian) return 'ethiopian';
+  if (typeof value === 'string') return 'gregorian';
+  return q.calendar === 'ethiopian' ? 'ethiopian' : 'gregorian';
+}
 
 export function splitDate(value) {
-  const [year = '', month = '', day = ''] = typeof value === 'string' ? value.split('-') : [];
+  const iso = typeof value === 'string' ? value : value?.date;
+  const [year = '', month = '', day = ''] = typeof iso === 'string' ? iso.split('-') : [];
   return { day, month, year };
 }
 
@@ -25,27 +40,65 @@ export function joinDate({ day, month, year }) {
   return `${y}-${pad(m)}-${pad(d)}`;
 }
 
+/** Answer for the Gregorian boxes (partly typed dates are kept as typed). */
+export function gregorianAnswer(parts) {
+  const date = joinDate(parts);
+  return { ...(date ? { date } : {}), calendar: 'gregorian' };
+}
+
 /**
- * The answer for an Ethiopian date: the ISO Gregorian date plus the date
- * the learner chose. Partly chosen dates keep their parts (no ISO date yet);
- * nothing chosen is no answer.
+ * Answer for the Ethiopian lists: the ISO Gregorian date plus the date the
+ * learner chose. Partly chosen dates keep their parts (no ISO date yet).
  */
 export function ethiopianAnswer({ day, month, year }) {
   const num = (v) => (v === '' || v === undefined || v === null ? null : Number(v));
   const ethiopian = { year: num(year), month: num(month), day: num(day) };
-  if (ethiopian.year === null && ethiopian.month === null && ethiopian.day === null) return undefined;
   const date = ethiopianToIso(ethiopian);
-  return date ? { date, ethiopian } : { ethiopian };
+  return { ...(date ? { date } : {}), calendar: 'ethiopian', ethiopian };
+}
+
+/** The same day in the other calendar (or just the calendar choice if there is no full date yet). */
+export function switchCalendar(value, to) {
+  const iso = value && typeof value === 'object' ? value.date : value;
+  const full = typeof iso === 'string' && isoToEthiopian(iso) ? iso : null;
+  if (to === 'ethiopian') return full ? { date: full, calendar: 'ethiopian', ethiopian: isoToEthiopian(full) } : { calendar: 'ethiopian' };
+  return full ? { date: full, calendar: 'gregorian' } : { calendar: 'gregorian' };
 }
 
 export function renderDate(ctx) {
-  return ctx.q.calendar === 'ethiopian' ? renderEthiopianDate(ctx) : renderGregorianDate(ctx);
+  const { q, lang, simple } = ctx;
+  const i = idsFor(ctx);
+  const calendar = currentCalendar(q, ctx.value);
+  const other = calendar === 'ethiopian' ? 'gregorian' : 'ethiopian';
+  const fields = calendar === 'ethiopian' ? ethiopianFields(ctx, i) : gregorianFields(ctx, i);
+
+  // Which calendar, with an example, read with the question.
+  const noteId = `${i.field}-calendar`;
+  const note = h('p', {
+    id: noteId,
+    class: 'op-hint op-calendar-note',
+    text: t(lang, calendar === 'ethiopian' ? 'dateExampleEthiopian' : 'dateExampleGregorian', {}, simple),
+  });
+  const switchButton = h('button', {
+    type: 'button',
+    class: 'op-button op-secondary op-small op-calendar-switch',
+    text: t(lang, other === 'gregorian' ? 'useGregorian' : 'useEthiopian', {}, simple),
+    // The element converts the answer as it is now (it may have changed since this step was drawn).
+    onclick: () => ctx.onSwitch?.(other, t(lang, other === 'gregorian' ? 'calendarNowGregorian' : 'calendarNowEthiopian', {}, simple)),
+  });
+
+  const fieldset = group(ctx, [note, fields.node, h('div', { class: 'op-calendar-tools' }, switchButton)]);
+  fieldset.setAttribute('aria-describedby', ids(noteId, describedBy(ctx)));
+  return {
+    node: h('div', { class: 'op-step' }, fieldset),
+    focusField: fields.focus,
+    calendar,
+  };
 }
 
-function renderGregorianDate(ctx) {
-  const { q, lang } = ctx;
-  const i = idsFor(ctx);
-  const parts = splitDate(ctx.value);
+function gregorianFields(ctx, i) {
+  const { q, lang, simple } = ctx;
+  const parts = splitDate(answerCalendar(ctx.value) === 'gregorian' ? ctx.value : undefined);
   const bday = q.autocomplete === 'bday';
   const inputs = {};
 
@@ -60,25 +113,23 @@ function renderGregorianDate(ctx) {
       'aria-invalid': ctx.error ? 'true' : undefined,
       size,
       value: parts[part],
-      oninput: () => ctx.onChange(joinDate({ day: inputs.day.value, month: inputs.month.value, year: inputs.year.value })),
+      oninput: () => ctx.onChange(gregorianAnswer({ day: inputs.day.value, month: inputs.month.value, year: inputs.year.value })),
     });
     inputs[part] = input;
-    return h('div', { class: 'op-date-part' }, h('label', { for: id, text: t(lang, part, {}, ctx.simple) }), input);
+    return h('div', { class: 'op-date-part' }, h('label', { for: id, text: t(lang, part, {}, simple) }), input);
   };
 
-  const fields = h('div', { class: 'op-date' }, box('day', 2), box('month', 2), box('year', 4));
   return {
-    node: h('div', { class: 'op-step' }, group(ctx, fields)),
-    focusField: () => inputs.day.focus(),
+    node: h('div', { class: 'op-date' }, box('day', 2), box('month', 2), box('year', 4)),
+    focus: () => inputs.day.focus(),
   };
 }
 
 const EARLIEST_ETHIOPIAN_YEAR = 1892; // 1900 in the Gregorian calendar
 
-function renderEthiopianDate(ctx) {
+function ethiopianFields(ctx, i) {
   const { lang, simple } = ctx;
-  const i = idsFor(ctx);
-  const chosen = ctx.value?.ethiopian ?? {};
+  const chosen = (ctx.value && typeof ctx.value === 'object' && ctx.value.ethiopian) || {};
   const months = tList(lang, 'ethiopianMonths');
   const thisYear = ethiopianToday().year;
   const selects = {};
@@ -107,9 +158,8 @@ function renderEthiopianDate(ctx) {
     return h('div', { class: 'op-date-part' }, h('label', { for: id, text: t(lang, part, {}, simple) }), select);
   };
 
-  const fields = h('div', { class: 'op-date' }, list('day'), list('month'), list('year'));
   return {
-    node: h('div', { class: 'op-step' }, group(ctx, fields)),
-    focusField: () => selects.day.focus(),
+    node: h('div', { class: 'op-date' }, list('day'), list('month'), list('year')),
+    focus: () => selects.day.focus(),
   };
 }

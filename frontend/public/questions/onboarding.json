@@ -1,6 +1,6 @@
 {
   "$schema": "../../../shared/questions.schema.json",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "flowId": "alx-onboarding",
   "title": { "en": "Join ALX", "am": "ALXን ይቀላቀሉ" },
   "questions": [
@@ -47,8 +47,7 @@
       "voice": false,
       "calendar": "ethiopian",
       "label": { "en": "What is your date of birth?", "am": "የትውልድ ቀንዎ መቼ ነው?" },
-      "simple": { "en": "When were you born?", "am": "መቼ ተወለዱ?" },
-      "hint": { "en": "Use the Ethiopian calendar. For example, 18 Megabit 1993.", "am": "በኢትዮጵያ አቆጣጠር ይምረጡ። ለምሳሌ መጋቢት 18 ቀን 1993 ዓ.ም." }
+      "simple": { "en": "When were you born?", "am": "መቼ ተወለዱ?" }
     },
     {
       "id": "language",

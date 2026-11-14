@@ -99,8 +99,8 @@ describe('Ethiopian date answers', () => {
     expect(validateAnswer(q, { ethiopian: { year: 1993, month: 7, day: null } })).toBe('invalid_date');
     expect(validateAnswer(q, { date: ethiopianToIso(E(2100, 1, 1)), ethiopian: E(2100, 1, 1) })).toBe('future_date');
     expect(validateAnswer(q, { date: ethiopianToIso(E(1890, 1, 1)), ethiopian: E(1890, 1, 1) })).toBe('invalid_date');
-    expect(validateAnswer(q, '2001-03-27')).toBe('invalid_type');
     expect(validateAnswer(q, ['2001-03-27'])).toBe('invalid_type');
+    expect(validateAnswer(q, { date: '2001-03-27', calendar: 'julian' })).toBe('invalid_type');
   });
 
   it('nothing chosen is no answer', () => {
@@ -113,7 +113,19 @@ describe('Ethiopian date answers', () => {
     const flow = { version: '1', flowId: 'f', title: { en: 'T' }, questions: [q] };
     const { errors, clean } = validateAnswers(flow, { dob: { ...answer, extra: 'x', ethiopian: { ...answer.ethiopian, note: 1 } } });
     expect(errors).toEqual([]);
-    expect(clean).toEqual({ dob: answer });
+    expect(clean).toEqual({ dob: { ...answer, calendar: 'ethiopian' } });
+  });
+
+  it('the learner may answer in the Gregorian calendar instead; the calendar used is stored', () => {
+    const flow = { version: '1', flowId: 'f', title: { en: 'T' }, questions: [q] };
+    expect(validateAnswer(q, { date: '2001-03-27', calendar: 'gregorian' })).toBeNull();
+    expect(validateAnswer(q, { date: '2001-02-30', calendar: 'gregorian' })).toBe('invalid_date');
+    expect(validateAnswer(q, '2001-03-27')).toBeNull(); // a plain ISO date is a Gregorian date
+    expect(validateAnswer(q, { calendar: 'gregorian' })).toBe('required'); // only the calendar chosen
+    expect(validateAnswers(flow, { dob: '2001-03-27' }).clean).toEqual({ dob: { date: '2001-03-27', calendar: 'gregorian' } });
+    expect(validateAnswers(flow, { dob: { date: '2001-03-27', calendar: 'gregorian', ethiopian: E(1, 1, 1) } }).clean).toEqual({
+      dob: { date: '2001-03-27', calendar: 'gregorian' },
+    });
   });
 
   it('the calendar setting is only for date questions', () => {

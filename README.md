@@ -191,15 +191,22 @@ is downloaded) with a line height of 1.7. All Amharic is collected in
 { "id": "dateOfBirth", "type": "date", "calendar": "ethiopian", "label": { "en": "What is your date of birth?" } }
 ```
 
-| `calendar` | Input | Stored answer |
-|------------|-------|---------------|
-| `"gregorian"` (default) | three boxes: day, month, year | `"2001-03-27"` |
-| `"ethiopian"` | a fieldset with three native lists: day, month (13 months, in the learner's language), year | `{ "date": "2001-03-27", "ethiopian": { "year": 1993, "month": 7, "day": 18 } }` |
+`calendar` is where the learner **starts**. A button under the fields switches between
+*Use Gregorian calendar* and *Use Ethiopian calendar*; the same day is carried over, focus
+stays on the button and the change is announced. Every date is stored as the ISO Gregorian
+date plus the calendar the learner used:
 
-Pagume (month 13) has 5 days, or 6 when the Ethiopian year mod 4 is 3. The browser and
-the API both check that the two dates agree (`calendar_mismatch` otherwise). The review
-screen shows the date the way the learner entered it: *18 Megabit 1993 (Ethiopian
-calendar)*, *መጋቢት 18 ቀን 1993 ዓ.ም.* The default flow uses the Ethiopian calendar for date of birth.
+| Calendar used | Input | Stored answer |
+|---------------|-------|---------------|
+| `"gregorian"` (default start) | three boxes: day, month, year | `{ "date": "2001-03-27", "calendar": "gregorian" }` |
+| `"ethiopian"` | three native lists: day, month (13 months, in the learner's language), year | `{ "date": "2001-03-27", "calendar": "ethiopian", "ethiopian": { "year": 1993, "month": 7, "day": 18 } }` |
+
+A plain `"2001-03-27"` sent to the API is accepted as a Gregorian date. Pagume (month 13)
+has 5 days, or 6 when the Ethiopian year mod 4 is 3. The browser and the API both check
+that the two dates agree (`calendar_mismatch` otherwise). The review screen shows the date
+in the calendar the learner used: *18 Megabit 1993 (Ethiopian calendar)*,
+*መጋቢት 18 ቀን 1993 ዓ.ም.*, *27 March 2001*. The default flow starts date of birth in the
+Ethiopian calendar.
 
 ### Phone country
 
