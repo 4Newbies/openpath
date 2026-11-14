@@ -471,3 +471,13 @@ textarea.op-input {
     border-color: ButtonText;
   }
 }
+
+/* Ethiopic script (Amharic, Tigrinya): fonts already on the device, nothing
+   is downloaded. Noto Sans Ethiopic (Android, ChromeOS, Linux), Nyala and
+   Ebrima (Windows), Kefa (macOS, iOS), Abyssinica SIL (if installed).
+   Ethiopic letters are tall and detailed, so lines get more room. */
+:lang(am),
+:lang(ti) {
+  font-family: 'Noto Sans Ethiopic', Nyala, Kefa, Ebrima, 'Abyssinica SIL', var(--openpath-font, sans-serif);
+  line-height: 1.7;
+}

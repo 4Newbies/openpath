@@ -10,7 +10,8 @@
     "demo": "vite build && node scripts/serve.mjs",
     "serve": "node scripts/serve.mjs",
     "test": "vitest run",
-    "test:browser": "node test/browser/a11y.browser.mjs"
+    "test:browser": "node test/browser/a11y.browser.mjs",
+    "review:amharic": "node scripts/amharic-review.mjs"
   },
   "devDependencies": {
     "axe-core": "^4.14.0",
