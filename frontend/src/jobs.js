@@ -284,6 +284,7 @@ export class OpenPathJobs extends HTMLElement {
     this.listNode = h('ul', { class: 'op-jobs-list', 'aria-labelledby': titleId });
     this.view.append(
       h(`h${this.level}`, { id: titleId, class: 'op-jobs-heading', tabindex: '-1', text: this.tr('jobsTitle') }),
+      this.jobs.length ? this.renderFilter() : null,
       h('p', { class: 'op-jobs-count', text: this.countText() }),
       this.listNode,
     );
