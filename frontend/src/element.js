@@ -18,7 +18,9 @@ import css from './styles.css?inline';
 let counter = 0;
 const DONE = 'done';
 const SETUP = 'setup';
-const LANGUAGE = 'language'; // first screen when the host offers several languages
+// First screen when the host offers several languages. The hyphen keeps it
+// apart from question ids (a question may well be called "language").
+const LANGUAGE = 'choose-language';
 const QUEUED = 'queued'; // answers wait on the device until the server can be reached
 const RETRY_MS = 20000;
 

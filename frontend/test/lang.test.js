@@ -116,6 +116,23 @@ describe('<openpath-flow> languages', () => {
     expect(JSON.parse(localStorage.getItem('openpath:prefs')).lang).toBe('am');
   });
 
+  it('a question called "language" is a question, not the language screen', async () => {
+    const withLanguageQuestion = {
+      ...flow,
+      flowId: 'lang-q',
+      questions: [...flow.questions, { id: 'language', type: 'single', label: { en: 'Which language for learning?' }, options: [{ value: 'en', label: { en: 'English' } }] }],
+    };
+    const el = await mount(withLanguageQuestion, { lang: 'en', languages: 'en,am' }, { prefs: null });
+    expect($$(el, '.op-lang-choice')).toHaveLength(2);
+    $(el, '.op-lang-choice[lang=en]').click();
+    await vi.waitFor(() => expect(heading(el)).toBe('How do you want to use this?'));
+    button(el, "Continue with my device's own tools").click();
+    el.store.setAnswer('name', 'Hana');
+    button(el, 'Next').click();
+    expect(heading(el)).toContain('Which language for learning?');
+    expect($$(el, '.op-lang-choice')).toHaveLength(0);
+  });
+
   it('skips the language screen with one language, or once a language is chosen', async () => {
     const one = await mount(flow, { lang: 'en', languages: 'en' }, { prefs: null });
     expect(heading(one)).toBe('How do you want to use this?');

@@ -578,6 +578,9 @@ async function jobsWalk(browser, mode, lang, apiUp) {
   if (ld?.['@context'] !== 'https://schema.org' || ld['@graph']?.length !== jobs.length) fail(at('json-ld'), 'no JobPosting JSON-LD for every job in the host page');
 
   // The private filter: announced, never leaves the browser, not stored.
+  // On narrow screens the filter starts closed (a <details>): open it like a learner would.
+  const box = host.locator('details.op-jobs-filter-box');
+  if ((await box.count()) && !(await box.evaluate((d) => d.open))) await box.locator('summary').click();
   if (!(await host.getByText(s('supportFilterPrivacy')).isVisible())) fail(at('filter'), 'the privacy sentence is not shown');
   const url = page.url();
   const sent = requests.length;
@@ -705,7 +708,7 @@ try {
   for (const lang of LANGS) {
     for (const mode of PAGES.includes('flow') ? MODES : []) {
       const before = failures.length;
-      const done = await walk(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${mode.label}`, `stopped: ${e.message.split('\n')[0]}`));
+      const done = await walk(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${mode.label}`, `stopped: ${e.message.split('\n').slice(0, 3).join(' / ')}`));
       if (apiUp && done && !done.sessionId) fail(`${lang} / ${mode.label}`, 'the API is running but the complete event has no sessionId');
       console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${lang} ${PACKS[lang].dir}  ${mode.label}`);
     }
@@ -714,7 +717,7 @@ try {
       if (!PAGES.includes(page)) continue;
       for (const mode of modes) {
         const before = failures.length;
-        await run(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${page} / ${mode.label}`, `stopped: ${e.message.split('\n')[0]}`));
+        await run(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${page} / ${mode.label}`, `stopped: ${e.message.split('\n').slice(0, 3).join(' / ')}`));
         console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${lang} ${PACKS[lang].dir}  ${page}: ${mode.label}`);
       }
     }

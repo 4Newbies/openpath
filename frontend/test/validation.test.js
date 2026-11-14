@@ -9,6 +9,14 @@ describe('validateFlow', () => {
     expect(validateFlow(defaultFlow)).toEqual([]);
   });
 
+  it('question ids cannot be the names of the form\'s own screens', () => {
+    for (const id of ['setup', 'review', 'done', 'queued']) {
+      const errors = validateFlow({ version: '1', flowId: 'f', title: { en: 'T' }, questions: [{ id, type: 'text', label: { en: 'Q' } }] });
+      expect(errors.join()).toMatch(/form's own screens/);
+    }
+    expect(validateFlow({ version: '1', flowId: 'f', title: { en: 'T' }, questions: [{ id: 'language', type: 'text', label: { en: 'Q' } }] })).toEqual([]);
+  });
+
   it('explains every problem in plain words', () => {
     const errors = validateFlow({
       version: '1',

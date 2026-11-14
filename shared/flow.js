@@ -61,6 +61,8 @@ export function formatPhone(e164, country = DEFAULT_PHONE_COUNTRY) {
 }
 
 const ID_RE = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
+// The form's own screens use these step names, so questions can't.
+const RESERVED_IDS = ['setup', 'review', 'done', 'queued'];
 const FLOW_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const OPTION_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 // Language codes in question files and sessions: "en", "am", "ar", "pt-BR" ...
@@ -130,6 +132,7 @@ export function validateFlow(flow) {
     for (const k of Object.keys(q)) if (!QUESTION_KEYS.has(k)) errors.push(`${where} has unknown field "${k}"`);
 
     if (typeof q.id !== 'string' || !ID_RE.test(q.id)) errors.push(`${p}.id must start with a letter and use only letters, digits and _`);
+    else if (RESERVED_IDS.includes(q.id)) errors.push(`${where} id "${q.id}" is the name of one of the form's own screens; choose another`);
     else if (seen.has(q.id)) errors.push(`${where} id is used twice`);
 
     if (!QUESTION_TYPES.includes(q.type)) errors.push(`${where}.type must be one of ${QUESTION_TYPES.join(', ')}`);

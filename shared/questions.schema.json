@@ -80,7 +80,7 @@
       "additionalProperties": false,
       "required": ["id", "type", "label"],
       "properties": {
-        "id": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$" },
+        "id": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$", "not": { "enum": ["setup", "review", "done", "queued"] } },
         "type": { "enum": ["text", "phone", "date", "single", "multi", "yesno", "info"] },
         "label": { "$ref": "#/$defs/localized" },
         "simple": { "$ref": "#/$defs/localized", "description": "Plain-words version of the label." },
