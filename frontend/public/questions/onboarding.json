@@ -1,6 +1,6 @@
 {
   "$schema": "../../../shared/questions.schema.json",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "flowId": "alx-onboarding",
   "title": { "en": "Join ALX" },
   "questions": [
@@ -27,10 +27,7 @@
       "options": [
         { "value": "larger-text", "label": { "en": "Larger text" } },
         { "value": "high-contrast", "label": { "en": "Stronger colours (high contrast)" } },
-        { "value": "screen-reader", "label": { "en": "I use a screen reader" } },
-        { "value": "simple-words", "label": { "en": "Simpler words" }, "hint": { "en": "Coming soon" } },
-        { "value": "read-aloud", "label": { "en": "Read the questions aloud" }, "hint": { "en": "Coming soon" } },
-        { "value": "voice-input", "label": { "en": "Answer by speaking" }, "hint": { "en": "Coming soon" } }
+        { "value": "screen-reader", "label": { "en": "I use a screen reader" } }
       ]
     },
     {
