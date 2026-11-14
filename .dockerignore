@@ -1,8 +1,0 @@
-**/node_modules
-**/.env
-**/dist
-.git
-client
-server
-frontend/public/savanna
-frontend/src

@@ -22,8 +22,11 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      # The API validates answers with the same code and question files as the tag.
+      additional_contexts:
+        shared: ./shared
+        questions: ./frontend/public/questions
     depends_on:
       db:
         condition: service_healthy
