@@ -286,7 +286,7 @@ export class OpenPathFlow extends HTMLElement {
       this.stopRetry();
       this.store.setPendingSubmit(false);
       this.queued = false;
-      this.submitError = this.tr('submitFailed');
+      this.submitError = this.submitFailedMessage(e);
       this.store.setStep(REVIEW);
       this.render({ focus: true });
       this.announce(this.submitError);
@@ -995,7 +995,7 @@ export class OpenPathFlow extends HTMLElement {
         // Offline: keep the answers here and send them when the connection returns.
         if (isUnreachable(e)) return this.queueSubmit();
         this.busy = false;
-        this.submitError = this.tr('submitFailed');
+        this.submitError = this.submitFailedMessage(e);
         this.render();
         this.view.querySelector('.op-primary')?.focus();
         this.announce(this.submitError);
@@ -1003,6 +1003,11 @@ export class OpenPathFlow extends HTMLElement {
       }
     }
     this.finish(sessionId, clean);
+  }
+
+  /** What to say when sending failed. The answers stay, so "Send" can be pressed again. */
+  submitFailedMessage(e) {
+    return this.tr(e instanceof ApiError && e.code === 'job_not_saved' ? 'jobNotSaved' : 'submitFailed');
   }
 
   /** Submit to the API. Safe to repeat: "already submitted" counts as sent. */

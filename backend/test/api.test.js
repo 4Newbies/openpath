@@ -175,6 +175,27 @@ for (const [name, makeStore] of stores) {
           });
           expect((await request(app).get('/v1/jobs')).body['@graph'].some((j) => j.identifier === `job-${id}`)).toBe(true);
         });
+
+        it('leaves the session open when the job cannot be saved, so the employer can try again', async () => {
+          const { id } = (await request(app).post('/v1/sessions').send({ flowId: 'employer-accommodations', lang: 'en' }).expect(201)).body;
+          const answers = { jobTitle: 'Receptionist', organisation: 'Bole Hotel (test)', location: 'Addis Ababa', employmentType: 'part-time', accommodations: [] };
+          // The real store, but the job it is given fails to be written (reading
+          // it throws, as a failed disk or connection would), inside submit.
+          const failing = Object.create(store);
+          const unwritable = (job) => Object.defineProperty({ ...job }, 'broken', { enumerable: true, get: () => { throw new Error('write failed'); } });
+          failing.submit = (sid, data) => store.submit(sid, { ...data, job: unwritable(data.job) });
+          const broken = createApp({ store: failing, flows, config, log: silent });
+          const r = await request(broken).post(`/v1/sessions/${id}/submit`).send({ answers }).expect(500);
+          expect(r.body.error.code).toBe('job_not_saved');
+          expect(r.body.error.message).toMatch(/try again/);
+          expect((await store.get(id)).status).toBe('open');
+          await request(app).get(`/v1/jobs/job-${id}`).expect(404);
+
+          // Retry: the job is posted and the session is sent.
+          await request(app).post(`/v1/sessions/${id}/submit`).send({ answers }).expect(200);
+          expect((await store.get(id)).status).toBe('submitted');
+          await request(app).get(`/v1/jobs/job-${id}`).expect(200);
+        });
       });
 
       it('rejects unknown flows and languages with the standard error shape', async () => {

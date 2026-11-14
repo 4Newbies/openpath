@@ -229,21 +229,25 @@ export function createApp({ store, flows, config, log = console }) {
     // Submit the answers sent with the request, or the last saved ones.
     const answers = body.answers !== undefined ? body.answers : storedAnswers(session);
     const clean = checkAnswers(flow, answers, 'submit');
+    // The employer form becomes a job listing (schema.org/JobPosting). The job
+    // is saved and the session marked submitted in one step: if the job can't
+    // be saved, the session stays open and the employer can simply try again.
+    const isEmployer = flow.flowId === EMPLOYER_FLOW;
+    let saved;
+    let job = null;
     try {
-      const saved = await store.submit(session.id, split(flow, clean));
-      if (!saved) throw new ApiError(404, 'not_found', 'No session with this id.');
-      const out = { id: saved.id, status: saved.status, submittedAt: saved.submittedAt };
-      // The employer form becomes a job listing (schema.org/JobPosting).
-      if (flow.flowId === EMPLOYER_FLOW) {
-        const job = jobFromEmployerAnswers(clean, { identifier: `job-${session.id}`, today: new Date().toISOString().slice(0, 10), lang: session.lang });
-        await store.saveJob(job, { sourceSession: session.id });
-        out.jobId = job.identifier;
-      }
-      res.json(out);
+      if (isEmployer) job = jobFromEmployerAnswers(clean, { identifier: `job-${session.id}`, today: new Date().toISOString().slice(0, 10), lang: session.lang });
+      saved = await store.submit(session.id, { ...split(flow, clean), job });
     } catch (e) {
       if (e instanceof StoreConflict) throw conflict();
-      throw e;
+      if (!isEmployer) throw e;
+      log.error('[openpath] job not saved; session left open', e);
+      throw new ApiError(500, 'job_not_saved', 'Your job could not be saved, so nothing was posted. Your answers are kept. Please try again.');
     }
+    if (!saved) throw new ApiError(404, 'not_found', 'No session with this id.');
+    const out = { id: saved.id, status: saved.status, submittedAt: saved.submittedAt };
+    if (job) out.jobId = job.identifier;
+    res.json(out);
   });
 
   // ---- jobs (schema.org/JobPosting) ----------------------------------------

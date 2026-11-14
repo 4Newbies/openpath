@@ -18,6 +18,12 @@ export function createMemoryStore() {
     return { ...clone(s), profile: clone(profiles.get(id) ?? {}), private: clone(privates.get(id) ?? {}) };
   }
 
+  function putJob(data, sourceSession) {
+    const created = !jobs.has(data.identifier);
+    jobs.set(data.identifier, { data, sourceSession: created ? sourceSession : jobs.get(data.identifier).sourceSession });
+    return created;
+  }
+
   function openOrThrow(id) {
     const s = sessions.get(id);
     if (!s) return null;
@@ -57,20 +63,22 @@ export function createMemoryStore() {
       s.updatedAt = new Date().toISOString();
       return view(id);
     },
-    async submit(id, { profile, privateAnswers }) {
+    /** Submit, and with a job (employer form) save it too: both or neither. */
+    async submit(id, { profile, privateAnswers, job = null }) {
       const s = openOrThrow(id);
       if (!s) return null;
-      profiles.set(id, clone(profile));
-      privates.set(id, clone(privateAnswers));
+      // Copy everything first, so a failure changes nothing.
+      const next = { profile: clone(profile), privateAnswers: clone(privateAnswers), job: job && clone(job) };
+      if (next.job) putJob(next.job, id);
+      profiles.set(id, next.profile);
+      privates.set(id, next.privateAnswers);
       s.status = 'submitted';
       s.submittedAt = s.updatedAt = new Date().toISOString();
       return view(id);
     },
     /** Create or replace a job by identifier. Returns { job, created }. */
     async saveJob(job, { sourceSession = null } = {}) {
-      const created = !jobs.has(job.identifier);
-      jobs.set(job.identifier, { data: clone(job), sourceSession: created ? sourceSession : jobs.get(job.identifier).sourceSession });
-      return { job: clone(job), created };
+      return { job: clone(job), created: putJob(clone(job), sourceSession) };
     },
     async getJob(identifier) {
       return jobs.has(identifier) ? clone(jobs.get(identifier).data) : null;

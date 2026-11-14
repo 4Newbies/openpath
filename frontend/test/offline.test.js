@@ -179,3 +179,33 @@ describe('when the API cannot be reached', () => {
     expect($(el, '.op-error').textContent).toContain('We could not send your answers');
   });
 });
+
+describe('when the server cannot save the employer\'s job', () => {
+  it('says plainly that the job was not posted, keeps the answers and lets "Send" be pressed again', async () => {
+    api.online = true;
+    let failNext = true;
+    const real = api.fetch.getMockImplementation();
+    api.fetch.mockImplementation(async (url, init) => {
+      if (String(url).endsWith('/submit') && failNext) {
+        failNext = false;
+        const body = { error: { code: 'job_not_saved', message: 'x' } };
+        return { ok: false, status: 500, json: async () => body };
+      }
+      return real(url, init);
+    });
+    const el = await mountWithApi();
+    type($(el, 'input'), 'Hana');
+    button(el, 'Next').click();
+    await el.saveChain;
+    button(el, 'Send my answers').click();
+    const message = 'Your job was not posted, because it could not be saved. Your answers are still here. Please try again.';
+    await vi.waitFor(() => expect($(el, '.op-error').textContent).toContain(message));
+    expect(heading(el)).toBe('Check your answers');
+    expect(saved().answers).toEqual({ name: 'Hana' });
+    expect(api.submitted.size).toBe(0);
+
+    button(el, 'Send my answers').click();
+    await vi.waitFor(() => expect(heading(el)).toBe('Thank you. Your answers have been sent.'));
+    expect(api.submitted.size).toBe(1);
+  });
+});

@@ -250,6 +250,7 @@ Buttons, messages and help text around the questions and in the job list.
 | year | Year | ዓመት | – |  |
 | errorPrefix | Error:  | ስህተት፦  | – |  |
 | submitFailed | We could not send your answers. They are still saved on this device. Please try again. | መልሶችዎን መላክ አልተቻለም። አሁንም በዚህ መሣሪያ ላይ ተቀምጠዋል። እባክዎ እንደገና ይሞክሩ። | መላክ አልተቻለም። እባክዎ እንደገና ይሞክሩ። |  |
+| jobNotSaved | Your job was not posted, because it could not be saved. Your answers are still here. Please try again. | ሥራው መቀመጥ ስላልቻለ አልተለጠፈም። መልሶችዎ አሁንም እዚህ አሉ። እባክዎ እንደገና ይሞክሩ። | – |  |
 | fixBeforeSubmit | One answer needs to be fixed before you can send. | ከመላክዎ በፊት አንድ መልስ መስተካከል አለበት። | እባክዎ መጀመሪያ አንድ መልስ ያስተካክሉ። |  |
 | settings | Settings | ቅንብሮች | – |  |
 | setupTitle | How do you want to use this? | ይህን እንዴት መጠቀም ይፈልጋሉ? | – |  |

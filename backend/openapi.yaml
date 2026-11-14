@@ -218,6 +218,11 @@ paths:
         has none. Every visible required question must be answered; answers to
         questions hidden by showIf are dropped. After submit the session is
         read-only.
+
+        For the employer form, the job listing is saved and the session marked
+        submitted in one step. If the job cannot be saved, the answer is 500
+        with code job_not_saved, the session stays open and the same request
+        can be sent again.
       operationId: submitSession
       requestBody:
         required: false
@@ -238,11 +243,15 @@ paths:
                   id: { $ref: '#/components/schemas/SessionId' }
                   status: { type: string, enum: [submitted] }
                   submittedAt: { type: string, format: date-time }
+                  jobId: { type: string, description: 'Employer form only: the identifier of the job listing created.' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/Unprocessable' }
         '429': { $ref: '#/components/responses/RateLimited' }
+        '500':
+          description: The employer form's job could not be saved (job_not_saved); nothing was submitted, try again
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 components:
   parameters:
     SessionId:
@@ -368,7 +377,7 @@ components:
                 Machine-readable code, e.g. unknown_flow, invalid_lang, invalid_body,
                 invalid_json, invalid_step, unknown_question, invalid_type, too_long,
                 invalid_phone, invalid_date, future_date, calendar_mismatch, invalid_option, required,
-                not_found, already_submitted, payload_too_large, rate_limited, internal.
+                not_found, already_submitted, job_not_saved, payload_too_large, rate_limited, internal.
             message: { type: string, description: Plain-language message safe to show to a person. }
             field: { type: string, description: The question id or body field the error is about. }
   responses:

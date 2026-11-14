@@ -55,6 +55,16 @@ export function createPgStore(connectionString) {
     }
   }
 
+  async function writeJob(client, job, sourceSession) {
+    const { rows } = await client.query(
+      `INSERT INTO openpath_jobs (identifier, data, source_session) VALUES ($1, $2, $3)
+       ON CONFLICT (identifier) DO UPDATE SET data = EXCLUDED.data, updated_at = now()
+       RETURNING (xmax = 0) AS created`,
+      [job.identifier, JSON.stringify(job), sourceSession],
+    );
+    return rows[0].created;
+  }
+
   async function lockOpen(client, id) {
     const { rows } = await client.query('SELECT status FROM openpath_sessions WHERE id = $1 FOR UPDATE', [id]);
     if (!rows.length) return false;
@@ -115,10 +125,12 @@ export function createPgStore(connectionString) {
       return found ? this.get(id) : null;
     },
 
-    async submit(id, { profile, privateAnswers }) {
+    /** Submit, and with a job (employer form) save it in the same transaction: both or neither. */
+    async submit(id, { profile, privateAnswers, job = null }) {
       const found = await tx(async (c) => {
         if (!(await lockOpen(c, id))) return false;
         await writeAnswers(c, id, profile, privateAnswers);
+        if (job) await writeJob(c, job, id);
         await c.query(
           `UPDATE openpath_sessions SET status = 'submitted', submitted_at = now(), updated_at = now() WHERE id = $1`,
           [id],
@@ -129,13 +141,7 @@ export function createPgStore(connectionString) {
     },
 
     async saveJob(job, { sourceSession = null } = {}) {
-      const { rows } = await pool.query(
-        `INSERT INTO openpath_jobs (identifier, data, source_session) VALUES ($1, $2, $3)
-         ON CONFLICT (identifier) DO UPDATE SET data = EXCLUDED.data, updated_at = now()
-         RETURNING (xmax = 0) AS created`,
-        [job.identifier, JSON.stringify(job), sourceSession],
-      );
-      return { job, created: rows[0].created };
+      return { job, created: await writeJob(pool, job, sourceSession) };
     },
 
     async getJob(identifier) {
