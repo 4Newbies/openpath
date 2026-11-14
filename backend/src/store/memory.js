@@ -9,6 +9,7 @@ export function createMemoryStore() {
   const sessions = new Map();
   const profiles = new Map();
   const privates = new Map();
+  const jobs = new Map(); // identifier -> { data, sourceSession }
   const clone = (v) => structuredClone(v);
 
   function view(id) {
@@ -65,12 +66,25 @@ export function createMemoryStore() {
       s.submittedAt = s.updatedAt = new Date().toISOString();
       return view(id);
     },
+    /** Create or replace a job by identifier. Returns { job, created }. */
+    async saveJob(job, { sourceSession = null } = {}) {
+      const created = !jobs.has(job.identifier);
+      jobs.set(job.identifier, { data: clone(job), sourceSession: created ? sourceSession : jobs.get(job.identifier).sourceSession });
+      return { job: clone(job), created };
+    },
+    async getJob(identifier) {
+      return jobs.has(identifier) ? clone(jobs.get(identifier).data) : null;
+    },
+    async listJobs() {
+      return [...jobs.values()].map((j) => clone(j.data));
+    },
     async ping() {},
     async close() {},
     async _truncate() {
       sessions.clear();
       profiles.clear();
       privates.clear();
+      jobs.clear();
     },
   };
 }

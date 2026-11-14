@@ -56,6 +56,49 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+  /jobs:
+    get:
+      summary: Open jobs, as schema.org/JobPosting JSON-LD
+      description: >-
+        Jobs from the employer form and from POST /v1/jobs, newest first, leaving out jobs whose
+        validThrough has passed. Support offered (accommodations) is in jobBenefits: one text per
+        support tag (shared/support-tags.js), using the tag's English text.
+      responses:
+        '200':
+          description: The jobs
+          content:
+            application/ld+json:
+              schema:
+                type: object
+                required: ['@context', '@graph']
+                properties:
+                  '@context': { type: string, const: 'https://schema.org' }
+                  '@graph': { type: array, items: { $ref: '#/components/schemas/JobPosting' } }
+    post:
+      summary: Create or update a job by identifier
+      description: >-
+        For partner platforms. Needs "Authorization: Bearer <JOBS_API_KEY>" when JOBS_API_KEY is set;
+        without a key it is open in development and off (403) in production. Only the JobPosting
+        properties listed in the schema are accepted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JobPosting' }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/JobPosting' } } } }
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/JobPosting' } } } }
+        '400': { description: Not a valid JobPosting (invalid_job), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Missing or wrong jobs API key, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Off in production without JOBS_API_KEY, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /jobs/{identifier}:
+    get:
+      summary: One job
+      parameters:
+        - { name: identifier, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+      responses:
+        '200': { description: The job, content: { application/ld+json: { schema: { $ref: '#/components/schemas/JobPosting' } } } }
+        '404': { description: No such job, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
   /sessions:
     post:
       tags: [sessions]
@@ -231,6 +274,58 @@ components:
         fullName: Hana Tesfaye
         phone: '+251 911 234 567'
         dateOfBirth: { date: '2001-03-27', calendar: ethiopian, ethiopian: { year: 1993, month: 7, day: 18 } }
+    LocalizedText:
+      description: Text, or JSON-LD language-tagged values.
+      oneOf:
+        - { type: string }
+        - type: array
+          items:
+            type: object
+            required: ['@value']
+            properties:
+              '@value': { type: string }
+              '@language': { type: string, example: am }
+    JobPosting:
+      type: object
+      description: A schema.org/JobPosting. Only these properties are accepted.
+      required: ['@type', identifier, title, description, hiringOrganization, employmentType, datePosted]
+      additionalProperties: false
+      properties:
+        '@context': { type: string, example: 'https://schema.org' }
+        '@type': { type: string, const: JobPosting }
+        '@id': { type: string }
+        identifier: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' }
+        title: { $ref: '#/components/schemas/LocalizedText' }
+        description: { $ref: '#/components/schemas/LocalizedText' }
+        hiringOrganization:
+          type: object
+          properties: { '@type': { const: Organization }, name: { $ref: '#/components/schemas/LocalizedText' } }
+        jobLocation:
+          type: object
+          description: Required unless jobLocationType is TELECOMMUTE.
+          properties:
+            '@type': { const: Place }
+            address:
+              type: object
+              properties:
+                '@type': { const: PostalAddress }
+                addressLocality: { $ref: '#/components/schemas/LocalizedText' }
+                addressRegion: { $ref: '#/components/schemas/LocalizedText' }
+                addressCountry: { type: string, example: ET }
+        jobLocationType: { type: string, enum: [TELECOMMUTE] }
+        applicantLocationRequirements: { type: object, properties: { '@type': { const: Country }, name: { type: string } } }
+        employmentType:
+          oneOf:
+            - { type: string, enum: [FULL_TIME, PART_TIME, CONTRACTOR, TEMPORARY, INTERN, VOLUNTEER, PER_DIEM, OTHER] }
+            - { type: array, items: { type: string, enum: [FULL_TIME, PART_TIME, CONTRACTOR, TEMPORARY, INTERN, VOLUNTEER, PER_DIEM, OTHER] } }
+        datePosted: { type: string, format: date }
+        validThrough: { type: string, format: date }
+        jobBenefits:
+          type: array
+          items: { type: string, maxLength: 300 }
+          description: Support offered. One value per support tag, using the tag's English text, e.g. "Step-free workplace".
+        url: { type: string, format: uri }
+        directApply: { type: boolean }
     DateAnswer:
       type: object
       required: [date, calendar]

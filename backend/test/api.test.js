@@ -109,6 +109,74 @@ for (const [name, makeStore] of stores) {
         }
       });
 
+      describe('jobs (schema.org/JobPosting)', () => {
+        const job = {
+          '@context': 'https://schema.org',
+          '@type': 'JobPosting',
+          identifier: 'partner-1',
+          title: [{ '@value': 'Driver', '@language': 'en' }, { '@value': 'ሹፌር', '@language': 'am' }],
+          description: 'Drive a delivery van in Addis Ababa.',
+          hiringOrganization: { '@type': 'Organization', name: 'Partner Logistics' },
+          jobLocation: { '@type': 'Place', address: { '@type': 'PostalAddress', addressLocality: 'Addis Ababa', addressCountry: 'ET' } },
+          employmentType: 'FULL_TIME',
+          datePosted: '2026-11-01',
+          validThrough: '2099-01-01',
+          jobBenefits: ['Flexible hours'],
+        };
+
+        it('POST /v1/jobs creates or updates a job; GET /v1/jobs returns JobPosting JSON-LD', async () => {
+          const created = await request(app).post('/v1/jobs').send(job).expect(201);
+          expect(created.body).toEqual(job);
+          await request(app).post('/v1/jobs').send({ ...job, title: 'Senior driver' }).expect(200);
+          const list = await request(app).get('/v1/jobs').expect(200);
+          expect(list.body['@context']).toBe('https://schema.org');
+          expect(list.body['@graph']).toEqual([{ ...job, '@context': undefined, title: 'Senior driver' }].map(({ '@context': _, ...j }) => j));
+          const one = await request(app).get('/v1/jobs/partner-1').expect(200);
+          expect(one.body).toMatchObject({ '@context': 'https://schema.org', '@type': 'JobPosting', title: 'Senior driver' });
+          await request(app).get('/v1/jobs/nope').expect(404);
+        });
+
+        it('rejects anything that is not a valid JobPosting, and leaves closed jobs out of the list', async () => {
+          const bad = await request(app).post('/v1/jobs').send({ ...job, accommodations: ['x'] }).expect(400);
+          expect(bad.body.error).toMatchObject({ code: 'invalid_job', message: expect.stringMatching(/accommodations/) });
+          await request(app).post('/v1/jobs').send({ ...job, '@context': 'https://evil.example' }).expect(400);
+          await request(app).post('/v1/jobs').send({ ...job, identifier: 'old', validThrough: '2020-01-01' }).expect(201);
+          const list = await request(app).get('/v1/jobs').expect(200);
+          expect(list.body['@graph'].map((j) => j.identifier)).not.toContain('old');
+        });
+
+        it('needs the jobs API key when one is set, and is off in production without one', async () => {
+          const keyed = createApp({ store, flows, config: { ...config, jobsApiKey: 's3cret-key' }, log: silent });
+          expect((await request(keyed).post('/v1/jobs').send(job).expect(401)).body.error.code).toBe('unauthorized');
+          await request(keyed).post('/v1/jobs').set('Authorization', 'Bearer wrong').send(job).expect(401);
+          await request(keyed).post('/v1/jobs').set('Authorization', 'Bearer s3cret-key').send(job).expect(201);
+          const prod = createApp({ store, flows, config: { ...config, production: true, jobsApiKey: '' }, log: silent });
+          expect((await request(prod).post('/v1/jobs').send(job).expect(403)).body.error.code).toBe('jobs_api_disabled');
+        });
+
+        it('submitting the employer form creates a job with the support offered', async () => {
+          const { id } = (await request(app).post('/v1/sessions').send({ flowId: 'employer-accommodations', lang: 'en' }).expect(201)).body;
+          const answers = {
+            jobTitle: 'Receptionist',
+            organisation: 'Bole Hotel (test)',
+            location: 'Addis Ababa',
+            employmentType: 'part-time',
+            accommodations: ['step-free-workplace', 'sign-language-interview'],
+          };
+          const r = await request(app).post(`/v1/sessions/${id}/submit`).send({ answers }).expect(200);
+          expect(r.body.jobId).toBe(`job-${id}`);
+          const posted = (await request(app).get(`/v1/jobs/job-${id}`).expect(200)).body;
+          expect(posted).toMatchObject({
+            '@type': 'JobPosting',
+            title: 'Receptionist',
+            employmentType: 'PART_TIME',
+            hiringOrganization: { '@type': 'Organization', name: 'Bole Hotel (test)' },
+            jobBenefits: ['Sign language interpreter at interview', 'Step-free workplace'],
+          });
+          expect((await request(app).get('/v1/jobs')).body['@graph'].some((j) => j.identifier === `job-${id}`)).toBe(true);
+        });
+      });
+
       it('rejects unknown flows and languages with the standard error shape', async () => {
         const r = await request(app).post('/v1/sessions').send({ flowId: 'nope' }).expect(400);
         expect(r.body).toEqual({ error: { code: 'unknown_flow', message: expect.any(String), field: 'flowId' } });

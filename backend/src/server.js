@@ -47,6 +47,9 @@ const app = createApp({ store, flows, config });
 const server = app.listen(config.port, () => {
   console.log(`[openpath] API on http://localhost:${config.port}/v1  flows: ${[...flows.keys()].join(', ')}`);
   if (!config.corsOrigins.length) console.warn('[openpath] CORS_ORIGINS is empty: browsers on other origins will be blocked.');
+  if (!config.jobsApiKey) {
+    console.log(config.production ? '[openpath] POST /v1/jobs is off (no JOBS_API_KEY).' : '[openpath] POST /v1/jobs is open: set JOBS_API_KEY to require a key.');
+  }
   console.log(
     config.rateLimitMax > 0
       ? `[openpath] rate limit: ${config.rateLimitMax} requests per IP address per ${Math.round(config.rateLimitWindowMs / 60000)} min (RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)`

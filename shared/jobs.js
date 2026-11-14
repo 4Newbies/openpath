@@ -79,6 +79,10 @@ export function validateJobPosting(job) {
       if (address.addressCountry !== undefined && !/^[A-Z]{2}$/.test(address.addressCountry)) errors.push('addressCountry must be a two-letter code such as "ET"');
     }
   }
+  const where = job.applicantLocationRequirements;
+  if (where !== undefined && !(isObj(where) && where['@type'] === 'Country' && typeof where.name === 'string' && where.name.length <= 100 && Object.keys(where).length === 2)) {
+    errors.push('applicantLocationRequirements must be { "@type": "Country", "name": "ET" }');
+  }
   const types = [].concat(job.employmentType ?? []);
   if (!types.length || types.some((t) => !EMPLOYMENT_TYPES.includes(t))) errors.push(`employmentType must be one or more of ${EMPLOYMENT_TYPES.join(', ')}`);
   if (typeof job.datePosted !== 'string' || !DATE_RE.test(job.datePosted)) errors.push('datePosted must be a date (YYYY-MM-DD)');

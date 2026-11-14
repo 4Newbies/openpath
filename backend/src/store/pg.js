@@ -128,6 +128,26 @@ export function createPgStore(connectionString) {
       return found ? this.get(id) : null;
     },
 
+    async saveJob(job, { sourceSession = null } = {}) {
+      const { rows } = await pool.query(
+        `INSERT INTO openpath_jobs (identifier, data, source_session) VALUES ($1, $2, $3)
+         ON CONFLICT (identifier) DO UPDATE SET data = EXCLUDED.data, updated_at = now()
+         RETURNING (xmax = 0) AS created`,
+        [job.identifier, JSON.stringify(job), sourceSession],
+      );
+      return { job, created: rows[0].created };
+    },
+
+    async getJob(identifier) {
+      const { rows } = await pool.query('SELECT data FROM openpath_jobs WHERE identifier = $1', [identifier]);
+      return rows.length ? rows[0].data : null;
+    },
+
+    async listJobs() {
+      const { rows } = await pool.query('SELECT data FROM openpath_jobs ORDER BY created_at DESC LIMIT 500');
+      return rows.map((r) => r.data);
+    },
+
     async ping() {
       await pool.query('SELECT 1');
     },
@@ -138,7 +158,7 @@ export function createPgStore(connectionString) {
 
     // Test helper only.
     async _truncate() {
-      await pool.query('TRUNCATE openpath_support_requests, openpath_profile_answers, openpath_sessions');
+      await pool.query('TRUNCATE openpath_support_requests, openpath_profile_answers, openpath_sessions, openpath_jobs');
     },
   };
 }

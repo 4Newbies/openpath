@@ -28,6 +28,15 @@ CREATE TABLE IF NOT EXISTS openpath_profile_answers (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Jobs (schema.org/JobPosting JSON), from the employer form or POST /v1/jobs.
+CREATE TABLE IF NOT EXISTS openpath_jobs (
+  identifier      TEXT PRIMARY KEY,
+  data            JSONB NOT NULL,
+  source_session  TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS openpath_support_requests (
   session_id   TEXT NOT NULL REFERENCES openpath_sessions(id) ON DELETE CASCADE,
   question_id  TEXT NOT NULL,

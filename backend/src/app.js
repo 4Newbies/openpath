@@ -2,7 +2,9 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
+import crypto from 'node:crypto';
 import { LANG_RE, latestToday, validateAnswers } from '../../shared/flow.js';
+import { isOpen, jobFromEmployerAnswers, jobsJsonLd, validateJobPosting } from '../../shared/jobs.js';
 import { ApiError, answerError, errorBody, errorHandler } from './errors.js';
 import { newResumeCode, newSessionId, SESSION_ID_RE } from './ids.js';
 import { StoreConflict, StoreDuplicate } from './store/memory.js';
@@ -22,7 +24,7 @@ export function createApp({ store, flows, config, log = console }) {
     cors({
       origin: (origin, cb) => cb(null, !origin ? false : config.corsOrigins.includes(origin)),
       methods: ['GET', 'POST', 'PUT'],
-      allowedHeaders: ['Content-Type'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
       maxAge: 600,
     }),
   );
@@ -140,6 +142,7 @@ export function createApp({ store, flows, config, log = console }) {
   // Repeat-safe: with the same clientKey, a retried request (for example after
   // a dropped connection) gets the session it already created (200), not a new one.
   const CLIENT_KEY_RE = /^[A-Za-z0-9_-]{16,64}$/;
+  const EMPLOYER_FLOW = 'employer-accommodations';
   // A small context for the session, e.g. which job an application is for.
   const CONTEXT_KEY_RE = /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/;
   function checkContext(context) {
@@ -229,11 +232,56 @@ export function createApp({ store, flows, config, log = console }) {
     try {
       const saved = await store.submit(session.id, split(flow, clean));
       if (!saved) throw new ApiError(404, 'not_found', 'No session with this id.');
-      res.json({ id: saved.id, status: saved.status, submittedAt: saved.submittedAt });
+      const out = { id: saved.id, status: saved.status, submittedAt: saved.submittedAt };
+      // The employer form becomes a job listing (schema.org/JobPosting).
+      if (flow.flowId === EMPLOYER_FLOW) {
+        const job = jobFromEmployerAnswers(clean, { identifier: `job-${session.id}`, today: new Date().toISOString().slice(0, 10), lang: session.lang });
+        await store.saveJob(job, { sourceSession: session.id });
+        out.jobId = job.identifier;
+      }
+      res.json(out);
     } catch (e) {
       if (e instanceof StoreConflict) throw conflict();
       throw e;
     }
+  });
+
+  // ---- jobs (schema.org/JobPosting) ----------------------------------------
+  // The earliest "today" anywhere on Earth (UTC-12): a job stays listed until
+  // its last day is over everywhere.
+  const earliestToday = () => new Date(Date.now() - 12 * 3600 * 1000).toISOString().slice(0, 10);
+  const withContext = (job) => ({ '@context': 'https://schema.org', ...job });
+
+  v1.get('/jobs', async (req, res) => {
+    const today = earliestToday();
+    const open = (await store.listJobs()).filter((j) => isOpen(j, today)).sort((a, b) => b.datePosted.localeCompare(a.datePosted));
+    res.json(jobsJsonLd(open));
+  });
+
+  v1.get('/jobs/:identifier', async (req, res) => {
+    const job = /^[A-Za-z0-9_-]{1,64}$/.test(req.params.identifier) ? await store.getJob(req.params.identifier) : null;
+    if (!job) throw new ApiError(404, 'not_found', 'No job with this identifier.');
+    res.json(withContext(job));
+  });
+
+  // Create or update a job by identifier (for partner platforms).
+  v1.post('/jobs', async (req, res) => {
+    if (config.jobsApiKey) {
+      const given = String(req.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+      const a = Buffer.from(given);
+      const b = Buffer.from(config.jobsApiKey);
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) throw new ApiError(401, 'unauthorized', 'Send the jobs API key: Authorization: Bearer <key>.');
+    } else if (config.production) {
+      throw new ApiError(403, 'jobs_api_disabled', 'POST /v1/jobs is off: set JOBS_API_KEY to use it.');
+    }
+    const { '@context': ctx, ...job } = bodyOf(req);
+    if (ctx !== undefined && ctx !== 'https://schema.org' && ctx !== 'http://schema.org') {
+      throw new ApiError(400, 'invalid_job', '@context must be https://schema.org.', '@context');
+    }
+    const errors = validateJobPosting(job);
+    if (errors.length) throw new ApiError(400, 'invalid_job', `This is not a valid JobPosting: ${errors.join('; ')}.`);
+    const { created } = await store.saveJob(job);
+    res.status(created ? 201 : 200).json(withContext(job));
   });
 
   app.use('/v1', v1);

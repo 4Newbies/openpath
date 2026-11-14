@@ -37,5 +37,9 @@ export function loadConfig(env = process.env) {
     // Number of reverse proxies in front of the API. Without it, behind a proxy
     // every learner looks like the proxy's address and shares one limit.
     trustProxy: int(env, 'TRUST_PROXY', 0),
+    // POST /v1/jobs (for partner platforms) needs "Authorization: Bearer <JOBS_API_KEY>".
+    // Without a key it is open in development and switched off in production.
+    jobsApiKey: env.JOBS_API_KEY || '',
+    production: env.NODE_ENV === 'production',
   };
 }
