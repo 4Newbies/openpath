@@ -1,6 +1,6 @@
 // API tests for the four session endpoints. Always run against the
 // in-memory store; also run against Postgres when TEST_DATABASE_URL is set
-// (e.g. the docker compose database on localhost:5433).
+// (a dedicated *_test database; see test/global-setup.js).
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import request from 'supertest';

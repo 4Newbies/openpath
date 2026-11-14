@@ -28,8 +28,9 @@ For hot-reload development of the tag: `cd frontend && npm run dev` (http://loca
 
 ```sh
 cd backend  && npm install && npm test        # API + schema tests (in-memory store)
-# also against Postgres from docker compose:
-TEST_DATABASE_URL=postgres://openpath:local-dev-only@localhost:5433/openpath npm test
+# also against Postgres from docker compose (a separate openpath_test database,
+# created automatically; the demo database is never touched):
+TEST_DATABASE_URL=postgres://openpath:local-dev-only@localhost:5433/openpath_test npm test
 
 cd frontend && npm install && npm test        # unit, element and axe (jsdom) tests
 npm run build && npm run test:browser         # real Chrome/Edge: axe incl. contrast, 320px/200%/400% reflow, focus, targets
