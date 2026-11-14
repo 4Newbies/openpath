@@ -152,6 +152,7 @@
     "supportFilterLegend": "የሚያስፈልገኝ ድጋፍ",
     "supportFilterPrivacy": "ይህን ማየት የሚችሉት እርስዎ ብቻ ነዎት። ለአሠሪዎች አይነገርም።",
     "supportFilterHint": "የሚያስፈልግዎትን ድጋፍ ይምረጡ፤ ያንን ድጋፍ የሚሰጡ ሥራዎች ብቻ ይታያሉ።",
+    "supportFilterChosen": "የተመረጡ፦ {count}",
     "rememberFilter": "በዚህ መሣሪያ ላይ አስታውስ",
     "clearFilter": "ምርጫዎቼን አጽዳ",
     "backToJobs": "ወደ ሥራዎች ተመለስ",

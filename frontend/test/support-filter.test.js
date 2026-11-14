@@ -103,3 +103,56 @@ describe('the private "Support I need" filter', () => {
     expect(localStorage.getItem(FILTER_KEY)).toBeNull();
   });
 });
+
+describe('the filter on phones', () => {
+  const screen = (narrow) => {
+    globalThis.matchMedia = vi.fn((q) => ({ media: q, matches: narrow && q === '(max-width: 40em)' }));
+  };
+  afterEach(() => {
+    globalThis.matchMedia = undefined;
+  });
+  const summary = (el) => $(el, 'details.op-jobs-filter-box > summary');
+
+  it('is a native <details>, closed on a narrow screen, with the filter inside', async () => {
+    screen(true);
+    const el = await mountJobs();
+    const details = $(el, 'details.op-jobs-filter-box');
+    expect(details.open).toBe(false);
+    expect(details.querySelector('fieldset.op-jobs-filter')).not.toBeNull();
+    expect(summary(el).textContent).toBe('Support I need');
+    expect($(el, '.op-jobs-filter-count').hidden).toBe(true);
+  });
+
+  it('is open on a wide screen, as before', async () => {
+    screen(false);
+    const el = await mountJobs();
+    expect($(el, 'details.op-jobs-filter-box').open).toBe(true);
+  });
+
+  it('shows the number of active filters in the summary, and stays as the learner left it', async () => {
+    screen(true);
+    const el = await mountJobs();
+    const details = $(el, 'details.op-jobs-filter-box');
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    tick(el, 'remote-work');
+    tick(el, 'flexible-hours');
+    expect($(el, '.op-jobs-filter-count').hidden).toBe(false);
+    expect(summary(el).textContent).toBe('Support I need, Chosen: 2');
+    expect($(el, '.op-jobs-filter-count .op-sr').textContent).toBe(', '); // read as a pause, not shown
+
+    el.render(); // e.g. after changing language
+    expect($(el, 'details.op-jobs-filter-box').open).toBe(true);
+    expect(summary(el).textContent).toBe('Support I need, Chosen: 2');
+
+    $$(el, '.op-jobs-filter button').find((b) => b.textContent === 'Clear my choices').click();
+    expect($(el, '.op-jobs-filter-count').hidden).toBe(true);
+  });
+
+  it('says the number in Amharic too', async () => {
+    screen(true);
+    localStorage.setItem(FILTER_KEY, JSON.stringify(['remote-work']));
+    const el = await mountJobs({ lang: 'am' });
+    expect($(el, '.op-jobs-filter-number').textContent).toBe('የተመረጡ፦ 1');
+  });
+});

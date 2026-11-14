@@ -155,6 +155,7 @@
     "supportFilterLegend": "Support I need",
     "supportFilterPrivacy": "Only you can see this. Employers are not told.",
     "supportFilterHint": "Tick the support you need to see only jobs that offer it.",
+    "supportFilterChosen": "Chosen: {count}",
     "rememberFilter": "Remember on this device",
     "clearFilter": "Clear my choices",
     "backToJobs": "Back to jobs",

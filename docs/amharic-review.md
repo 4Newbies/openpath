@@ -336,6 +336,7 @@ Buttons, messages and help text around the questions and in the job list.
 | supportFilterLegend | Support I need | የሚያስፈልገኝ ድጋፍ | – |  |
 | supportFilterPrivacy | Only you can see this. Employers are not told. | ይህን ማየት የሚችሉት እርስዎ ብቻ ነዎት። ለአሠሪዎች አይነገርም። | ይህን የሚያዩት እርስዎ ብቻ ነዎት። ለአሠሪዎች አንነግርም። |  |
 | supportFilterHint | Tick the support you need to see only jobs that offer it. | የሚያስፈልግዎትን ድጋፍ ይምረጡ፤ ያንን ድጋፍ የሚሰጡ ሥራዎች ብቻ ይታያሉ። | – |  |
+| supportFilterChosen | Chosen: {count} | የተመረጡ፦ {count} | – |  |
 | rememberFilter | Remember on this device | በዚህ መሣሪያ ላይ አስታውስ | – |  |
 | clearFilter | Clear my choices | ምርጫዎቼን አጽዳ | – |  |
 | backToJobs | Back to jobs | ወደ ሥራዎች ተመለስ | – |  |

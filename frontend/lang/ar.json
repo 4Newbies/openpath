@@ -154,6 +154,7 @@
     "supportFilterLegend": "الدعم الذي أحتاجه",
     "supportFilterPrivacy": "أنت وحدك ترى هذا. لا يتم إخبار أصحاب العمل.",
     "supportFilterHint": "اختر الدعم الذي تحتاجه لترى فقط الوظائف التي تقدّمه.",
+    "supportFilterChosen": "المحدَّد: {count}",
     "rememberFilter": "تذكّر على هذا الجهاز",
     "clearFilter": "مسح اختياراتي",
     "backToJobs": "العودة إلى الوظائف",

@@ -12,6 +12,8 @@ import jobsCss from './jobs.css?inline';
 
 let counter = 0;
 export const FILTER_KEY = 'openpath:support-filter';
+// Below this width the filter starts closed, so the jobs are not pushed off a phone screen.
+const NARROW = '(max-width: 40em)';
 
 function storage() {
   try {
@@ -36,7 +38,8 @@ function storage() {
  *
  * The "Support I need" filter runs only in this browser: it is never sent to
  * a server, put in the URL or included in an event, and it is only stored
- * when the learner ticks "Remember on this device".
+ * when the learner ticks "Remember on this device". It sits in a native
+ * <details>, closed on narrow screens, and its summary says how many are chosen.
  */
 export class OpenPathJobs extends HTMLElement {
   static get observedAttributes() {
@@ -189,8 +192,24 @@ export class OpenPathJobs extends HTMLElement {
     return shown === 1 ? this.tr('jobsCountFilteredOne', { total }) : this.tr('jobsCountFiltered', { count: shown, total });
   }
 
+  /** "Chosen: 2" in the filter's summary, hidden when nothing is chosen. */
+  updateFilterCount() {
+    const count = this.view.querySelector('.op-jobs-filter-count');
+    if (!count) return;
+    count.hidden = this.need.size === 0;
+    count.textContent = '';
+    if (this.need.size) {
+      // The comma is only heard, so the summary reads "Support I need, Chosen: 2".
+      count.append(
+        h('span', { class: 'op-sr', text: ', ' }),
+        h('span', { class: 'op-jobs-filter-number', text: this.tr('supportFilterChosen', { count: this.need.size }) }),
+      );
+    }
+  }
+
   filterChanged() {
     this.saveFilter();
+    this.updateFilterCount();
     this.renderList();
     const text = this.countText();
     setText(this.view.querySelector('.op-jobs-count'), text);
@@ -228,10 +247,11 @@ export class OpenPathJobs extends HTMLElement {
         this.saveFilter();
       },
     });
-    return h(
+    const fieldset = h(
       'fieldset',
       { class: 'op-group op-jobs-filter', 'aria-describedby': privacyId },
-      h('legend', { class: 'op-legend op-subheading', text: this.tr('supportFilterLegend') }),
+      // The summary shows these words; the legend still names the group for screen readers.
+      h('legend', { class: 'op-sr', text: this.tr('supportFilterLegend') }),
       h('p', { id: privacyId, class: 'op-privacy' }, h('strong', { text: this.tr('supportFilterPrivacy') }), ' ', this.tr('supportFilterHint')),
       h('div', { class: 'op-options op-options-inline' }, boxes),
       h(
@@ -250,6 +270,20 @@ export class OpenPathJobs extends HTMLElement {
         }),
       ),
     );
+    const details = h(
+      'details',
+      { class: 'op-jobs-filter-box', ontoggle: () => (this.filterOpen = details.open) },
+      h(
+        'summary',
+        { class: 'op-jobs-filter-summary' },
+        h('span', { class: 'op-subheading', text: this.tr('supportFilterLegend') }),
+        h('span', { class: 'op-jobs-filter-count', hidden: true }),
+      ),
+      fieldset,
+    );
+    // Open on wide screens, closed on phones; after that, as the learner left it.
+    details.open = this.filterOpen ?? !globalThis.matchMedia?.(NARROW).matches;
+    return details;
   }
 
   // ---- rendering ---------------------------------------------------------------------
@@ -288,6 +322,7 @@ export class OpenPathJobs extends HTMLElement {
       h('p', { class: 'op-jobs-count', text: this.countText() }),
       this.listNode,
     );
+    this.updateFilterCount();
     this.renderList();
   }
 

@@ -211,6 +211,10 @@ are not told."* The filter runs only in the browser: it is never sent to a serve
 put in the URL, never included in an event or the application, and not stored unless the
 learner ticks *Remember on this device*.
 
+The filter sits in a native `<details>` element. On narrow screens (phones, or high zoom)
+it starts closed so the jobs come first; its summary shows how many are chosen, e.g.
+*Support I need, Chosen: 2*. On wider screens it starts open.
+
 ### Applying
 
 *Apply* opens `<openpath-flow flow="job-application">` for that job:

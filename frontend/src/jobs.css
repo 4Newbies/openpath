@@ -14,15 +14,44 @@
   outline-offset: 3px;
 }
 
-.op-jobs-filter {
+.op-jobs-filter-box {
   margin-block-end: 1.5em;
-  padding-block: 1em;
-  padding-inline: 1em;
   border: var(--op-border-width) solid var(--op-border);
   border-radius: 0.3em;
 }
-.op-jobs-filter .op-legend {
-  padding-inline: 0.25em;
+.op-jobs-filter-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em;
+  min-block-size: 44px; /* a large target on touch screens */
+  padding-block: 0.5em;
+  padding-inline: 1em;
+  cursor: pointer;
+}
+.op-jobs-filter-summary .op-subheading {
+  margin: 0;
+}
+.op-jobs-filter-summary:focus-visible {
+  outline: 3px solid var(--op-focus);
+  outline-offset: 2px;
+}
+.op-jobs-filter-count {
+  padding-block: 0.1em;
+  padding-inline: 0.6em;
+  border-radius: 1em;
+  background: var(--op-accent);
+  color: var(--op-accent-text);
+  font-weight: 700;
+}
+.op-jobs-filter-count[hidden] {
+  display: none;
+}
+.op-jobs-filter {
+  margin: 0;
+  padding-block: 0 1em;
+  padding-inline: 1em;
+  border: 0;
 }
 .op-privacy {
   margin-block: 0 1em;
