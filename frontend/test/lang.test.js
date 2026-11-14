@@ -145,7 +145,7 @@ describe('<openpath-flow> languages', () => {
     const el = await mount(flow, { lang: 'en', languages: 'am,en' }, { prefs: { chosen: true, lang: 'en' } });
     button(el, 'Settings').click();
     const options = $$(el, '.op-lang button');
-    expect(options.map((b) => [b.textContent, b.getAttribute('lang'), b.getAttribute('aria-pressed')])).toEqual([
+    expect(options.map((b) => [b.querySelector('.op-lang-name').textContent, b.getAttribute('lang'), b.getAttribute('aria-pressed')])).toEqual([
       ['አማርኛ', 'am', 'false'],
       ['English', 'en', 'true'],
     ]);

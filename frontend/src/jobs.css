@@ -40,7 +40,7 @@
   padding-block: 0.1em;
   padding-inline: 0.6em;
   border-radius: 1em;
-  background: var(--op-accent);
+  background: var(--op-accent-fill);
   color: var(--op-accent-text);
   font-weight: 700;
 }
@@ -57,7 +57,7 @@
   margin-block: 0 1em;
   padding-block: 0.5em;
   padding-inline: 0.75em;
-  border-inline-start: 5px solid var(--op-accent);
+  border-inline-start: 5px solid var(--op-accent-line);
   background: var(--op-selected);
 }
 .op-options-inline {

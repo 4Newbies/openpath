@@ -47,7 +47,8 @@ export function hint(ctx) {
 
 export function errorText(ctx) {
   const i = idsFor(ctx);
-  return i.error ? h('p', { id: i.error, class: 'op-error' }, sr(t(ctx.lang, 'errorPrefix', {}, ctx.simple)), ctx.error) : null;
+  // Not colour alone: a warning icon, the message, and "Error:" for screen readers.
+  return i.error ? h('p', { id: i.error, class: 'op-error' }, icon('alert'), sr(t(ctx.lang, 'errorPrefix', {}, ctx.simple)), ctx.error) : null;
 }
 
 export function describedBy(ctx) {

@@ -19,16 +19,21 @@ export function renderLanguageSwitcher({ tr, languages = [], current, onLanguage
       'div',
       { class: 'op-lang-list' },
       languages.map((l) =>
-        h('button', {
-          type: 'button',
-          class: 'op-button op-secondary op-small',
-          lang: l.code,
-          dir: l.dir,
-          'data-lang': l.code,
-          'aria-pressed': l.code === current ? 'true' : 'false',
-          onclick: () => l.code !== current && onLanguage(l.code),
-          text: l.name,
-        }),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'op-button op-secondary op-small',
+            lang: l.code,
+            dir: l.dir,
+            'data-lang': l.code,
+            'aria-pressed': l.code === current ? 'true' : 'false',
+            onclick: () => l.code !== current && onLanguage(l.code),
+          },
+          // The chosen language shows a tick as well as its colour (aria-pressed tells screen readers).
+          l.code === current ? h('span', { class: 'op-lang-check', 'aria-hidden': 'true', text: '✓' }) : null,
+          h('span', { class: 'op-lang-name', text: l.name }),
+        ),
       ),
     ),
   );

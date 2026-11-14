@@ -1,5 +1,6 @@
 import { answerCalendar, formatPhone, isEmpty, normalizePhone, phoneCountry, visibleQuestions } from '../../shared/flow.js';
 import { h, sr } from './dom.js';
+import { icon } from './icons.js';
 import { labelOf, langAttrs, t, tList } from './messages.js';
 
 /** Human-readable answer text for the review screen. */
@@ -70,7 +71,7 @@ export function renderReview({ flow, answers, lang, simple = false, uid, onEdit,
     heading,
     h('p', { class: 'op-hint', text: tr('reviewIntro') }),
     h('dl', { class: 'op-review' }, items),
-    submitError ? h('p', { id: errorId, class: 'op-error' }, sr(tr('errorPrefix')), submitError) : null,
+    submitError ? h('p', { id: errorId, class: 'op-error' }, icon('alert'), sr(tr('errorPrefix')), submitError) : null,
     h(
       'div',
       { class: 'op-nav' },

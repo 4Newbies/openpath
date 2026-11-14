@@ -227,7 +227,7 @@ describe('the language switcher in the job list', () => {
     const switcher = $(el, '.op-lang');
     expect(switcher.previousElementSibling.classList.contains('op-jobs-heading')).toBe(true);
     expect(switcher.querySelector('legend').textContent).toBe('Language');
-    expect(langButtons(el).map((b) => [b.textContent, b.lang, b.getAttribute('aria-pressed')])).toEqual([
+    expect(langButtons(el).map((b) => [b.querySelector('.op-lang-name').textContent, b.lang, b.getAttribute('aria-pressed')])).toEqual([
       ['English', 'en', 'true'],
       ['አማርኛ', 'am', 'false'],
       ['العربية', 'ar', 'false'],

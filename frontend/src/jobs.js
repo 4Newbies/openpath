@@ -8,6 +8,8 @@ import { folderUrl, resolveLanguages, themeFor } from './language.js';
 import { FALLBACK_LANG, langAttrs, packInfo, t, tList } from './messages.js';
 import { loadPrefs, savePrefs } from './prefs.js';
 import { renderLanguageSwitcher } from './setup.js';
+import { icon } from './icons.js';
+import { ThemeGuard } from './theme.js';
 import css from './styles.css?inline';
 import jobsCss from './jobs.css?inline';
 
@@ -70,16 +72,20 @@ export class OpenPathJobs extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this.shadowRoot) return;
+    if (this.shadowRoot) return void this.theme?.sync(); // moved in the page: watch colours again
     const shadow = this.attachShadow({ mode: 'open' });
     this.live = h('div', { class: 'op-sr', 'aria-live': 'polite' });
     this.view = h('div', { class: 'op-card op-jobs' }, h('p', { text: this.tr('jobsLoading') }));
     this.root = h('div', { class: 'op-root', lang: FALLBACK_LANG, dir: 'ltr' }, this.view, this.live);
     shadow.append(h('style', { text: css + jobsCss }), this.root);
+    // Host colours and font size are measured and made safe (theme.js),
+    // from the moment the theme and helper attributes are set.
+    this.theme = new ThemeGuard(this, this.root);
     this.ready = this.start();
   }
 
   disconnectedCallback() {
+    this.theme?.stop();
     this.ld?.remove();
     this.ld = null;
   }
@@ -116,6 +122,7 @@ export class OpenPathJobs extends HTMLElement {
     this.root.toggleAttribute('data-high-contrast', Boolean(this.prefs.highContrast));
     this.root.toggleAttribute('data-simple', Boolean(this.prefs.simple));
     this.root.setAttribute('data-theme', themeFor(this, this.prefs));
+    this.theme?.sync(); // colours are checked against this theme
     const { lang, switcher } = await resolveLanguages(this, this.prefs);
     this.activeLang = lang;
     this.switcherLangs = switcher;
@@ -323,13 +330,14 @@ export class OpenPathJobs extends HTMLElement {
   renderFailed() {
     this.view.textContent = '';
     this.view.append(
-      h('p', { class: 'op-error', text: this.tr('jobsFailed') }),
+      h('p', { class: 'op-error' }, icon('alert'), this.tr('jobsFailed')),
       h('button', { type: 'button', class: 'op-button op-primary', text: this.tr('tryAgain'), onclick: () => this.load() }),
     );
   }
 
   render() {
     if (!this.loaded) return;
+    this.theme?.check(); // the host page may have changed its colours since
     this.view.textContent = '';
     const titleId = `op-jobs-${this.uid}-title`;
     this.listNode = h('ul', { class: 'op-jobs-list', 'aria-labelledby': titleId });

@@ -1,5 +1,14 @@
 /* <openpath-flow> styles. Lives inside the shadow root, so host page CSS
-   can't break it. Hosts theme it with --openpath-color and --openpath-font.
+   can't break it. Hosts theme it with --openpath-color (and
+   --openpath-color-dark) and --openpath-font. Host colours never reach the
+   form directly: theme.js measures them and writes safe versions as
+   --op-brand-fill / -on-fill / -text / -line, which the normal palettes below
+   map to the accent tokens:
+     --op-accent       accent as text on the form background (>= 4.5:1)
+     --op-accent-line  accent as borders, outlines, checkbox fill (>= 3:1)
+     --op-accent-fill  background of the primary button and other filled controls
+     --op-accent-text  text on --op-accent-fill (black or white, >= 4.5:1)
+   High contrast and forced-colors set all four themselves and ignore the host.
    Only logical properties (inline/block, start/end), so the same rules lay
    out left-to-right and right-to-left: dir on .op-root comes from the
    language pack, and flex rows (Back / Next) follow it.
@@ -8,7 +17,7 @@
 
 :host {
   display: block;
-  /* Never smaller than 18px, even if the host page shrinks its root font size. */
+  /* 18px by default, even if the host page shrinks its root font size. */
   font-size: max(18px, 1.125rem);
 }
 :host([hidden]) {
@@ -16,8 +25,10 @@
 }
 
 .op-root {
-  --op-accent: var(--openpath-color, #0b5cad);
-  --op-accent-text: #fff;
+  --op-accent: var(--op-brand-text, #0b5cad);
+  --op-accent-line: var(--op-brand-line, var(--op-accent));
+  --op-accent-fill: var(--op-brand-fill, var(--op-accent));
+  --op-accent-text: var(--op-brand-on-fill, #fff);
   --op-text: #1b1b1b;
   --op-muted: #474747;
   --op-bg: #fff;
@@ -28,7 +39,8 @@
   --op-border-width: 2px;
 
   font-family: var(--openpath-font, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Ethiopic', sans-serif);
-  font-size: 1em;
+  /* Never below 16px, even when the host page sets a smaller font size on the element. */
+  font-size: max(16px, 1em);
   line-height: 1.5;
   text-align: start;
   color: var(--op-text);
@@ -36,18 +48,18 @@
   text-size-adjust: 100%;
 }
 .op-root[data-larger-text] {
-  font-size: 1.25em;
+  font-size: max(20px, 1.25em);
 }
 
 /* Colours: light by default. data-theme on .op-root is "dark" (the host's
    theme="dark" or the learner's "Dark colours") or "auto" (theme="auto":
    follow the device). The device's dark mode alone never changes the form.
-   Hosts can set --openpath-color-dark (a light colour, used with dark text
-   on buttons). Contrast on #1b1b1f: text 15.6:1, muted 10.4:1, accent 9.0:1,
-   error 10.8:1, borders 6.6:1. */
+   Hosts can set --openpath-color-dark; theme.js checks it against this
+   background like the light one. Contrast on #1b1b1f: text 15.6:1,
+   muted 10.4:1, accent 9.0:1, error 10.8:1, borders 6.6:1. */
 .op-root[data-theme='dark'] {
-  --op-accent: var(--openpath-color-dark, #8cb8ff);
-  --op-accent-text: #111;
+  --op-accent: var(--op-brand-text, #8cb8ff);
+  --op-accent-text: var(--op-brand-on-fill, #111);
   --op-text: #f2f2f2;
   --op-muted: #c8c8c8;
   --op-bg: #1b1b1f;
@@ -58,8 +70,8 @@
 }
 @media (prefers-color-scheme: dark) {
   .op-root[data-theme='auto'] {
-    --op-accent: var(--openpath-color-dark, #8cb8ff);
-    --op-accent-text: #111;
+    --op-accent: var(--op-brand-text, #8cb8ff);
+    --op-accent-text: var(--op-brand-on-fill, #111);
     --op-text: #f2f2f2;
     --op-muted: #c8c8c8;
     --op-bg: #1b1b1f;
@@ -74,6 +86,8 @@
    (prefers-contrast is still followed automatically). */
 .op-root[data-high-contrast] {
   --op-accent: #000;
+  --op-accent-line: #000;
+  --op-accent-fill: #000;
   --op-accent-text: #fff;
   --op-text: #000;
   --op-muted: #000;
@@ -87,6 +101,8 @@
 @media (prefers-contrast: more) {
   .op-root {
     --op-accent: #000;
+    --op-accent-line: #000;
+    --op-accent-fill: #000;
     --op-accent-text: #fff;
     --op-text: #000;
     --op-muted: #000;
@@ -101,6 +117,8 @@
 /* High contrast in dark colours: white and yellow on black. */
 .op-root[data-theme='dark'][data-high-contrast] {
   --op-accent: #ffeb3b;
+  --op-accent-line: #ffeb3b;
+  --op-accent-fill: #ffeb3b;
   --op-accent-text: #000;
   --op-text: #fff;
   --op-muted: #fff;
@@ -113,6 +131,8 @@
 @media (prefers-contrast: more) {
   .op-root[data-theme='dark'] {
     --op-accent: #ffeb3b;
+    --op-accent-line: #ffeb3b;
+    --op-accent-fill: #ffeb3b;
     --op-accent-text: #000;
     --op-text: #fff;
     --op-muted: #fff;
@@ -126,6 +146,8 @@
 @media (prefers-color-scheme: dark) {
   .op-root[data-theme='auto'][data-high-contrast] {
     --op-accent: #ffeb3b;
+    --op-accent-line: #ffeb3b;
+    --op-accent-fill: #ffeb3b;
     --op-accent-text: #000;
     --op-text: #fff;
     --op-muted: #fff;
@@ -139,6 +161,8 @@
 @media (prefers-color-scheme: dark) and (prefers-contrast: more) {
   .op-root[data-theme='auto'] {
     --op-accent: #ffeb3b;
+    --op-accent-line: #ffeb3b;
+    --op-accent-fill: #ffeb3b;
     --op-accent-text: #000;
     --op-text: #fff;
     --op-muted: #fff;
@@ -238,8 +262,12 @@
   gap: 0.5em;
 }
 .op-lang [aria-pressed='true'] {
-  background: var(--op-accent);
+  background: var(--op-accent-fill);
   color: var(--op-accent-text);
+}
+/* The chosen language is also marked with a tick, not only by colour. */
+.op-lang-check {
+  margin-inline-end: 0.35em;
 }
 /* "Saved on this device" while the server can't be reached. */
 .op-offline {
@@ -247,7 +275,7 @@
   margin-inline: 0;
   padding-block: 0.4em;
   padding-inline: 0.75em;
-  border-inline-start: 5px solid var(--op-accent);
+  border-inline-start: 5px solid var(--op-accent-line);
   background: var(--op-selected);
   color: var(--op-text);
 }
@@ -294,6 +322,7 @@
 .op-error {
   margin-block: 0 1em;
   margin-inline: 0;
+  /* Not colour alone: a warning icon and the message text (and "Error:" for screen readers). */
   padding-inline-start: 0.6em;
   border-inline-start: 5px solid var(--op-error);
   color: var(--op-error);
@@ -407,9 +436,9 @@ textarea.op-input {
   background: var(--op-bg);
 }
 .op-option:has(input:checked) {
-  border-color: var(--op-accent);
+  border-color: var(--op-accent-line);
   background: var(--op-selected);
-  outline: 1px solid var(--op-accent);
+  outline: 1px solid var(--op-accent-line);
 }
 .op-option input {
   position: relative;
@@ -420,7 +449,7 @@ textarea.op-input {
   block-size: 1.4em;
   margin-block: 0.05em 0;
   margin-inline: 0;
-  accent-color: var(--op-accent);
+  accent-color: var(--op-accent-line);
 }
 .op-option label {
   flex: 1;
@@ -452,11 +481,11 @@ textarea.op-input {
   font: inherit;
   font-weight: 700;
   border-radius: 0.3em;
-  border: var(--op-border-width) solid var(--op-accent);
+  border: var(--op-border-width) solid var(--op-accent-line);
   cursor: pointer;
 }
 .op-primary {
-  background: var(--op-accent);
+  background: var(--op-accent-fill);
   color: var(--op-accent-text);
 }
 .op-nav .op-primary {
@@ -482,7 +511,7 @@ textarea.op-input {
   margin-block-start: 1em;
 }
 .op-mic.op-mic-on {
-  background: var(--op-accent);
+  background: var(--op-accent-fill);
   color: var(--op-accent-text);
 }
 .op-voice-status {
@@ -571,7 +600,23 @@ textarea.op-input {
   border: 0;
 }
 
+/* The warning icon in an error message: the error colour, text size. */
+.op-error .op-icon {
+  color: inherit;
+  inline-size: 1.2em;
+  block-size: 1.2em;
+  margin-inline-end: 0.35em;
+  vertical-align: -0.2em;
+}
+
 @media (forced-colors: active) {
+  /* The device's own colours; host colours are never used. */
+  .op-root {
+    --op-accent: LinkText;
+    --op-accent-line: CanvasText;
+    --op-accent-fill: ButtonText;
+    --op-accent-text: ButtonFace;
+  }
   .op-option:has(input:checked) {
     outline: 3px solid Highlight;
   }

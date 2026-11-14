@@ -460,5 +460,55 @@ The form keeps working offline or when the API is down:
 | `openpath:queued` | `{ flowId }`: *Send* was pressed while the server couldn't be reached; the answers wait on the device and `openpath:complete` follows when they are sent. |
 
 Both bubble and cross the shadow boundary (`composed: true`). Theme with
-`--openpath-color`, `--openpath-color-dark` (a light colour for dark mode) and
-`--openpath-font` on the element.
+`--openpath-color`, `--openpath-color-dark` (for the dark theme) and
+`--openpath-font` on the element; see [Theming safely](#theming-safely).
+
+## Theming safely
+
+Your brand colour can never make the form inaccessible: OpenPath measures it and
+corrects it if needed.
+
+```css
+openpath-flow, openpath-jobs {
+  --openpath-color: #0b5cad;      /* light theme */
+  --openpath-color-dark: #8cb8ff; /* dark theme (theme="dark", or theme="auto" in dark mode) */
+}
+```
+
+At start-up, and again whenever the colour, the theme or the device's settings
+change, both components check the colour against the form background (white, or
+`#1b1b1f` in the dark theme) using the WCAG 2.2 contrast formula:
+
+| Where the colour is used | Rule |
+|--------------------------|------|
+| Filled buttons (*Next*, *Send*, the chosen language, the mic while listening) | The colour is used as it is. The text on it is **black or white, whichever has the higher contrast** (always at least 4.5:1). |
+| Text in that colour (secondary buttons, icons, ticks) | At least **4.5:1** on the background. |
+| Borders, outlines, the selected option, checkboxes | At least **3:1** on the background. |
+| Font size | Never below **16px**, even if the page sets a smaller `font-size` on the element (18px by default). |
+
+If the colour fails a rule, OpenPath darkens it (light theme) or lightens it
+(dark theme) one small step at a time, keeping its hue, until it passes, and
+uses that version only where the rule applies. It tells you in the browser
+console, for example:
+
+```
+[openpath] --openpath-color: #fff59d has a contrast of only 1.11:1 on the light form
+background #ffffff. Text needs 4.5:1 and borders and focus rings need 3:1, so OpenPath
+uses #847600 (4.59:1) for text and #a29200 (3.15:1) for borders and outlines. Buttons
+filled with #fff59d use black text (18.79:1).
+```
+
+To keep your exact shade everywhere, pick one that already passes; a checker such
+as the WebAIM contrast checker shows the ratio. A value OpenPath can't read (use
+`#rrggbb`, `rgb()` or `hsl()`) is ignored with a warning, and the built-in colour
+is used. Font size warnings work the same way.
+
+- **High contrast** (the learner's helper, or the device's *more contrast*
+  setting) and **forced colours** (Windows high contrast) ignore host colours
+  completely and use the built-in palette or the device's colours.
+- **Not colour alone:** errors have a warning icon and words (and "Error:" for
+  screen readers), required and optional questions are told apart by the words
+  *(optional)*, selected options are native ticked checkboxes and radio buttons,
+  and the chosen language has a tick. Tests check all of this, and feed in bad
+  colours (pale yellow, light grey, mid-blue on dark, see-through colours) to
+  check that every text/background pair still passes.

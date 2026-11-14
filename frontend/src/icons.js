@@ -13,6 +13,8 @@ const PATHS = {
   partner: ['M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M2 20a6 6 0 0 1 12 0', 'M10 20a6 6 0 0 1 12 0'],
   course: ['M2 8l10-5 10 5-10 5z', 'M6 10v5c3 3 9 3 12 0v-5'],
   lock: ['M5 11h14v10H5z', 'M8 11V7a4 4 0 0 1 8 0v4'],
+  // A warning triangle with "!": errors are never shown by colour alone.
+  alert: ['M12 3L2 21h20z', 'M12 10v5', 'M12 18h.01'],
 };
 
 export function icon(name) {

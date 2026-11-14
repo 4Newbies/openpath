@@ -13,6 +13,8 @@ import { renderSetup } from './setup.js';
 import { switchCalendar } from './steps/date.js';
 import { renderStep } from './steps/index.js';
 import { createStore } from './store.js';
+import { icon } from './icons.js';
+import { ThemeGuard } from './theme.js';
 import css from './styles.css?inline';
 
 let counter = 0;
@@ -99,12 +101,15 @@ export class OpenPathFlow extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this.shadowRoot) return;
+    if (this.shadowRoot) return void this.theme?.sync(); // moved in the page: watch colours again
     const shadow = this.attachShadow({ mode: 'open' });
     this.live = h('div', { class: 'op-sr', 'aria-live': 'polite' });
     this.view = h('div', { class: 'op-card' }, h('p', { text: this.tr('loading') }));
     this.root = h('div', { class: 'op-root', lang: FALLBACK_LANG, dir: 'ltr' }, this.view, this.live);
     shadow.append(h('style', { text: css }), this.root);
+    // Host colours and font size are measured and made safe (theme.js),
+    // from the moment the theme and helper attributes are set.
+    this.theme = new ThemeGuard(this, this.root);
     // Escape stops read-aloud and voice input. Nothing else is taken over.
     this.root.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && (this.speaking || this.listening)) this.stopHelpers({ announce: true });
@@ -116,6 +121,7 @@ export class OpenPathFlow extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.theme?.stop();
     this.stopHelpers();
     this.stopRetry();
     globalThis.removeEventListener?.('online', this.onOnline);
@@ -147,7 +153,7 @@ export class OpenPathFlow extends HTMLElement {
     ]);
     if (!flow) {
       this.view.textContent = '';
-      this.view.append(h('p', { class: 'op-error', text: this.tr('formFailed') }));
+      this.view.append(h('p', { class: 'op-error' }, icon('alert'), this.tr('formFailed')));
       return;
     }
     this.flow = flow;
@@ -407,6 +413,7 @@ export class OpenPathFlow extends HTMLElement {
     this.root.toggleAttribute('data-high-contrast', Boolean(prefs?.highContrast));
     this.root.setAttribute('data-theme', themeFor(this, prefs));
     this.root.toggleAttribute('data-simple', Boolean(prefs?.simple));
+    this.theme?.sync(); // colours are checked against this theme
   }
 
   setPrefs(changes) {
@@ -858,6 +865,7 @@ export class OpenPathFlow extends HTMLElement {
   }
 
   render(opts = {}) {
+    this.theme?.check(); // the host page may have changed its colours since
     this.renderView(opts);
     // "Listen" goes first in the tools row, only when read-aloud is on and works here.
     if (this.canSpeak()) {
