@@ -101,7 +101,7 @@ Few devices have an Amharic voice, so recorded `am` audio is the dependable way 
 
 Uses the browser's `SpeechRecognition` (or `webkitSpeechRecognition`). Where it isn't
 supported the mic button is not shown at all. Before first use the learner sees:
-*"Your voice is sent to your browser's speech service to turn it into text. Allow?"*
+*"Your voice is sent over the internet to your browser's speech service (Google, if you use Chrome) to turn it into text. Allow?"*
 (**Allow** / **No, I will type**); the answer is remembered. There are clear messages
 when the microphone is blocked, nothing was heard, or the device is offline. The voice
 code is only loaded once the learner turns voice on.

@@ -295,7 +295,7 @@ describe('voice input', () => {
     const mic = button(el, 'Speak your answer');
     expect(mic.hasAttribute('aria-pressed')).toBe(false);
     mic.click();
-    expect(active(el).textContent).toBe("Your voice is sent to your browser's speech service to turn it into text. Allow?");
+    expect(active(el).textContent).toBe("Your voice is sent over the internet to your browser's speech service (Google, if you use Chrome) to turn it into text. Allow?");
     expect($(el, '.op-consent').getAttribute('role')).toBe('group');
     button(el, 'No, I will type').click();
     expect(savedPrefs().voiceConsent).toBe('deny');
@@ -392,5 +392,20 @@ describe('voice input', () => {
     expect(stop).toHaveBeenCalled();
     await wait();
     expect($(el, '[aria-live]').textContent).toBe('Stopped');
+  });
+});
+
+describe('voice consent text', () => {
+  it.each([
+    ['en', false, "Your voice is sent over the internet to your browser's speech service (Google, if you use Chrome) to turn it into text. Allow?"],
+    ['en', true, 'Your voice goes over the internet to a speech service (Google, if you use Chrome) to make text. Is that OK?'],
+    ['am', false, 'ድምፅዎ ወደ ጽሑፍ እንዲቀየር በኢንተርኔት ወደ አሳሽዎ የንግግር አገልግሎት ይላካል (Chromeን ከተጠቀሙ ወደ Google)። ይፈቅዳሉ?'],
+    ['am', true, 'ድምፅዎ ጽሑፍ እንዲሆን በኢንተርኔት ወደ የንግግር አገልግሎት ይሄዳል (Chromeን ከተጠቀሙ Google)። ይስማማሉ?'],
+  ])('lang=%s simple=%s says it goes over the internet and names Google', async (lang, simple, text) => {
+    setVoiceProvider(fakeVoice('x'));
+    localStorage.setItem('openpath:helpers', JSON.stringify({ flowVersion: '1', step: 'name', answers: {} }));
+    const el = await mount(flow, { lang }, { prefs: { chosen: true, voice: true, simple } });
+    $(el, '.op-mic').click();
+    expect($(el, '.op-consent-text').textContent).toBe(text);
   });
 });
