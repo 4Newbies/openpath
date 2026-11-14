@@ -26,14 +26,14 @@ export function createMemoryStore() {
 
   return {
     async init() {},
-    async create({ id, resumeCode, flowId, flowVersion, lang, clientKey = null }) {
+    async create({ id, resumeCode, flowId, flowVersion, lang, clientKey = null, context = null }) {
       const all = [...sessions.values()];
       if (sessions.has(id) || all.some((s) => s.resumeCode === resumeCode || (clientKey && s.clientKey === clientKey))) {
         throw new StoreDuplicate();
       }
       const now = new Date().toISOString();
       sessions.set(id, {
-        id, resumeCode, flowId, flowVersion, lang, clientKey,
+        id, resumeCode, flowId, flowVersion, lang, clientKey, context: clone(context),
         status: 'open', step: null, createdAt: now, updatedAt: now, submittedAt: null,
       });
       profiles.set(id, {});

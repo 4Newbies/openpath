@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS openpath_sessions (
 -- lost connection returns the same session instead of making a second one.
 ALTER TABLE openpath_sessions ADD COLUMN IF NOT EXISTS client_key TEXT UNIQUE;
 
+-- What the session is about, e.g. { "jobId": "...", "jobTitle": "..." } for a job application.
+ALTER TABLE openpath_sessions ADD COLUMN IF NOT EXISTS context JSONB;
+
 CREATE TABLE IF NOT EXISTS openpath_profile_answers (
   session_id  TEXT PRIMARY KEY REFERENCES openpath_sessions(id) ON DELETE CASCADE,
   answers     JSONB NOT NULL DEFAULT '{}'::jsonb,

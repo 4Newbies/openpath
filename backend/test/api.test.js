@@ -99,6 +99,16 @@ for (const [name, makeStore] of stores) {
         expect(done.body.answers.phone).toBe('+251911234567');
       });
 
+      it('a session can record what it is about (the job applied for)', async () => {
+        const context = { jobId: 'sample-data-entry-addis', jobTitle: 'Data entry clerk' };
+        const { id } = (await request(app).post('/v1/sessions').send({ flowId: 'job-application', context }).expect(201)).body;
+        expect((await request(app).get(`/v1/sessions/${id}`)).body.context).toEqual(context);
+        for (const bad of [['x'], { 'bad key': 'x' }, { jobId: 'x'.repeat(201) }, { n: 1 }]) {
+          const r = await request(app).post('/v1/sessions').send({ flowId: 'job-application', context: bad }).expect(400);
+          expect(r.body.error.code).toBe('invalid_context');
+        }
+      });
+
       it('rejects unknown flows and languages with the standard error shape', async () => {
         const r = await request(app).post('/v1/sessions').send({ flowId: 'nope' }).expect(400);
         expect(r.body).toEqual({ error: { code: 'unknown_flow', message: expect.any(String), field: 'flowId' } });

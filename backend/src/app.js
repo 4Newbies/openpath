@@ -107,6 +107,7 @@ export function createApp({ store, flows, config, log = console }) {
     flowId: s.flowId,
     flowVersion: s.flowVersion,
     lang: s.lang,
+    context: s.context ?? null,
     status: s.status,
     step: s.step,
     answers: storedAnswers(s),
@@ -139,9 +140,22 @@ export function createApp({ store, flows, config, log = console }) {
   // Repeat-safe: with the same clientKey, a retried request (for example after
   // a dropped connection) gets the session it already created (200), not a new one.
   const CLIENT_KEY_RE = /^[A-Za-z0-9_-]{16,64}$/;
+  // A small context for the session, e.g. which job an application is for.
+  const CONTEXT_KEY_RE = /^[a-zA-Z][a-zA-Z0-9_]{0,31}$/;
+  function checkContext(context) {
+    if (context === undefined || context === null) return null;
+    const ok =
+      typeof context === 'object' &&
+      !Array.isArray(context) &&
+      Object.keys(context).length <= 10 &&
+      Object.entries(context).every(([k, v]) => CONTEXT_KEY_RE.test(k) && typeof v === 'string' && v.length <= 200);
+    if (!ok) throw new ApiError(400, 'invalid_context', 'context must be up to 10 short text values, like { "jobId": "..." }.', 'context');
+    return context;
+  }
 
   v1.post('/sessions', async (req, res) => {
     const { flowId, lang = 'en', clientKey } = bodyOf(req);
+    const context = checkContext(bodyOf(req).context);
     if (typeof flowId !== 'string' || !flows.has(flowId)) {
       throw new ApiError(400, 'unknown_flow', 'This question flow is not known to the server.', 'flowId');
     }
@@ -168,6 +182,7 @@ export function createApp({ store, flows, config, log = console }) {
           flowVersion: flow.version,
           lang,
           clientKey: clientKey ?? null,
+          context,
         });
         return res.status(201).json({ id: s.id, resumeCode: s.resumeCode });
       } catch (e) {

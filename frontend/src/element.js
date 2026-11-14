@@ -2,9 +2,10 @@ import { cleanAnswer, validateAnswer, validateAnswers } from '../../shared/flow.
 import { ApiError, createApi, isUnreachable, newClientKey } from './api.js';
 import { h, setText } from './dom.js';
 import { loadFlow } from './loader.js';
-import { resolveLanguages } from './language.js';
+import { folderUrl, resolveLanguages } from './language.js';
 import { errorMessage, FALLBACK_LANG, labelOf, langAttrs, packInfo, pick, t, tList } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
+import { earlierAnswer, forgetProfile, saveProfile } from './profile.js';
 import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
 import { getSpeech, getVoice, loadVoiceModule, voiceAvailable } from './providers.js';
 import { renderReview } from './review.js';
@@ -27,6 +28,10 @@ const RETRY_MS = 20000;
  * lang:      starting language (default en). Packs other than English are fetched
  *            from lang-path (default: the "lang" folder next to openpath.js).
  * languages: optional; shows a language switcher on the first screen and in Settings.
+ * flow:      a flow by name instead of a questions URL: flow="job-application" loads
+ *            job-application.json from flows-path (default: "questions" next to openpath.js).
+ * .context:  optional property, e.g. { jobId, jobTitle }: sent with the session and
+ *            included in openpath:complete (set by <openpath-jobs>).
  *
  * When the API can't be reached the form keeps working: answers stay on the
  * device, a note says they will be sent when the learner is back online,
@@ -35,7 +40,7 @@ const RETRY_MS = 20000;
  *
  * Events (bubble and cross the shadow boundary):
  *   openpath:step      detail { flowId, stepId, index, total }
- *   openpath:complete  detail { flowId, sessionId, answers }  (private answers left out)
+ *   openpath:complete  detail { flowId, sessionId, answers, context? }  (private answers left out)
  *   openpath:queued    detail { flowId }  "Send" was pressed offline; sent later
  */
 export class OpenPathFlow extends HTMLElement {
@@ -118,11 +123,30 @@ export class OpenPathFlow extends HTMLElement {
     this.resolveLanguage().then((ok) => ok && this.render());
   }
 
+  /** The question file: questions="url", or flow="name" from the flows folder. */
+  questionsUrl() {
+    const url = this.getAttribute('questions');
+    const name = this.getAttribute('flow');
+    if (url || !name) return url;
+    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(name)) return null;
+    return `${folderUrl(this, 'flows-path', 'questions/')}${name}.json`;
+  }
+
   async start() {
     this.prefs = loadPrefs();
-    const [{ flow }] = await Promise.all([loadFlow(this.getAttribute('questions')), this.resolveLanguage()]);
+    const named = !this.getAttribute('questions') && this.hasAttribute('flow');
+    const [{ flow }] = await Promise.all([
+      named && !this.questionsUrl() ? { flow: null } : loadFlow(this.questionsUrl(), { fallback: !named }),
+      this.resolveLanguage(),
+    ]);
+    if (!flow) {
+      this.view.textContent = '';
+      this.view.append(h('p', { class: 'op-error', text: this.tr('formFailed') }));
+      return;
+    }
     this.flow = flow;
-    this.store = createStore(flow);
+    this.store = createStore(flow, { scope: this.context?.jobId });
+    this.prefillEarlierAnswers();
     this.nav = createNavigator(flow);
     const api = this.getAttribute('api');
     this.api = api ? createApi(api) : null;
@@ -161,6 +185,25 @@ export class OpenPathFlow extends HTMLElement {
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) this.forgetSession();
       if (isUnreachable(e)) this.setOffline(true);
+    }
+  }
+
+  /**
+   * Questions with "prefillFrom" start with the learner's earlier answer
+   * (WCAG 3.3.7), so they don't type their name and phone again. The step
+   * says it was filled in and can be changed.
+   */
+  prefillEarlierAnswers() {
+    this.prefilled = new Set();
+    for (const q of this.flow.questions) {
+      if (!q.prefillFrom || this.store.state.answers[q.id] !== undefined) continue;
+      for (const source of [].concat(q.prefillFrom)) {
+        const value = earlierAnswer(source);
+        if (value === undefined || validateAnswer(q, value, { checkRequired: false })) continue;
+        this.store.setAnswer(q.id, value);
+        this.prefilled.add(q.id);
+        break;
+      }
     }
   }
 
@@ -721,6 +764,7 @@ export class OpenPathFlow extends HTMLElement {
       uid: this.uid,
       onChange: (value) => {
         this.store.setAnswer(q.id, value);
+        this.prefilled?.delete(q.id); // the learner's own answer now
         if (q.setsPreference === 'access') this.accessAnswerChanged(q, value);
         // A showIf answer can change the number of steps: update the text in
         // place (no re-render, so focus stays where it is).
@@ -740,6 +784,12 @@ export class OpenPathFlow extends HTMLElement {
     });
 
     // The text field always stays; the mic is an extra way to fill it.
+    if (this.prefilled?.has(q.id)) {
+      const noteId = `op-${this.uid}-${q.id}-prefilled`;
+      step.node.append(h('p', { id: noteId, class: 'op-hint op-prefilled', text: this.tr('prefilled') }));
+      const field = step.node.querySelector(`#op-${this.uid}-${q.id}-field`);
+      if (field) field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), noteId].filter(Boolean).join(' '));
+    }
     if (this.micAllowed(q)) step.node.append(this.micBlock(q));
 
     const back = this.nav.back(q.id, answers);
@@ -764,7 +814,26 @@ export class OpenPathFlow extends HTMLElement {
 
   renderDone(focus) {
     const heading = h('h2', { class: 'op-question', tabindex: '-1', text: this.tr('doneTitle') });
-    this.view.append(h('div', { class: 'op-step' }, heading, h('p', { class: 'op-body', text: this.tr('doneBody') })));
+    const step = h('div', { class: 'op-step' }, heading, h('p', { class: 'op-body', text: this.tr('doneBody') }));
+    // Say plainly what is kept on this device for next time, and let the learner forget it.
+    if (this.profileKept) {
+      const note = h('p', { class: 'op-body op-profile-note', text: this.tr('profileKept') });
+      const forget = h('button', {
+        type: 'button',
+        class: 'op-button op-secondary',
+        text: this.tr('forgetProfile'),
+        onclick: () => {
+          forgetProfile();
+          this.profileKept = false;
+          setText(note, this.tr('profileForgotten'));
+          forget.remove();
+          note.setAttribute('tabindex', '-1');
+          note.focus();
+        },
+      });
+      step.append(note, forget);
+    }
+    this.view.append(step);
     if (focus) heading.focus();
   }
 
@@ -833,7 +902,7 @@ export class OpenPathFlow extends HTMLElement {
     // The same key on every retry: if a reply was lost, the server returns
     // the session it already made instead of a second one.
     if (!this.store.state.clientKey) this.store.setClientKey(newClientKey());
-    const s = await this.api.createSession(this.flow.flowId, this.uiLang, this.store.state.clientKey);
+    const s = await this.api.createSession(this.flow.flowId, this.uiLang, this.store.state.clientKey, this.context);
     this.store.setSession(s.id, s.resumeCode);
     return s.id;
   }
@@ -908,12 +977,19 @@ export class OpenPathFlow extends HTMLElement {
     const publicAnswers = Object.fromEntries(
       Object.entries(clean).filter(([id]) => !this.nav.question(id).private),
     );
+    // Keep "reuse" answers (name, phone) for other flows to prefill.
+    const keep = Object.fromEntries(
+      this.flow.questions.filter((q) => q.reuse && !q.private && clean[q.id] !== undefined).map((q) => [`${this.flow.flowId}.${q.id}`, clean[q.id]]),
+    );
+    this.profileKept = Object.keys(keep).length > 0 && saveProfile(keep);
     this.busy = false;
     this.queued = false;
     this.store.clear();
     this.done = true; // not persisted: a reload starts a fresh form
     this.render({ focus });
     this.autoSpeak(focus);
-    this.emit('openpath:complete', { flowId: this.flow.flowId, sessionId, answers: publicAnswers });
+    const detail = { flowId: this.flow.flowId, sessionId, answers: publicAnswers };
+    if (this.context) detail.context = { ...this.context };
+    this.emit('openpath:complete', detail);
   }
 }

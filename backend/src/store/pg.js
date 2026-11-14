@@ -13,6 +13,7 @@ const toSession = (row) => ({
   flowVersion: row.flow_version,
   lang: row.lang,
   clientKey: row.client_key ?? null,
+  context: row.context ?? null,
   status: row.status,
   step: row.step,
   createdAt: row.created_at.toISOString(),
@@ -66,13 +67,13 @@ export function createPgStore(connectionString) {
       await pool.query(schemaSql);
     },
 
-    async create({ id, resumeCode, flowId, flowVersion, lang, clientKey = null }) {
+    async create({ id, resumeCode, flowId, flowVersion, lang, clientKey = null, context = null }) {
       try {
         return await tx(async (c) => {
           const { rows } = await c.query(
-            `INSERT INTO openpath_sessions (id, resume_code, flow_id, flow_version, lang, client_key)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [id, resumeCode, flowId, flowVersion, lang, clientKey],
+            `INSERT INTO openpath_sessions (id, resume_code, flow_id, flow_version, lang, client_key, context)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [id, resumeCode, flowId, flowVersion, lang, clientKey, context === null ? null : JSON.stringify(context)],
           );
           await c.query('INSERT INTO openpath_profile_answers (session_id) VALUES ($1)', [id]);
           return toSession(rows[0]);

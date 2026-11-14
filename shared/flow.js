@@ -69,7 +69,10 @@ const DEFAULT_MAX_LENGTH = 500;
 const QUESTION_KEYS = new Set([
   'id', 'type', 'label', 'simple', 'hint', 'icon', 'required', 'voice', 'options',
   'showIf', 'autocomplete', 'maxLength', 'multiline', 'private', 'setsPreference', 'audio', 'calendar', 'country',
+  'prefillFrom', 'reuse',
 ]);
+// "prefillFrom": "<flowId>.<questionId>" (or a list of them, tried in order).
+const PREFILL_RE = /^[a-z0-9][a-z0-9-]{0,63}\.[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
 // Audio file URLs: http(s) or a relative path; never javascript:, data: or other schemes.
 const AUDIO_URL_RE = /^(https?:\/\/\S+|(?![a-zA-Z][a-zA-Z0-9+.-]*:)(?!\/\/)\S+)$/;
 
@@ -134,7 +137,15 @@ export function validateFlow(flow) {
     checkLocalized(q.simple, `${where}.simple`, errors);
     checkLocalized(q.hint, `${where}.hint`, errors);
 
-    for (const b of ['required', 'voice', 'multiline', 'private']) {
+    if (q.prefillFrom !== undefined) {
+      const list = [].concat(q.prefillFrom);
+      if (!list.length || list.some((p) => typeof p !== 'string' || !PREFILL_RE.test(p))) {
+        errors.push(`${where}.prefillFrom must be "flowId.questionId" or a list of them`);
+      }
+      if (q.private) errors.push(`${where} is private and cannot be prefilled`);
+    }
+    if (q.reuse === true && q.private) errors.push(`${where} is private and cannot be kept for reuse`);
+    for (const b of ['required', 'voice', 'multiline', 'private', 'reuse']) {
       if (q[b] !== undefined && typeof q[b] !== 'boolean') errors.push(`${where}.${b} must be true or false`);
     }
     if (q.type === 'info' && q.required !== undefined) errors.push(`${where} is an info screen and cannot be required`);

@@ -349,9 +349,9 @@ export class OpenPathJobs extends HTMLElement {
     this.applying = job;
     const title = this.text(job.title);
     const org = this.text(job.hiringOrganization.name);
-    const flowName = this.getAttribute('apply-flow') || 'job-application';
     const flow = document.createElement('openpath-flow');
-    flow.setAttribute('questions', `${folderUrl(this, 'flows-path', 'questions/')}${encodeURIComponent(flowName)}.json`);
+    flow.setAttribute('flow', this.getAttribute('apply-flow') || 'job-application');
+    flow.setAttribute('flows-path', folderUrl(this, 'flows-path', 'questions/'));
     for (const a of ['api', 'languages', 'lang-path']) if (this.hasAttribute(a)) flow.setAttribute(a, this.getAttribute(a));
     flow.setAttribute('lang', this.uiLang);
     // Which job this application is for. The private filter is never passed on.

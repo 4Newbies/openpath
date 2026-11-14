@@ -72,6 +72,12 @@ paths:
               properties:
                 flowId: { type: string, example: alx-onboarding }
                 lang: { type: string, pattern: '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$', default: en, example: am, description: 'Interface language of the form (en, am, ar ...).' }
+                context:
+                  type: object
+                  maxProperties: 10
+                  additionalProperties: { type: string, maxLength: 200 }
+                  example: { jobId: sample-data-entry-addis, jobTitle: Data entry clerk }
+                  description: What the session is about, e.g. the job a job-application session applies for.
                 clientKey:
                   type: string
                   pattern: '^[A-Za-z0-9_-]{16,64}$'

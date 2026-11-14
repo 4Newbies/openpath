@@ -177,7 +177,9 @@ describe('<openpath-jobs>', () => {
     const el = await mountJobs({ api: 'http://api.test', languages: 'en,am' });
     $(el, '.op-job button').click();
     const flow = $(el, 'openpath-flow');
-    expect(flow.getAttribute('questions')).toBe('http://localhost:3000/questions/job-application.json');
+    expect(flow.getAttribute('flow')).toBe('job-application');
+    expect(flow.getAttribute('flows-path')).toBe('http://localhost:3000/questions/');
+    expect(flow.questionsUrl()).toBe('http://localhost:3000/questions/job-application.json');
     expect(flow.getAttribute('api')).toBe('http://api.test');
     expect(flow.context).toEqual({ jobId: 'sample-virtual-assistant-gondar', jobTitle: 'Virtual assistant intern', organisation: 'Gondar Remote Work Collective (sample)' });
     expect(el.shadowRoot.activeElement.textContent).toBe('Applying for Virtual assistant intern at Gondar Remote Work Collective (sample)');

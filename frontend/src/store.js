@@ -1,7 +1,9 @@
 // Form state: current step, answers, display preferences and the server
 // session. Written to localStorage on every change and restored on load.
 
-export const storageKey = (flow) => `openpath:${flow.flowId}`;
+// One saved form per flow; with a scope (e.g. a job id) one per flow and scope,
+// so an application for one job never carries over to another.
+export const storageKey = (flow, scope) => `openpath:${flow.flowId}${scope ? `:${scope}` : ''}`;
 
 function safeStorage() {
   try {
@@ -11,8 +13,8 @@ function safeStorage() {
   }
 }
 
-export function createStore(flow, { storage = safeStorage() } = {}) {
-  const key = storageKey(flow);
+export function createStore(flow, { storage = safeStorage(), scope } = {}) {
+  const key = storageKey(flow, scope && /^[A-Za-z0-9_-]{1,64}$/.test(scope) ? scope : undefined);
   const known = new Set(flow.questions.map((q) => q.id));
   const prefQuestion = flow.questions.find((q) => q.setsPreference === 'access');
   const listeners = new Set();
