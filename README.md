@@ -201,7 +201,10 @@ The list:
 - It is keyboard and screen reader friendly and reflows at 200% and 400% zoom.
 - The jobs are also written into the host page as JSON-LD
   (`<script type="application/ld+json">`), so search engines and other platforms can
-  read them.
+  read them. `title` and `description` start with a plain-text English value (or the
+  first value when a job has no English) next to the language-tagged values, because
+  search engines read a JobPosting title as plain text. The API's `GET /v1/jobs` does
+  the same; jobs are stored as they were sent.
 
 ### Private "Support I need" filter
 

@@ -11,6 +11,13 @@
 //             { "@value": "የመረጃ መዝጋቢ", "@language": "am" }]
 // Accommodations are jobBenefits text values, one per support tag, using the
 // tag's English text from support-tags.js.
+// In the JSON-LD we publish (jobsJsonLd, jobForSearch), title and description
+// also start with a plain-text value, because search engines read a JobPosting
+// title as plain text:
+//   "title": ["Data entry clerk",
+//             { "@value": "Data entry clerk", "@language": "en" }, { "@value": "የመረጃ መዝጋቢ", "@language": "am" }]
+// The plain text is the English value (or the first value when there is no
+// English). A plain string may therefore sit next to language-tagged values.
 
 import { benefitsFromTags, isSupportTag } from './support-tags.js';
 
@@ -28,10 +35,13 @@ const MAX_TEXT = 2000;
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
+/** A string or { "@value" } as { "@value", "@language"? }; anything else unchanged. */
+const asValue = (v) => (typeof v === 'string' ? { '@value': v } : v);
+
 /** Text in the wanted language from a string or language-tagged values: { text, lang }. */
 export function textIn(value, lang) {
   if (typeof value === 'string') return { text: value, lang: null };
-  const list = [].concat(value ?? []).filter((v) => isObj(v) && typeof v['@value'] === 'string');
+  const list = [].concat(value ?? []).map(asValue).filter((v) => isObj(v) && typeof v['@value'] === 'string');
   const found = list.find((v) => v['@language'] === lang) ?? list.find((v) => v['@language'] === 'en') ?? list[0];
   return found ? { text: found['@value'], lang: found['@language'] ?? null } : { text: '', lang: null };
 }
@@ -41,7 +51,7 @@ function checkText(value, path, errors, { required = false } = {}) {
     if (required) errors.push(`${path} is missing`);
     return;
   }
-  const values = typeof value === 'string' ? [{ '@value': value }] : [].concat(value);
+  const values = [].concat(value).map(asValue);
   if (!values.length) errors.push(`${path} is empty`);
   for (const v of values) {
     if (!isObj(v) || typeof v['@value'] !== 'string' || !v['@value'].trim()) {
@@ -118,8 +128,19 @@ export function readJobs(data) {
 /** Is the job still open on this day ("YYYY-MM-DD")? */
 export const isOpen = (job, today) => !job.validThrough || job.validThrough.slice(0, 10) >= today;
 
+/** Plain text first, then the language-tagged values. Safe to repeat: an older plain value is replaced. */
+function withPlainText(value) {
+  if (typeof value === 'string' || value === undefined) return value;
+  const tagged = [].concat(value).filter(isObj);
+  if (!tagged.length) return value;
+  return [textIn(tagged, 'en').text, ...tagged];
+}
+
+/** A job as published for search engines: a plain-text title and description next to the language-tagged ones. */
+export const jobForSearch = (job) => ({ ...job, title: withPlainText(job.title), description: withPlainText(job.description) });
+
 /** The jobs as one JSON-LD document. */
-export const jobsJsonLd = (jobs) => ({ '@context': 'https://schema.org', '@graph': jobs.map((j) => ({ '@type': 'JobPosting', ...j })) });
+export const jobsJsonLd = (jobs) => ({ '@context': 'https://schema.org', '@graph': jobs.map((j) => ({ '@type': 'JobPosting', ...jobForSearch(j) })) });
 
 // Employer form answers (employer-accommodations.json) -> JobPosting.
 const EMPLOYMENT_FROM_ANSWER = {

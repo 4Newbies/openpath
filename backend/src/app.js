@@ -4,7 +4,7 @@ import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
 import crypto from 'node:crypto';
 import { LANG_RE, latestToday, validateAnswers } from '../../shared/flow.js';
-import { isOpen, jobFromEmployerAnswers, jobsJsonLd, validateJobPosting } from '../../shared/jobs.js';
+import { isOpen, jobForSearch, jobFromEmployerAnswers, jobsJsonLd, validateJobPosting } from '../../shared/jobs.js';
 import { ApiError, answerError, errorBody, errorHandler } from './errors.js';
 import { newResumeCode, newSessionId, SESSION_ID_RE } from './ids.js';
 import { StoreConflict, StoreDuplicate } from './store/memory.js';
@@ -265,7 +265,7 @@ export function createApp({ store, flows, config, log = console }) {
   v1.get('/jobs/:identifier', async (req, res) => {
     const job = /^[A-Za-z0-9_-]{1,64}$/.test(req.params.identifier) ? await store.getJob(req.params.identifier) : null;
     if (!job) throw new ApiError(404, 'not_found', 'No job with this identifier.');
-    res.json(withContext(job));
+    res.json(withContext(jobForSearch(job)));
   });
 
   // Create or update a job by identifier (for partner platforms).

@@ -133,6 +133,13 @@ for (const [name, makeStore] of stores) {
           expect(list.body['@graph']).toEqual([{ ...job, '@context': undefined, title: 'Senior driver' }].map(({ '@context': _, ...j }) => j));
           const one = await request(app).get('/v1/jobs/partner-1').expect(200);
           expect(one.body).toMatchObject({ '@context': 'https://schema.org', '@type': 'JobPosting', title: 'Senior driver' });
+
+          // Language-tagged text also gets a plain-text English value for search engines.
+          await request(app).post('/v1/jobs').send(job).expect(200);
+          const plainFirst = ['Driver', ...job.title];
+          expect((await request(app).get('/v1/jobs')).body['@graph'][0].title).toEqual(plainFirst);
+          expect((await request(app).get('/v1/jobs/partner-1')).body.title).toEqual(plainFirst);
+          expect((await store.getJob('partner-1')).title).toEqual(job.title); // stored as sent
           await request(app).get('/v1/jobs/nope').expect(404);
         });
 

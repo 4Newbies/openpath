@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { jobFromEmployerAnswers, readJobs, textIn, validateJobPosting } from '../../shared/jobs.js';
+import { jobForSearch, jobFromEmployerAnswers, jobsJsonLd, readJobs, textIn, validateJobPosting } from '../../shared/jobs.js';
 import { benefitsFromTags, readBenefits, SUPPORT_TAGS } from '../../shared/support-tags.js';
 import { resetPacks } from '../src/messages.js';
 import { langFile } from './helpers.js';
@@ -125,6 +125,32 @@ describe('<openpath-jobs>', () => {
     expect(ld['@graph'].every((j) => j['@type'] === 'JobPosting' && validateJobPosting(j).length === 0)).toBe(true);
     el.remove();
     expect(document.head.querySelector('script[data-openpath-jobs]')).toBeNull();
+  });
+
+  it('JSON-LD has a plain-text English title and description next to the language-tagged values', async () => {
+    await mountJobs({ lang: 'am' });
+    const ld = JSON.parse(document.head.querySelector('script[data-openpath-jobs]').textContent);
+    const clerk = ld['@graph'].find((j) => j.identifier === 'sample-data-entry-addis');
+    expect(clerk.title).toEqual([
+      'Data entry clerk',
+      { '@value': 'Data entry clerk', '@language': 'en' },
+      { '@value': 'የመረጃ መዝጋቢ', '@language': 'am' },
+    ]);
+    expect(clerk.description[0]).toMatch(/^Enter customer records/);
+    expect(clerk.description.slice(1)).toEqual(sample['@graph'].find((j) => j.identifier === clerk.identifier).description);
+    // Reading the feed back and publishing it again does not add a second plain value.
+    const again = jobsJsonLd(readJobs(ld).jobs)['@graph'].find((j) => j.identifier === clerk.identifier);
+    expect(again.title).toEqual(clerk.title);
+  });
+
+  it('the plain text is the first value when a job has no English, and a plain string stays as it is', () => {
+    const base = structuredClone(sample['@graph'][0]);
+    const amOnly = { ...base, title: [{ '@value': 'ሹፌር', '@language': 'am' }], description: 'Drive a van.' };
+    const out = jobForSearch(amOnly);
+    expect(out.title).toEqual(['ሹፌር', { '@value': 'ሹፌር', '@language': 'am' }]);
+    expect(out.description).toBe('Drive a van.');
+    expect(validateJobPosting(out)).toEqual([]);
+    expect(textIn(out.title, 'am')).toEqual({ text: 'ሹፌር', lang: 'am' });
   });
 
   it('JSON-LD cannot be broken out of with </script> in job text', async () => {
