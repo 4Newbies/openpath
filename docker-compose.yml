@@ -1,0 +1,41 @@
+# One command starts Postgres and the API:
+#   docker compose up --build
+# Settings come from .env (copy .env.example). The fallback values below are
+# for a local machine only; set real values in .env anywhere else.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-openpath}
+      POSTGRES_USER: ${POSTGRES_USER:-openpath}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+    volumes:
+      - openpath-db:/var/lib/postgresql/data
+    ports:
+      # Only reachable from this machine, for running the API tests against Postgres.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://${POSTGRES_USER:-openpath}:${POSTGRES_PASSWORD:-local-dev-only}@db:5432/${POSTGRES_DB:-openpath}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      BODY_LIMIT: ${BODY_LIMIT:-32kb}
+    ports:
+      - "${API_PORT:-4000}:4000"
+
+volumes:
+  openpath-db:

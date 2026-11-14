@@ -1,0 +1,213 @@
+openapi: 3.1.0
+info:
+  title: OpenPath session API
+  version: 0.1.0
+  description: |
+    Saves, resumes and submits answers to an OpenPath question flow.
+    Every answer is validated against the question file the server has loaded
+    for the session's flowId (shared/flow.js). Answers to questions marked
+    `private` (the support request) are stored in a separate table.
+
+    Every error uses the same shape: `{ "error": { "code", "message", "field"? } }`.
+servers:
+  - url: http://localhost:4000/v1
+tags:
+  - name: sessions
+paths:
+  /sessions:
+    post:
+      tags: [sessions]
+      summary: Start a session
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [flowId]
+              additionalProperties: false
+              properties:
+                flowId: { type: string, example: alx-onboarding }
+                lang: { type: string, enum: [en, am], default: en }
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, resumeCode]
+                properties:
+                  id: { $ref: '#/components/schemas/SessionId' }
+                  resumeCode: { type: string, pattern: '^[A-Z2-9]{4}-[A-Z2-9]{4}$', example: K7QM-3XHT }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /sessions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [sessions]
+      summary: Resume a session
+      operationId: getSession
+      responses:
+        '200':
+          description: The session and every saved answer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /sessions/{id}/answers:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    put:
+      tags: [sessions]
+      summary: Save progress
+      description: |
+        Replaces the full set of saved answers (idempotent: sending the same
+        body twice has the same effect). Formats and option values are checked;
+        missing required answers are allowed until submit.
+      operationId: saveAnswers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers: { $ref: '#/components/schemas/Answers' }
+                step:
+                  type: [string, 'null']
+                  description: Question id the person is on, or "review".
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { $ref: '#/components/schemas/SessionId' }
+                  status: { type: string, enum: [open] }
+                  step: { type: [string, 'null'] }
+                  updatedAt: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /sessions/{id}/submit:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    post:
+      tags: [sessions]
+      summary: Submit the answers
+      description: |
+        Submits the answers in the body, or the last saved answers when the body
+        has none. Every visible required question must be answered; answers to
+        questions hidden by showIf are dropped. After submit the session is
+        read-only.
+      operationId: submitSession
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers: { $ref: '#/components/schemas/Answers' }
+      responses:
+        '200':
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { $ref: '#/components/schemas/SessionId' }
+                  status: { type: string, enum: [submitted] }
+                  submittedAt: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+components:
+  parameters:
+    SessionId:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/SessionId' }
+  schemas:
+    SessionId:
+      type: string
+      pattern: '^[A-Za-z0-9_-]{22}$'
+      description: 128 random bits, base64url. Treat it as a secret.
+    Answers:
+      type: object
+      description: Map of question id to answer. text/phone/date/single are strings (date is YYYY-MM-DD), multi is an array of option values, yesno is a boolean.
+      additionalProperties:
+        oneOf:
+          - type: string
+          - type: boolean
+          - type: array
+            items: { type: string }
+      example:
+        fullName: Hana Tesfaye
+        phone: '+251 911 234 567'
+        dateOfBirth: '2001-03-27'
+        access: [larger-text]
+    Session:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/SessionId' }
+        resumeCode: { type: string }
+        flowId: { type: string }
+        flowVersion: { type: string }
+        lang: { type: string, enum: [en, am] }
+        status: { type: string, enum: [open, submitted] }
+        step: { type: [string, 'null'] }
+        answers: { $ref: '#/components/schemas/Answers' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        submittedAt: { type: [string, 'null'], format: date-time }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: |
+                Machine-readable code, e.g. unknown_flow, invalid_lang, invalid_body,
+                invalid_json, invalid_step, unknown_question, invalid_type, too_long,
+                invalid_phone, invalid_date, future_date, invalid_option, required,
+                not_found, already_submitted, payload_too_large, rate_limited, internal.
+            message: { type: string, description: Plain-language message safe to show to a person. }
+            field: { type: string, description: The question id or body field the error is about. }
+  responses:
+    BadRequest:
+      description: The request or an answer is not valid
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unprocessable:
+      description: A required question has no answer
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: No session with this id
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: The session was already submitted
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    TooLarge:
+      description: The request body is larger than BODY_LIMIT
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    RateLimited:
+      description: Too many requests from this address
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
