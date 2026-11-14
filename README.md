@@ -70,7 +70,7 @@ can't support are not offered.
 | Helper | What it does |
 |--------|--------------|
 | Read questions to me | A **Listen** button on every step reads the question, hint and options; each step is also read once when the learner moves to it. **Stop** (or Escape) stops it, and it stops on every step change. |
-| I want to speak my answers | A **Speak your answer** button (a real `<button>` with `aria-pressed`) on questions with `"voice": true`. Asks for consent once. What was said goes into the field, which stays editable, and focus returns to it; choice questions match the words to an option. It never moves on by itself. |
+| I want to speak my answers | A **Speak your answer** button (a real `<button>` whose label changes to **Stop listening** while it listens) on questions with `"voice": true`. Asks for consent once. What was said goes into the field, which stays editable, and focus returns to it; choice questions match the words to an option. It never moves on by itself. |
 | Simple words | Shows each question's `simple` text and simple option labels, the question's icon (decorative), and short, plain interface text and errors (English and Amharic). |
 | Bigger text | Larger text throughout (shown as soon as it's ticked). |
 | High contrast | Black on white (or white and yellow on black in dark mode), thicker borders. |

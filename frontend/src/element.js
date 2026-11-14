@@ -129,7 +129,9 @@ export class OpenPathFlow extends HTMLElement {
     );
   }
 
-  /** The mic button (a real toggle button) and a status line under it. */
+  /** The mic button and a status line under it. Its text label says what it
+   *  will do ("Speak your answer" / "Stop listening"); no aria-pressed, so the
+   *  state isn't announced twice. */
   micBlock(q) {
     const status = this.voiceStatus?.questionId === q.id ? this.voiceStatus.text : '';
     return h(
@@ -138,7 +140,6 @@ export class OpenPathFlow extends HTMLElement {
       h('button', {
         type: 'button',
         class: 'op-button op-secondary op-mic',
-        'aria-pressed': 'false',
         onclick: () => this.micClicked(q),
         text: this.tr('speakAnswer'),
       }),
@@ -198,7 +199,7 @@ export class OpenPathFlow extends HTMLElement {
   setMic(on) {
     const b = this.view.querySelector('.op-mic');
     if (!b) return;
-    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.classList.toggle('op-mic-on', on);
     b.textContent = this.tr(on ? 'stopListening' : 'speakAnswer');
   }
 

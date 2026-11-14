@@ -293,7 +293,7 @@ describe('voice input', () => {
     at('name');
     const el = await mount(flow, {}, { prefs: on() });
     const mic = button(el, 'Speak your answer');
-    expect(mic.getAttribute('aria-pressed')).toBe('false');
+    expect(mic.hasAttribute('aria-pressed')).toBe(false);
     mic.click();
     expect(active(el).textContent).toBe("Your voice is sent to your browser's speech service to turn it into text. Allow?");
     expect($(el, '.op-consent').getAttribute('role')).toBe('group');
@@ -324,7 +324,7 @@ describe('voice input', () => {
     expect(JSON.parse(localStorage.getItem('openpath:helpers')).answers.name).toBe('Hana Tesfaye');
   });
 
-  it('shows aria-pressed and "Stop listening" while listening, and announces it', async () => {
+  it('says "Stop listening" while listening (no aria-pressed), and announces it', async () => {
     let finish;
     setVoiceProvider({ isAvailable: () => true, listen: () => new Promise((r) => (finish = r)), stop: vi.fn() });
     at('name');
@@ -332,13 +332,13 @@ describe('voice input', () => {
     button(el, 'Speak your answer').click();
     await tick();
     const mic = $(el, '.op-mic');
-    expect(mic.getAttribute('aria-pressed')).toBe('true');
     expect(mic.textContent).toBe('Stop listening');
+    expect(mic.hasAttribute('aria-pressed')).toBe(false);
     await wait();
     expect($(el, '[aria-live]').textContent).toBe('Listening');
     finish('Hana');
     await tick();
-    expect(mic.getAttribute('aria-pressed')).toBe('false');
+    expect(mic.textContent).toBe('Speak your answer');
   });
 
   it('matches spoken words to an option, and says so when nothing matches', async () => {
@@ -377,7 +377,7 @@ describe('voice input', () => {
     await tick();
     await tick();
     expect($(el, '.op-voice-status').textContent).toContain(text);
-    expect($(el, '.op-mic').getAttribute('aria-pressed')).toBe('false');
+    expect($(el, '.op-mic').textContent).toBe('Speak your answer');
     expect($(el, 'input')).not.toBeNull(); // typing still works
   });
 

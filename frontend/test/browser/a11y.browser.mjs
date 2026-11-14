@@ -147,7 +147,7 @@ async function speak(page, where, words, check) {
   const host = page.locator('openpath-flow');
   await page.evaluate((w) => window.__say.push(w), words);
   const mic = host.getByRole('button', { name: 'Speak your answer' });
-  if ((await mic.getAttribute('aria-pressed')) !== 'false') fail(where, 'mic button has no aria-pressed="false"');
+  if ((await mic.getAttribute('aria-pressed')) !== null) fail(where, 'mic button should not have aria-pressed');
   await mic.click();
   const allow = host.getByRole('button', { name: 'Allow' });
   if (await allow.isVisible().catch(() => false)) {

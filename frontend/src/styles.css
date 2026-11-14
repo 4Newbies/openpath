@@ -344,7 +344,7 @@ textarea.op-input {
 .op-voice {
   margin-top: 1em;
 }
-.op-mic[aria-pressed='true'] {
+.op-mic.op-mic-on {
   background: var(--op-accent);
   color: var(--op-accent-text);
 }
