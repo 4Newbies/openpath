@@ -98,6 +98,10 @@
         },
         "maxLength": { "type": "integer", "minimum": 1, "maximum": 2000 },
         "multiline": { "type": "boolean", "description": "Text questions only: show a multi-line box." },
+        "country": {
+          "description": "Phone questions only. Default \"ET\": shows +251, accepts 09/07 local numbers and stores +251XXXXXXXXX. \"any\": free format, stored as typed.",
+          "enum": ["ET", "any"]
+        },
         "calendar": {
           "description": "Date questions only. \"ethiopian\" shows day, month and year lists in the Ethiopian calendar and stores { date: ISO Gregorian, ethiopian: { year, month, day } }. Default \"gregorian\" (stored as YYYY-MM-DD).",
           "enum": ["gregorian", "ethiopian"]
@@ -124,6 +128,10 @@
         {
           "if": { "properties": { "type": { "not": { "const": "date" } } } },
           "then": { "not": { "required": ["calendar"] } }
+        },
+        {
+          "if": { "properties": { "type": { "not": { "const": "phone" } } } },
+          "then": { "not": { "required": ["country"] } }
         }
       ]
     }

@@ -237,7 +237,8 @@ async function walk(browser, mode) {
   // phone
   await field('phone').fill('12');
   await checkError(page, at('phone'), { field: 'input[tel]' });
-  if ((await field('phone').getAttribute('autocomplete')) !== 'tel') fail(at('phone'), 'no autocomplete="tel"');
+  if ((await field('phone').getAttribute('autocomplete')) !== 'tel-national') fail(at('phone'), 'no autocomplete="tel-national"');
+  if ((await host.locator('.op-prefix').textContent()) !== '+251') fail(at('phone'), 'no +251 prefix shown');
   const pasteBlocked = await shadow(page, `
     const el = root.querySelector('[name=phone]');
     const dt = new DataTransfer();

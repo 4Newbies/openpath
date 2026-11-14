@@ -17,7 +17,7 @@ const silent = { error() {}, warn() {}, log() {} };
 
 const complete = {
   fullName: 'Hana Tesfaye',
-  phone: '+251 911 234 567',
+  phone: '0911 234 567', // stored as +251911234567
   dateOfBirth: { date: '2001-03-27', ethiopian: { year: 1993, month: 7, day: 18 } },
   language: 'am',
   location: 'Addis Ababa',
@@ -97,6 +97,7 @@ for (const [name, makeStore] of stores) {
         const { id } = (await create()).body;
         const cases = [
           [{ phone: 'call me' }, 'invalid_phone', 'phone'],
+          [{ phone: '0811 234 567' }, 'invalid_phone', 'phone'],
           [{ dateOfBirth: { ethiopian: { year: 2016, month: 13, day: 6 } } }, 'invalid_date', 'dateOfBirth'],
           [{ dateOfBirth: { date: '2001-03-28', ethiopian: { year: 1993, month: 7, day: 18 } } }, 'calendar_mismatch', 'dateOfBirth'],
           [{ dateOfBirth: '2001-03-27' }, 'invalid_type', 'dateOfBirth'],
@@ -125,12 +126,12 @@ for (const [name, makeStore] of stores) {
     });
 
     describe('GET /v1/sessions/:id', () => {
-      it('resumes a session with every saved answer', async () => {
+      it('resumes a session with every saved answer (phone in international format)', async () => {
         const { id, resumeCode } = (await create()).body;
         await request(app).put(`/v1/sessions/${id}/answers`).send({ answers: complete, step: 'course' }).expect(200);
         const r = await request(app).get(`/v1/sessions/${id}`).expect(200);
         expect(r.body).toMatchObject({ id, resumeCode, flowId: 'alx-onboarding', status: 'open', step: 'course', lang: 'en' });
-        expect(r.body.answers).toEqual(complete);
+        expect(r.body.answers).toEqual({ ...complete, phone: '+251911234567' });
       });
 
       it('404s for an unknown session', async () => {

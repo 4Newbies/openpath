@@ -1,4 +1,4 @@
-import { isEmpty, visibleQuestions } from '../../shared/flow.js';
+import { formatPhone, isEmpty, normalizePhone, phoneCountry, visibleQuestions } from '../../shared/flow.js';
 import { h, sr } from './dom.js';
 import { labelOf, langAttrs, t, tList } from './messages.js';
 
@@ -16,6 +16,11 @@ export function displayAnswer(q, value, lang, simple = false) {
       return value.map(label).join(', ');
     case 'yesno':
       return t(lang, value ? 'yes' : 'no', {}, simple);
+    case 'phone': {
+      const country = phoneCountry(q);
+      const e164 = country === 'any' ? null : normalizePhone(value, country);
+      return e164 ? formatPhone(e164, country) : String(value);
+    }
     case 'date': {
       if (q.calendar === 'ethiopian') {
         // Shown in the calendar the learner used, in their language.

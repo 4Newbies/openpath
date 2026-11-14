@@ -8,6 +8,57 @@ import { ethiopianToIso, isValidEthiopianDate } from './ethiopian.js';
 export const QUESTION_TYPES = ['text', 'phone', 'date', 'single', 'multi', 'yesno', 'info'];
 export const CALENDARS = ['gregorian', 'ethiopian'];
 
+/**
+ * Phone settings per country ("country" on a phone question, default ET).
+ * To add a country, add one entry: the calling code, the trunk prefix used
+ * in local numbers, the national number pattern (without trunk prefix) and
+ * an example in local format for the error message.
+ * "country": "any" keeps the old free format (7 to 15 digits, stored as typed).
+ */
+export const PHONE_COUNTRIES = {
+  // Ethiopian mobile numbers: 09... (Ethio telecom) and 07... (Safaricom).
+  ET: { callingCode: '251', trunk: '0', national: /^[79]\d{8}$/, example: '0911 234 567', groups: [3, 3, 3] },
+};
+export const DEFAULT_PHONE_COUNTRY = 'ET';
+export const phoneCountry = (q) => q.country ?? DEFAULT_PHONE_COUNTRY;
+
+/**
+ * A phone number in any accepted local or international form -> "+251911234567",
+ * or null when it is not a valid number for the country.
+ * Accepts 0911 234 567, 911 234 567, +251 911 234 567, 00251..., 251...
+ */
+export function normalizePhone(value, country = DEFAULT_PHONE_COUNTRY) {
+  const c = PHONE_COUNTRIES[country];
+  if (!c || typeof value !== 'string') return null;
+  const compact = value.trim().replace(/[\s().-]/g, '');
+  if (!/^\+?\d+$/.test(compact)) return null;
+  const cc = c.callingCode;
+  let national;
+  if (compact.startsWith('+')) {
+    if (!compact.startsWith(`+${cc}`)) return null;
+    national = compact.slice(cc.length + 1);
+  } else if (compact.startsWith(`00${cc}`)) national = compact.slice(cc.length + 2);
+  else if (compact.startsWith(cc) && compact.length > cc.length + 8) national = compact.slice(cc.length);
+  else national = compact;
+  if (c.trunk && national.startsWith(c.trunk)) national = national.slice(c.trunk.length); // 0911... or +251 0911...
+  return c.national.test(national) ? `+${cc}${national}` : null;
+}
+
+/** "+251911234567" -> "+251 911 234 567" for reading back to the learner. */
+export function formatPhone(e164, country = DEFAULT_PHONE_COUNTRY) {
+  const c = PHONE_COUNTRIES[country];
+  const prefix = c && `+${c.callingCode}`;
+  if (!c || typeof e164 !== 'string' || !e164.startsWith(prefix)) return e164;
+  let rest = e164.slice(prefix.length);
+  const parts = [];
+  for (const n of c.groups) {
+    parts.push(rest.slice(0, n));
+    rest = rest.slice(n);
+  }
+  if (rest) parts.push(rest);
+  return [prefix, ...parts.filter(Boolean)].join(' ');
+}
+
 const ID_RE = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
 const FLOW_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const OPTION_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
@@ -16,7 +67,7 @@ export const LANG_RE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 const DEFAULT_MAX_LENGTH = 500;
 const QUESTION_KEYS = new Set([
   'id', 'type', 'label', 'simple', 'hint', 'icon', 'required', 'voice', 'options',
-  'showIf', 'autocomplete', 'maxLength', 'multiline', 'private', 'setsPreference', 'audio', 'calendar',
+  'showIf', 'autocomplete', 'maxLength', 'multiline', 'private', 'setsPreference', 'audio', 'calendar', 'country',
 ]);
 // Audio file URLs: http(s) or a relative path; never javascript:, data: or other schemes.
 const AUDIO_URL_RE = /^(https?:\/\/\S+|(?![a-zA-Z][a-zA-Z0-9+.-]*:)(?!\/\/)\S+)$/;
@@ -106,6 +157,12 @@ export function validateFlow(flow) {
       errors.push(`${where}.maxLength must be a whole number from 1 to 2000`);
     }
     if (q.multiline !== undefined && q.type !== 'text') errors.push(`${where}.multiline only applies to text questions`);
+    if (q.country !== undefined) {
+      if (q.type !== 'phone') errors.push(`${where}.country only applies to phone questions`);
+      else if (q.country !== 'any' && !PHONE_COUNTRIES[q.country]) {
+        errors.push(`${where}.country must be one of ${[...Object.keys(PHONE_COUNTRIES), 'any'].join(', ')}`);
+      }
+    }
     if (q.calendar !== undefined) {
       if (q.type !== 'date') errors.push(`${where}.calendar only applies to date questions`);
       else if (!CALENDARS.includes(q.calendar)) errors.push(`${where}.calendar must be "gregorian" or "ethiopian"`);
@@ -235,6 +292,7 @@ export function validateAnswer(question, value, { checkRequired = true } = {}) {
     }
     case 'phone': {
       if (typeof value !== 'string') return 'invalid_type';
+      if (phoneCountry(question) !== 'any') return normalizePhone(value, phoneCountry(question)) ? null : 'invalid_phone';
       if (!/^\+?[0-9\s().-]+$/.test(value.trim())) return 'invalid_phone';
       const digits = value.replace(/\D/g, '').length;
       return digits >= 7 && digits <= 15 ? null : 'invalid_phone';
@@ -257,8 +315,15 @@ export function validateAnswer(question, value, { checkRequired = true } = {}) {
   }
 }
 
-/** The answer as stored: trimmed text; only the known fields of a date object. */
-function cleanValue(q, value) {
+/**
+ * The answer as stored: trimmed text, phone numbers in international format
+ * (+251911234567), only the known fields of a date object. Only call it for
+ * answers that passed validateAnswer.
+ */
+export function cleanAnswer(q, value) {
+  if (q.type === 'phone' && phoneCountry(q) !== 'any' && typeof value === 'string') {
+    return normalizePhone(value, phoneCountry(q)) ?? value.trim();
+  }
   if (typeof value === 'string') return value.trim();
   if (q.type === 'date' && q.calendar === 'ethiopian') {
     if (emptyEthiopian(value)) return undefined;
@@ -290,7 +355,7 @@ export function validateAnswers(flow, answers, { mode = 'save' } = {}) {
     const code = validateAnswer(q, has ? answers[q.id] : undefined, { checkRequired: mode === 'submit' });
     if (code) errors.push({ field: q.id, code });
     else if (has && !isEmpty(answers[q.id]) && q.type !== 'info') {
-      const value = cleanValue(q, answers[q.id]);
+      const value = cleanAnswer(q, answers[q.id]);
       if (value !== undefined) clean[q.id] = value;
     }
   }

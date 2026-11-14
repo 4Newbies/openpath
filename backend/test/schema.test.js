@@ -29,6 +29,8 @@ describe('questions.schema.json', () => {
     'required info screen': (f) => (q(f, 'intro').required = true),
     'calendar on a text question': (f) => (q(f, 'fullName').calendar = 'ethiopian'),
     'unknown calendar': (f) => (q(f, 'dateOfBirth').calendar = 'julian'),
+    'unknown phone country': (f) => (q(f, 'phone').country = 'XX'),
+    'country on a text question': (f) => (q(f, 'fullName').country = 'ET'),
     'audio with a javascript: URL': (f) => (q(f, 'fullName').audio = { en: 'javascript:alert(1)' }),
     'audio under a non-language key': (f) => (q(f, 'fullName').audio = { French: 'a.mp3' }),
   };

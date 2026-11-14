@@ -20,7 +20,7 @@ export const ANSWER_MESSAGES = {
   required: 'This question needs an answer.',
   invalid_type: 'This answer is not in the expected format.',
   too_long: 'This answer is too long.',
-  invalid_phone: 'Enter a phone number with 7 to 15 digits.',
+  invalid_phone: 'Enter a mobile number for the country of this question, for Ethiopia 09... or 07... (10 digits).',
   invalid_date: 'Enter a real date, with day, month and year.',
   future_date: 'The date cannot be in the future.',
   calendar_mismatch: 'The Gregorian date and the Ethiopian date in this answer do not match.',

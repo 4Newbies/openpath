@@ -31,6 +31,11 @@ export default defineConfig({
     },
     copyPublicDir: false,
     target: 'es2020',
+    // Browsers that support logical properties natively. Older targets make
+    // the CSS minifier "polyfill" them with :lang(ar)/:lang(he) rules, which
+    // guess direction from the language instead of dir (wrong for the
+    // dir="ltr" phone box in an Arabic form) and add ~2.5 kB.
+    cssTarget: ['chrome89', 'edge89', 'firefox66', 'safari15', 'ios15'],
     cssCodeSplit: false,
     sourcemap: true,
   },

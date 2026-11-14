@@ -285,6 +285,30 @@ textarea.op-input {
 .op-date-year {
   inline-size: 6.5em;
 }
+/* Phone: the country code is shown as text before the box. */
+.op-phone {
+  display: flex;
+  align-items: stretch;
+}
+.op-prefix {
+  display: flex;
+  align-items: center;
+  padding-inline: 0.6em;
+  font-weight: 700;
+  color: var(--op-text);
+  background: var(--op-selected);
+  border: var(--op-border-width) solid var(--op-border);
+  border-inline-end: 0;
+  border-start-start-radius: 0.3em;
+  border-end-start-radius: 0.3em;
+}
+.op-phone .op-input {
+  flex: 1;
+  min-inline-size: 0;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
 /* Ethiopian date lists: as wide as their longest choice. */
 .op-date select.op-input {
   inline-size: auto;

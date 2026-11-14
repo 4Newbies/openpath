@@ -1,4 +1,4 @@
-import { validateAnswer, validateAnswers } from '../../shared/flow.js';
+import { cleanAnswer, validateAnswer, validateAnswers } from '../../shared/flow.js';
 import { ApiError, createApi } from './api.js';
 import { h } from './dom.js';
 import { loadFlow } from './loader.js';
@@ -645,6 +645,11 @@ export class OpenPathFlow extends HTMLElement {
       return;
     }
     this.error = null;
+    // Keep the answer as it will be stored, e.g. phone numbers as +251911234567.
+    if (answers[q.id] !== undefined && q.type !== 'info') {
+      const stored = cleanAnswer(q, answers[q.id]);
+      if (JSON.stringify(stored) !== JSON.stringify(answers[q.id])) this.store.setAnswer(q.id, stored);
+    }
     const target = this.store.state.returnToReview ? REVIEW : this.nav.next(q.id, answers);
     this.go(target, { returnToReview: false });
     this.save({ announce: q.type !== 'info' });

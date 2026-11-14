@@ -21,7 +21,7 @@ const row = (...cells) => `| ${cells.map(cell).join(' | ')} |`;
 // Which error messages each question type can show.
 const ERRORS_BY_TYPE = {
   text: ['required_text', 'too_long'],
-  phone: ['required_text', 'invalid_phone'],
+  phone: ['required_text', 'invalid_phone', 'invalid_phone_any'],
   date: ['required_date', 'invalid_date', 'invalid_date_ethiopian', 'future_date', 'calendar_mismatch'],
   single: ['required_single', 'invalid_option'],
   multi: ['required_multi', 'invalid_option'],
@@ -77,6 +77,8 @@ export function buildReview() {
       const ethiopian = q.calendar === 'ethiopian';
       if ((code === 'calendar_mismatch' || code === 'invalid_date_ethiopian') && !ethiopian) continue;
       if (code === 'invalid_date' && ethiopian) continue;
+      if (code === 'invalid_phone_any' && q.country !== 'any') continue;
+      if (code === 'invalid_phone' && q.country === 'any') continue;
       out.push(row(q.id, code, en.strings.errors[code], am.strings.errors[code], am.simple?.errors?.[code], ''));
     }
   }

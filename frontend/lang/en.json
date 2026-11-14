@@ -104,19 +104,21 @@
       "Pagume"
     ],
     "ethiopianDateFormat": "{day} {month} {year} (Ethiopian calendar)",
+    "phonePrefix": "The country code {code} is already added.",
     "errors": {
       "required_text": "Please type an answer to this question.",
       "required_single": "Please choose one answer.",
       "required_multi": "Please choose at least one answer.",
       "too_long": "Your answer is too long. Please use {max} characters or fewer.",
-      "invalid_phone": "This does not look like a phone number. Use numbers, spaces and +, for example 0911 234 567.",
+      "invalid_phone": "This does not look like a mobile number. Type it like this: {example}.",
       "invalid_date": "Please enter a real date with day, month and year, for example 27 3 2001.",
       "future_date": "The date cannot be in the future.",
       "invalid_option": "Please choose one of the answers shown.",
       "invalid_type": "Please check this answer and try again.",
       "required_date": "Please give the day, month and year.",
       "invalid_date_ethiopian": "Please choose a real date: day, month and year. Pagume has 5 days, or 6 in a leap year.",
-      "calendar_mismatch": "Something went wrong with this date. Please choose it again."
+      "calendar_mismatch": "Something went wrong with this date. Please choose it again.",
+      "invalid_phone_any": "This does not look like a phone number. Use numbers, spaces and +, for example +251 911 234 567."
     }
   },
   "simple": {
@@ -151,13 +153,14 @@
       "required_single": "Please pick one.",
       "required_multi": "Please pick one or more.",
       "too_long": "Too long. Use {max} letters or less.",
-      "invalid_phone": "Please check the phone number.",
+      "invalid_phone": "Please check the number. Like this: {example}.",
       "invalid_date": "Please check the date.",
       "future_date": "This date has not come yet.",
       "invalid_option": "Please pick from the list.",
       "invalid_type": "Please check this answer.",
       "required_date": "Please pick the day, month and year.",
-      "invalid_date_ethiopian": "Please check the date."
+      "invalid_date_ethiopian": "Please check the date.",
+      "invalid_phone_any": "Please check the phone number."
     }
   }
 }
