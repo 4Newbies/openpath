@@ -259,15 +259,15 @@ export function answerCalendar(value) {
   return value.calendar ?? (value.ethiopian ? 'ethiopian' : 'gregorian');
 }
 
-function dateAnswerError(value) {
-  if (typeof value === 'string') return dateError(value.trim());
+function dateAnswerError(value, today) {
+  if (typeof value === 'string') return dateError(value.trim(), today);
   if (!isPlainObject(value)) return 'invalid_type';
   const calendar = answerCalendar(value);
   if (!CALENDARS.includes(calendar)) return 'invalid_type';
-  if (calendar === 'gregorian') return typeof value.date === 'string' ? dateError(value.date.trim()) : 'invalid_date';
+  if (calendar === 'gregorian') return typeof value.date === 'string' ? dateError(value.date.trim(), today) : 'invalid_date';
   if (!isValidEthiopianDate(value.ethiopian)) return 'invalid_date';
   if (typeof value.date !== 'string' || value.date !== ethiopianToIso(value.ethiopian)) return 'calendar_mismatch';
-  return dateError(value.date);
+  return dateError(value.date, today);
 }
 
 /** True for a date answer object with nothing filled in yet (maybe only a calendar choice). */
@@ -278,14 +278,30 @@ function emptyDateObject(value) {
   return (blank(value.date) || String(value.date).trim() === '') && (!e || ['year', 'month', 'day'].every((k) => blank(e[k])));
 }
 
-function dateError(value) {
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/** Today as "YYYY-MM-DD" in this device's own time zone. */
+export function localToday(now = new Date()) {
+  return `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+}
+
+/**
+ * The latest date that is "today" somewhere on Earth (UTC+14). The API uses
+ * it: it can't know the learner's time zone, so it only rejects dates that
+ * are in the future everywhere.
+ */
+export function latestToday(now = new Date()) {
+  return new Date(now.getTime() + 14 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+function dateError(value, today = localToday()) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!m) return 'invalid_date';
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
   const dt = new Date(Date.UTC(y, mo - 1, d));
   if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return 'invalid_date';
   if (y < 1900) return 'invalid_date';
-  if (dt.getTime() > Date.now()) return 'future_date';
+  if (value > today) return 'future_date'; // ISO dates compare as text
   return null;
 }
 
@@ -294,9 +310,10 @@ function dateError(value) {
  * required, invalid_type, too_long, invalid_phone, invalid_date,
  * future_date, calendar_mismatch, invalid_option, not_answerable.
  * Required-ness is only checked when `checkRequired` is true (on Next and
- * on submit), so progress can be saved half-done.
+ * on submit), so progress can be saved half-done. `today` ("YYYY-MM-DD",
+ * default: today in this device's time zone) is the latest allowed date.
  */
-export function validateAnswer(question, value, { checkRequired = true } = {}) {
+export function validateAnswer(question, value, { checkRequired = true, today = localToday() } = {}) {
   if (question.type === 'info') return value === undefined || value === null ? null : 'not_answerable';
   if (isEmpty(value) || (question.type === 'date' && emptyDateObject(value))) {
     return checkRequired && question.required ? 'required' : null;
@@ -316,7 +333,7 @@ export function validateAnswer(question, value, { checkRequired = true } = {}) {
       return digits >= 7 && digits <= 15 ? null : 'invalid_phone';
     }
     case 'date':
-      return dateAnswerError(value);
+      return dateAnswerError(value, today);
     case 'single':
       if (typeof value !== 'string') return 'invalid_type';
       return question.options.some((o) => o.value === value) ? null : 'invalid_option';
@@ -359,7 +376,7 @@ export function cleanAnswer(q, value) {
  * Returns { errors: [{ field, code }], clean } where `clean` holds only the
  * answers to visible questions (hidden ones are dropped on submit).
  */
-export function validateAnswers(flow, answers, { mode = 'save' } = {}) {
+export function validateAnswers(flow, answers, { mode = 'save', today = localToday() } = {}) {
   const errors = [];
   if (!isObj(answers)) return { errors: [{ field: null, code: 'invalid_type' }], clean: {} };
   const byId = new Map(flow.questions.map((q) => [q.id, q]));
@@ -371,7 +388,7 @@ export function validateAnswers(flow, answers, { mode = 'save' } = {}) {
     const has = Object.prototype.hasOwnProperty.call(answers, q.id);
     const visible = isVisible(q, answers, flow);
     if (mode === 'submit' && !visible) continue;
-    const code = validateAnswer(q, has ? answers[q.id] : undefined, { checkRequired: mode === 'submit' });
+    const code = validateAnswer(q, has ? answers[q.id] : undefined, { checkRequired: mode === 'submit', today });
     if (code) errors.push({ field: q.id, code });
     else if (has && !isEmpty(answers[q.id]) && q.type !== 'info') {
       const value = cleanAnswer(q, answers[q.id]);

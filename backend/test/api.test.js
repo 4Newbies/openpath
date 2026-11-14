@@ -93,6 +93,15 @@ for (const [name, makeStore] of stores) {
         expect(got.body.answers).toEqual({ fullName: 'A' });
       });
 
+      it('accepts a date that is today somewhere on Earth, rejects one in the future everywhere', async () => {
+        const { id } = (await create()).body;
+        const day = (offsetDays) => new Date(Date.now() + offsetDays * 86400000).toISOString().slice(0, 10);
+        const put = (date) => request(app).put(`/v1/sessions/${id}/answers`).send({ answers: { dateOfBirth: { date, calendar: 'gregorian' } } });
+        await put(day(0)).expect(200);
+        const r = await put(day(2)).expect(400);
+        expect(r.body.error).toMatchObject({ code: 'future_date', field: 'dateOfBirth' });
+      });
+
       it('validates every answer against the question file', async () => {
         const { id } = (await create()).body;
         const cases = [

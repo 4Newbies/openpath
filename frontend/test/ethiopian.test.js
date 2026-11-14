@@ -21,8 +21,10 @@ describe('Ethiopian calendar conversion', () => {
     expect(isoToEthiopian(iso)).toEqual(eth);
   });
 
-  it('knows today: 5 Hidar 2019 is 14 November 2026', () => {
-    expect(ethiopianToday(new Date(Date.UTC(2026, 10, 14, 12)))).toEqual(E(2019, 3, 5));
+  it('knows today in the device time zone: 5 Hidar 2019 is 14 November 2026', () => {
+    // Local midnight and one minute before the next: the same local day.
+    expect(ethiopianToday(new Date(2026, 10, 14, 0, 0))).toEqual(E(2019, 3, 5));
+    expect(ethiopianToday(new Date(2026, 10, 14, 23, 59))).toEqual(E(2019, 3, 5));
   });
 
   it('Pagume has 5 days, or 6 when the Ethiopian year mod 4 is 3', () => {

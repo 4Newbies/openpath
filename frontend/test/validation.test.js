@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateAnswer, validateAnswers, validateFlow } from '../../shared/flow.js';
+import { latestToday, localToday, validateAnswer, validateAnswers, validateFlow } from '../../shared/flow.js';
 import { defaultFlow } from '../src/loader.js';
 
 const q = (extra) => ({ id: 'q', label: { en: 'Q' }, ...extra });
@@ -79,6 +79,20 @@ describe('validateAnswer', () => {
     expect(validateAnswer(date, '2001--27')).toBe('invalid_date');
     expect(validateAnswer(date, '1850-01-01')).toBe('invalid_date');
     expect(validateAnswer(date, '2999-01-01')).toBe('future_date');
+  });
+
+  it('"today" is the learner’s own day, in the device time zone', () => {
+    const date = q({ type: 'date' });
+    expect(localToday(new Date(2026, 10, 15, 0, 30))).toBe('2026-11-15'); // just after local midnight
+    expect(localToday(new Date(2026, 10, 14, 23, 59))).toBe('2026-11-14');
+    expect(validateAnswer(date, '2026-11-15', { today: '2026-11-15' })).toBeNull();
+    expect(validateAnswer(date, '2026-11-16', { today: '2026-11-15' })).toBe('future_date');
+    expect(validateAnswer(date, localToday())).toBeNull(); // today itself is allowed
+  });
+
+  it('the API allows any date that is today somewhere on Earth (UTC+14)', () => {
+    expect(latestToday(new Date(Date.UTC(2026, 10, 14, 9, 59)))).toBe('2026-11-14');
+    expect(latestToday(new Date(Date.UTC(2026, 10, 14, 10, 0)))).toBe('2026-11-15');
   });
 
   it('checks choices', () => {

@@ -83,7 +83,7 @@ export function isoToEthiopian(iso) {
   return jdnToEthiopian(gregorianToJdn(g));
 }
 
-/** Today's Ethiopian date (in UTC, like the rest of the date checks). */
+/** Today's Ethiopian date in the device's own time zone. */
 export function ethiopianToday(now = new Date()) {
-  return jdnToEthiopian(gregorianToJdn({ year: now.getUTCFullYear(), month: now.getUTCMonth() + 1, day: now.getUTCDate() }));
+  return jdnToEthiopian(gregorianToJdn({ year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() }));
 }

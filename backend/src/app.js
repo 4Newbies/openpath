@@ -2,7 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
-import { LANG_RE, validateAnswers } from '../../shared/flow.js';
+import { LANG_RE, latestToday, validateAnswers } from '../../shared/flow.js';
 import { ApiError, answerError, errorBody, errorHandler } from './errors.js';
 import { newResumeCode, newSessionId, SESSION_ID_RE } from './ids.js';
 import { StoreConflict, StoreDuplicate } from './store/memory.js';
@@ -77,7 +77,9 @@ export function createApp({ store, flows, config, log = console }) {
     if (answers === undefined || answers === null || typeof answers !== 'object' || Array.isArray(answers)) {
       throw new ApiError(400, 'invalid_body', 'Send answers as an object of { questionId: answer }.', 'answers');
     }
-    const { errors, clean } = validateAnswers(flow, answers, { mode });
+    // The learner's "today" may be ahead of the server's: allow any date that
+    // is today somewhere on Earth (the browser checks the learner's own day).
+    const { errors, clean } = validateAnswers(flow, answers, { mode, today: latestToday() });
     if (errors.length) throw answerError(errors[0]);
     return clean;
   }
