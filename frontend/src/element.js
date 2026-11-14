@@ -424,11 +424,12 @@ export class OpenPathFlow extends HTMLElement {
 
   // ---- voice input -----------------------------------------------------------
 
+  /** Voice is on for every question that takes an answer, unless the question says "voice": false. */
   micAllowed(q) {
     return (
       Boolean(this.prefs?.voice) &&
-      q.voice === true &&
-      ['text', 'phone', 'single', 'multi', 'yesno'].includes(q.type) &&
+      q.voice !== false &&
+      q.type !== 'info' &&
       this.prefs.voiceConsent !== 'deny' &&
       voiceAvailable(this.uiLang, this.speechServer)
     );
@@ -454,31 +455,49 @@ export class OpenPathFlow extends HTMLElement {
   /** The mic button and a status line under it. Its text label says what it
    *  will do ("Speak your answer" / "Stop listening"); no aria-pressed, so the
    *  state isn't announced twice. */
-  micBlock(q) {
+  micBlock(q, { withButton = true } = {}) {
     const status = this.voiceStatus?.questionId === q.id ? this.voiceStatus.text : '';
+    // Private answers: speaking out loud can be overheard. Say so next to the mic.
+    const privacyId = q.private ? `op-${this.uid}-${q.id}-voice-privacy` : undefined;
     return h(
       'div',
       { class: 'op-voice' },
-      h('button', {
-        type: 'button',
-        class: 'op-button op-secondary op-mic',
-        onclick: () => this.micClicked(q),
-        text: this.tr('speakAnswer'),
-      }),
+      withButton ? this.micButton(q, { describedBy: privacyId }) : null,
+      privacyId ? h('p', { id: privacyId, class: 'op-hint op-voice-privacy', text: this.tr('voicePrivacy') }) : null,
       h('p', { class: 'op-voice-status', text: status }),
     );
   }
 
-  micClicked(q) {
+  /** A mic button: for the whole answer, or for one date list (part = day, month or year). */
+  micButton(q, { part, describedBy } = {}) {
+    return h('button', {
+      type: 'button',
+      class: 'op-button op-secondary op-mic',
+      'data-part': part,
+      'aria-describedby': describedBy,
+      onclick: () => this.micClicked(q, part),
+      text: this.tr(part ? `speak_${part}` : 'speakAnswer'),
+    });
+  }
+
+  /** Date questions: "Say the day", "Say the month" and "Say the year" under each list. */
+  addDateMics(q, node) {
+    for (const partNode of node.querySelectorAll('.op-date-part')) {
+      const part = ['day', 'month', 'year'].find((p) => partNode.querySelector(`.op-date-${p}`));
+      if (part) partNode.append(this.micButton(q, { part }));
+    }
+  }
+
+  micClicked(q, part) {
     if (this.listening) {
       if (!this.transcribing) this.listenProvider?.stop(); // listen() then settles with what was heard
       return;
     }
-    if (this.voiceConsented()) this.startListening(q);
-    else this.showConsent(q);
+    if (this.voiceConsented()) this.startListening(q, part);
+    else this.showConsent(q, part);
   }
 
-  showConsent(q) {
+  showConsent(q, part) {
     const block = this.view.querySelector('.op-voice');
     const textId = `op-${this.uid}-consent`;
     const target = this.voiceTarget();
@@ -501,8 +520,8 @@ export class OpenPathFlow extends HTMLElement {
             onclick: () => {
               this.setPrefs({ voiceConsent: 'allow', voiceConsentFor: target.consentFor });
               this.render();
-              this.view.querySelector('.op-mic')?.focus();
-              this.startListening(q);
+              this.micFor(part)?.focus();
+              this.startListening(q, part);
             },
           }),
           h('button', {
@@ -521,14 +540,18 @@ export class OpenPathFlow extends HTMLElement {
     text.focus();
   }
 
+  micFor(part) {
+    return this.view.querySelector(part ? `.op-mic[data-part="${part}"]` : '.op-mic');
+  }
+
   setMic(on) {
-    const b = this.view.querySelector('.op-mic');
+    const b = this.micFor(this.activePart);
     if (!b) return;
     b.classList.toggle('op-mic-on', on);
     // While a recording is turned into text the button can't do anything.
     if (this.transcribing) b.setAttribute('aria-disabled', 'true');
     else b.removeAttribute('aria-disabled');
-    setText(b, this.tr(this.transcribing ? 'transcribing' : on ? 'stopListening' : 'speakAnswer'));
+    setText(b, this.tr(this.transcribing ? 'transcribing' : on ? 'stopListening' : this.activePart ? `speak_${this.activePart}` : 'speakAnswer'));
   }
 
   setVoiceStatus(q, text) {
@@ -538,10 +561,11 @@ export class OpenPathFlow extends HTMLElement {
     this.announce(text);
   }
 
-  async startListening(q) {
+  async startListening(q, part) {
     this.stopSpeech(); // don't let read-aloud talk into the microphone
     const token = {};
     this.listenToken = token;
+    this.activePart = part;
     const target = this.voiceTarget();
     let mod;
     try {
@@ -580,7 +604,7 @@ export class OpenPathFlow extends HTMLElement {
     this.listening = false;
     this.transcribing = false;
     this.setMic(false);
-    this.useSpokenAnswer(q, text, mod);
+    this.useSpokenAnswer(q, text, mod, part);
   }
 
   stopListening() {
@@ -596,7 +620,20 @@ export class OpenPathFlow extends HTMLElement {
 
   // Put what was said into the answer, tell the learner, and give focus to
   // the field. Never moves on by itself.
-  useSpokenAnswer(q, text, mod) {
+  useSpokenAnswer(q, text, mod, part) {
+    if (q.type === 'date') return this.useSpokenDatePart(q, text, mod, part);
+    // Long text: what was said is added to what is already there, so the
+    // learner can speak several times (and edit in between).
+    if (q.type === 'text' && q.multiline) {
+      const field = this.view.querySelector('.op-input');
+      const before = field.value.replace(/\s+$/, '');
+      const value = before ? `${before} ${text}` : text;
+      field.value = value;
+      this.store.setAnswer(q.id, value);
+      field.focus();
+      field.setSelectionRange?.(value.length, value.length);
+      return this.setVoiceStatus(q, this.tr('voiceAdded', { text }));
+    }
     if (q.type === 'text' || q.type === 'phone') {
       const field = this.view.querySelector('.op-input');
       field.value = text;
@@ -620,6 +657,35 @@ export class OpenPathFlow extends HTMLElement {
     this.voiceStatus = { questionId: q.id, text: this.tr('youSaidChoice', { text, option: shown }) };
     this.render({ focusField: true });
     this.announce(this.voiceStatus.text);
+  }
+
+  /** A spoken day, month or year for one date list: matched in the current language. */
+  useSpokenDatePart(q, text, mod, part) {
+    const field = this.view.querySelector(`.op-date-${part}`);
+    if (!field) return;
+    const ethiopian = field.tagName === 'SELECT';
+    const lang = this.uiLang;
+    const monthKey = ethiopian ? 'ethiopianMonths' : 'gregorianMonths';
+    const lists = [tList(lang, monthKey), tList(FALLBACK_LANG, monthKey), ethiopian ? tList('am', monthKey) : []];
+    const months = Array.from({ length: ethiopian ? 13 : 12 }, (_, i) => lists.map((l) => l[i]).filter(Boolean));
+    const years = ethiopian ? [...field.options].map((o) => Number(o.value)).filter(Boolean) : [1900, new Date().getFullYear()];
+    const range = { day: [1, ethiopian ? 30 : 31], month: [1, ethiopian ? 13 : 12], year: [Math.min(...years), Math.max(...years)] }[part];
+    const value = mod.matchDatePart(text, {
+      min: range[0],
+      max: range[1],
+      months: part === 'month' ? months : [],
+      numberWords: part === 'year' ? [] : [...tList(lang, 'voiceNumbers')].length ? tList(lang, 'voiceNumbers') : tList(FALLBACK_LANG, 'voiceNumbers'),
+    });
+    if (value === undefined) {
+      this.setVoiceStatus(q, this.tr('noMatch', { text }));
+      field.focus();
+      return;
+    }
+    field.value = String(value);
+    field.dispatchEvent(new Event(ethiopian ? 'change' : 'input', { bubbles: true }));
+    field.focus();
+    const shown = ethiopian ? field.selectedOptions[0]?.textContent ?? String(value) : String(value);
+    this.setVoiceStatus(q, this.tr('youSaidChoice', { text, option: shown }));
   }
 
   // ---- read-aloud ------------------------------------------------------------
@@ -898,7 +964,12 @@ export class OpenPathFlow extends HTMLElement {
       const field = step.node.querySelector(`#op-${this.uid}-${q.id}-field`);
       if (field) field.setAttribute('aria-describedby', [field.getAttribute('aria-describedby'), noteId].filter(Boolean).join(' '));
     }
-    if (this.micAllowed(q)) step.node.append(this.micBlock(q));
+    if (this.micAllowed(q)) {
+      if (q.type === 'date') {
+        this.addDateMics(q, step.node);
+        step.node.append(this.micBlock(q, { withButton: false })); // the status line under the lists
+      } else step.node.append(this.micBlock(q));
+    }
 
     const back = this.nav.back(q.id, answers);
     const form = h(

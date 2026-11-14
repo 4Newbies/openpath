@@ -49,7 +49,6 @@
       "type": "date",
       "icon": "calendar",
       "required": true,
-      "voice": false,
       "calendar": "ethiopian",
       "label": { "en": "What is your date of birth?", "am": "የትውልድ ቀንዎ መቼ ነው?" },
       "simple": { "en": "When were you born?", "am": "መቼ ተወለዱ?" }

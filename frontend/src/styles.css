@@ -471,6 +471,13 @@ textarea.op-input {
   opacity: 0.85;
 }
 
+.op-date-part .op-mic {
+  display: block;
+  margin-block-start: 0.5em;
+}
+.op-voice-privacy {
+  margin-block: 0.5em 0;
+}
 .op-voice {
   margin-block-start: 1em;
 }

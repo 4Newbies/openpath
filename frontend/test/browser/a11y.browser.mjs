@@ -219,9 +219,21 @@ async function walk(browser, mode, lang, apiUp) {
   const field = (name) => host.locator(`[name="${name}"]`);
   const radio = (value) => host.locator(`input[type=radio][value="${value}"]`);
   const button = (name, exact = true) => host.getByRole('button', { name, exact });
+  // With voice on, every step that has a field shows a mic (date: one per list).
+  const checkMics = async (where) => {
+    if (!has('helperVoice')) return;
+    const r = await shadow(page, `
+      const fields = root.querySelectorAll('.op-form input, .op-form select, .op-form textarea').length;
+      return { fields, mics: root.querySelectorAll('.op-mic').length, date: !!root.querySelector('.op-date') };
+    `);
+    if (r.fields && r.mics < (r.date ? 3 : 1)) fail(where, `voice is on but this step shows ${r.mics} mic(s)`);
+    if (r.fields) micSteps++;
+  };
+  let micSteps = 0;
   const next = async (where) => {
     await button(s('next')).click();
     if (!(await focusedIsHeading(page))) fail(where, 'focus did not move to the next question heading');
+    await checkMics(where);
   };
 
   // 1. The first screen asks only for the language (the demo offers three).
@@ -413,6 +425,7 @@ async function walk(browser, mode, lang, apiUp) {
     }
   }
   if (await page.evaluate(() => localStorage.getItem('openpath:alx-onboarding'))) fail(at('complete'), 'localStorage was not cleared after submit');
+  if (has('helperVoice') && micSteps < 7) fail(at('voice'), `only ${micSteps} question steps were checked for a mic`);
   if (!has('helperReadAloud')) {
     const spoken = await page.evaluate(() => window.__speech.log.length);
     if (spoken) fail(at('rule'), `spoke ${spoken} time(s) although read-aloud was off`);

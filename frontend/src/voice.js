@@ -308,3 +308,70 @@ export function matchSpoken(question, transcript, words = {}) {
   if (!scored.length || (scored[1] && scored[1].s === scored[0].s)) return undefined; // nothing, or a tie
   return scored[0].value;
 }
+
+// ---- matching a spoken day, month or year (date lists) ---------------------------
+
+// Amharic letters that sound the same are written in several ways (ኅዳር, ህዳር,
+// ሕዳር; ሠ/ሰ; ዐ/አ; ፀ/ጸ). Fold them to one spelling before comparing.
+const ETHIOPIC_SAME_SOUND = [
+  [0x1210, 0x1200], // ሐ -> ሀ
+  [0x1280, 0x1200], // ኀ -> ሀ
+  [0x1220, 0x1230], // ሠ -> ሰ
+  [0x12d0, 0x12a0], // ዐ -> አ
+  [0x1340, 0x1338], // ፀ -> ጸ
+];
+export function foldEthiopic(s) {
+  return String(s).replace(/[\u1200-\u137f]/g, (ch) => {
+    const c = ch.codePointAt(0);
+    for (const [from, to] of ETHIOPIC_SAME_SOUND) if (c >= from && c < from + 8) return String.fromCodePoint(to + (c - from));
+    return ch;
+  });
+}
+
+/** Arabic-Indic and Ethiopic digits as 0-9 (Ethiopic ፩-፱ and ፲-፴ are added up, e.g. ፳፭ = 25). */
+export function westernDigits(s) {
+  return String(s)
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u1369-\u1374]+/g, (run) => {
+      let n = 0;
+      for (const ch of run) {
+        const c = ch.charCodeAt(0);
+        n += c <= 0x1371 ? c - 0x1368 : (c - 0x1371) * 10;
+      }
+      return ` ${n} `;
+    });
+}
+
+const dateNorm = (s) => norm(foldEthiopic(westernDigits(s)));
+
+/**
+ * What was said for one date list -> a number, or undefined.
+ *   min, max:     the allowed range (day 1-30, month 1-13, year 1892-2019 ...)
+ *   months:       for the month list, [[names...], ...] per month (current
+ *                 language, English and Amharic spellings)
+ *   numberWords:  ["one", "two", ...] for 1, 2, ... in the current language
+ * Digits win ("5", "1993", "፭"), then month names, then number words
+ * (the longest match, so "twenty one" is 21, not 1).
+ */
+export function matchDatePart(transcript, { min, max, months = [], numberWords = [] }) {
+  const said = dateNorm(transcript);
+  if (!said) return undefined;
+  const inRange = (n) => Number.isInteger(n) && n >= min && n <= max;
+  for (const d of said.match(/\d+/g) ?? []) if (inRange(Number(d))) return Number(d);
+  const padded = ` ${said} `;
+  let best;
+  months.forEach((names, i) => {
+    for (const name of names) {
+      const n = dateNorm(name);
+      if (n && (said === n || padded.includes(` ${n} `)) && (!best || n.length > best.len)) best = { value: i + 1, len: n.length };
+    }
+  });
+  if (best && inRange(best.value)) return best.value;
+  best = undefined;
+  numberWords.forEach((word, i) => {
+    const n = dateNorm(word);
+    if (n && padded.includes(` ${n} `) && inRange(i + 1) && (!best || n.length > best.len)) best = { value: i + 1, len: n.length };
+  });
+  return best?.value;
+}

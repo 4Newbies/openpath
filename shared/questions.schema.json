@@ -88,7 +88,7 @@
         "icon": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$" },
         "audio": { "$ref": "#/$defs/audio" },
         "required": { "type": "boolean", "default": false },
-        "voice": { "type": "boolean", "default": false, "description": "Allow voice input for this question (not implemented yet)." },
+        "voice": { "type": "boolean", "default": true, "description": "Voice input for this question when the learner turned it on (default true). Set false to offer typing only." },
         "options": {
           "type": "array",
           "minItems": 1,

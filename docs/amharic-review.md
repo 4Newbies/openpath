@@ -359,6 +359,11 @@ Buttons, messages and help text around the questions and in the job list.
 | formFailed | This form could not be loaded. Please try again later. | ይህን ቅጽ መጫን አልተቻለም። እባክዎ ቆይተው እንደገና ይሞክሩ። | – |  |
 | chooseLanguage | Choose your language | ቋንቋዎን ይምረጡ | – |  |
 | helperDark | Dark colours | ጨለማ ቀለሞች | – |  |
+| speak_day | Say the day | ቀኑን ይናገሩ | – |  |
+| speak_month | Say the month | ወሩን ይናገሩ | – |  |
+| speak_year | Say the year | ዓመቱን ይናገሩ | – |  |
+| voicePrivacy | People near you may hear what you say. | በአቅራቢያዎ ያሉ ሰዎች የሚናገሩትን ሊሰሙ ይችላሉ። | – |  |
+| voiceAdded | Added: {text}. Say more, edit it, or press Next. | ታክሏል፦ {text}። ተጨማሪ ይናገሩ፣ ያስተካክሉ ወይም «ቀጣይ»ን ይጫኑ። | – |  |
 | errors.required_text | Please type an answer to this question. | እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ። | እባክዎ መልስ ይጻፉ። |  |
 | errors.required_single | Please choose one answer. | እባክዎ አንድ መልስ ይምረጡ። | እባክዎ አንዱን ይምረጡ። |  |
 | errors.required_multi | Please choose at least one answer. | እባክዎ ቢያንስ አንድ መልስ ይምረጡ። | እባክዎ አንድ ወይም ከዚያ በላይ ይምረጡ። |  |
@@ -411,3 +416,34 @@ Buttons, messages and help text around the questions and in the job list.
 | ethiopianMonths 11 | Hamle | ሐምሌ |  |
 | ethiopianMonths 12 | Nehase | ነሐሴ |  |
 | ethiopianMonths 13 | Pagume | ጳጉሜን |  |
+| voiceNumbers 1 | one | አንድ |  |
+| voiceNumbers 2 | two | ሁለት |  |
+| voiceNumbers 3 | three | ሦስት |  |
+| voiceNumbers 4 | four | አራት |  |
+| voiceNumbers 5 | five | አምስት |  |
+| voiceNumbers 6 | six | ስድስት |  |
+| voiceNumbers 7 | seven | ሰባት |  |
+| voiceNumbers 8 | eight | ስምንት |  |
+| voiceNumbers 9 | nine | ዘጠኝ |  |
+| voiceNumbers 10 | ten | አስር |  |
+| voiceNumbers 11 | eleven | አስራ አንድ |  |
+| voiceNumbers 12 | twelve | አስራ ሁለት |  |
+| voiceNumbers 13 | thirteen | አስራ ሦስት |  |
+| voiceNumbers 14 | fourteen | አስራ አራት |  |
+| voiceNumbers 15 | fifteen | አስራ አምስት |  |
+| voiceNumbers 16 | sixteen | አስራ ስድስት |  |
+| voiceNumbers 17 | seventeen | አስራ ሰባት |  |
+| voiceNumbers 18 | eighteen | አስራ ስምንት |  |
+| voiceNumbers 19 | nineteen | አስራ ዘጠኝ |  |
+| voiceNumbers 20 | twenty | ሃያ |  |
+| voiceNumbers 21 | twenty one | ሃያ አንድ |  |
+| voiceNumbers 22 | twenty two | ሃያ ሁለት |  |
+| voiceNumbers 23 | twenty three | ሃያ ሦስት |  |
+| voiceNumbers 24 | twenty four | ሃያ አራት |  |
+| voiceNumbers 25 | twenty five | ሃያ አምስት |  |
+| voiceNumbers 26 | twenty six | ሃያ ስድስት |  |
+| voiceNumbers 27 | twenty seven | ሃያ ሰባት |  |
+| voiceNumbers 28 | twenty eight | ሃያ ስምንት |  |
+| voiceNumbers 29 | twenty nine | ሃያ ዘጠኝ |  |
+| voiceNumbers 30 | thirty | ሠላሳ |  |
+| voiceNumbers 31 | thirty one | ሠላሳ አንድ |  |

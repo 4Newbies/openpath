@@ -40,7 +40,7 @@ const flow = {
       options: [{ value: 'en', label: { en: 'English' } }, { value: 'am', label: { en: 'Amharic' } }],
     },
     { id: 'ok', type: 'yesno', voice: true, label: { en: 'Is this right?' } },
-    { id: 'note', type: 'text', label: { en: 'Note (no voice)' } },
+    { id: 'note', type: 'text', voice: false, label: { en: 'Note (no voice)' } },
   ],
 };
 
@@ -276,7 +276,7 @@ describe('voice input', () => {
   const on = (extra = {}) => ({ chosen: true, voice: true, ...extra });
   const at = (step) => localStorage.setItem('openpath:helpers', JSON.stringify({ flowVersion: '1', step, answers: {} }));
 
-  it('is hidden when the browser cannot do it, and on questions without voice: true', async () => {
+  it('is hidden when the browser cannot do it, and on questions with voice: false', async () => {
     at('name');
     let el = await mount(flow, {}, { prefs: on() });
     expect($(el, '.op-mic')).toBeNull(); // jsdom has no SpeechRecognition
