@@ -27,14 +27,14 @@
     {
       "id": "f00181e0-3bb5-4c70-b9f0-7f99254d44c8",
       "email": null,
-      "phoneNumber": null,
+      "phoneNumber": "099999999",
       "primaryLanguage": "AMHARIC",
       "role": "LEARNER",
       "authType": "PROVISIONAL_SESSION",
       "isActive": true,
       "isRefugeeStatus": false,
       "createdAt": "2026-11-14T07:52:46.798Z",
-      "updatedAt": "2026-11-14T08:40:38.844Z"
+      "updatedAt": "2026-11-14T09:46:27.173Z"
     },
     {
       "id": "e8c09514-5e6c-447a-bd39-5fb167b60339",
@@ -47,6 +47,18 @@
       "isRefugeeStatus": true,
       "createdAt": "2026-11-14T08:32:20.513Z",
       "updatedAt": "2026-11-14T08:32:20.514Z"
+    },
+    {
+      "id": "29943412-aa2b-4cde-b904-5328597b18ac",
+      "email": null,
+      "phoneNumber": null,
+      "primaryLanguage": "AMHARIC",
+      "role": "LEARNER",
+      "authType": "PROVISIONAL_SESSION",
+      "isActive": true,
+      "isRefugeeStatus": true,
+      "createdAt": "2026-11-14T09:38:23.330Z",
+      "updatedAt": "2026-11-14T09:38:23.330Z"
     }
   ],
   "accounts": [
@@ -97,6 +109,18 @@
       "lockedUntil": null,
       "createdAt": "2026-11-14T08:32:20.515Z",
       "updatedAt": "2026-11-14T08:32:20.515Z"
+    },
+    {
+      "id": "e8c36570-4a47-4687-afd7-f83d798c3228",
+      "userId": "29943412-aa2b-4cde-b904-5328597b18ac",
+      "passwordHash": null,
+      "refugeeRecoveryCode": "OP-S4K2",
+      "provisionalToken": "06df0854ffe681f8845e8646164cedf8a262ccf6fbbdbb00",
+      "lastLoginAt": "2026-11-14T09:38:23.332Z",
+      "failedLoginAttempts": 0,
+      "lockedUntil": null,
+      "createdAt": "2026-11-14T09:38:23.332Z",
+      "updatedAt": "2026-11-14T09:38:23.332Z"
     }
   ],
   "profiles": [
@@ -137,6 +161,44 @@
       "trustedContactPhone": null,
       "createdAt": "2026-11-14T08:32:20.527Z",
       "updatedAt": "2026-11-14T08:32:20.527Z"
+    },
+    {
+      "id": "66ded0fc-cf5c-4bc2-a4d5-820a50292462",
+      "userId": "f00181e0-3bb5-4c70-b9f0-7f99254d44c8",
+      "fullNameAmharic": "መሀመድ ሳዲቅ",
+      "fullNameEnglish": "",
+      "dateOfBirth": null,
+      "ageRange": "18-24",
+      "gender": null,
+      "currentRegion": "አዳማ",
+      "currentLocation": "",
+      "educationLevel": "BASIC_LITERACY_NUMERACY",
+      "readingComfortLevel": "moderate",
+      "primaryLearningGoal": "",
+      "preferredContactMethod": "PHONE_CALL",
+      "trustedContactName": null,
+      "trustedContactPhone": null,
+      "createdAt": "2026-11-14T09:14:51.318Z",
+      "updatedAt": "2026-11-14T09:48:48.717Z"
+    },
+    {
+      "id": "cc4c0a4b-b3e7-4de3-8834-df5b20101a77",
+      "userId": "29943412-aa2b-4cde-b904-5328597b18ac",
+      "fullNameAmharic": "",
+      "fullNameEnglish": "Yonas Tadesse Abebe",
+      "dateOfBirth": null,
+      "ageRange": "18-24",
+      "gender": null,
+      "currentRegion": "መልካዲዳ የስደተኞች ካምፕ",
+      "currentLocation": "",
+      "educationLevel": "BASIC_LITERACY_NUMERACY",
+      "readingComfortLevel": "moderate",
+      "primaryLearningGoal": "",
+      "preferredContactMethod": "PHONE_CALL",
+      "trustedContactName": null,
+      "trustedContactPhone": null,
+      "createdAt": "2026-11-14T09:38:23.338Z",
+      "updatedAt": "2026-11-14T09:38:23.338Z"
     }
   ],
   "identifications": [
@@ -165,6 +227,45 @@
       "verifiedAt": null,
       "createdAt": "2026-11-14T08:32:20.527Z",
       "updatedAt": "2026-11-14T08:32:20.527Z"
+    },
+    {
+      "id": "7fa73b7f-9c96-4ae3-a380-1eeddc427c39",
+      "userId": "f00181e0-3bb5-4c70-b9f0-7f99254d44c8",
+      "documentType": "UNHCR_REFUGEE_REGISTRATION",
+      "documentNumber": null,
+      "status": "PENDING",
+      "notes": null,
+      "isRefugeeDoc": true,
+      "issuedBy": null,
+      "verifiedAt": null,
+      "createdAt": "2026-11-14T09:14:51.320Z",
+      "updatedAt": "2026-11-14T09:14:51.320Z"
+    },
+    {
+      "id": "c6e1d600-d944-42a4-a293-03095d12ba60",
+      "userId": "29943412-aa2b-4cde-b904-5328597b18ac",
+      "documentType": "UNHCR_REFUGEE_REGISTRATION",
+      "documentNumber": "UNHCR-ETH-2026-9812",
+      "status": "PENDING",
+      "notes": null,
+      "isRefugeeDoc": true,
+      "issuedBy": null,
+      "verifiedAt": null,
+      "createdAt": "2026-11-14T09:38:23.339Z",
+      "updatedAt": "2026-11-14T09:38:23.339Z"
+    },
+    {
+      "id": "14ff53b2-89f9-4934-9343-888d12bab3c5",
+      "userId": "f00181e0-3bb5-4c70-b9f0-7f99254d44c8",
+      "documentType": "UNHCR_REFUGEE_REGISTRATION",
+      "documentNumber": null,
+      "status": "PENDING",
+      "notes": null,
+      "isRefugeeDoc": true,
+      "issuedBy": null,
+      "verifiedAt": null,
+      "createdAt": "2026-11-14T09:48:48.718Z",
+      "updatedAt": "2026-11-14T09:48:48.718Z"
     }
   ],
   "accessibilityPreferences": [
@@ -220,7 +321,7 @@
       "extendedTimeLimit": true,
       "largeClickTargets": true,
       "createdAt": "2026-11-14T07:52:46.801Z",
-      "updatedAt": "2026-11-14T08:40:38.841Z"
+      "updatedAt": "2026-11-14T09:46:27.170Z"
     },
     {
       "id": "dcc4b5e6-2d9e-40f4-a04a-18352993087f",
@@ -239,6 +340,24 @@
       "largeClickTargets": true,
       "createdAt": "2026-11-14T08:32:20.515Z",
       "updatedAt": "2026-11-14T08:32:20.515Z"
+    },
+    {
+      "id": "7f9cd69b-df83-464a-996a-bac743f35814",
+      "userId": "29943412-aa2b-4cde-b904-5328597b18ac",
+      "screenReaderActive": false,
+      "highContrastMode": "DEFAULT",
+      "fontSize": "NORMAL",
+      "reducedMotion": false,
+      "highContrastCursor": false,
+      "voiceGuidanceEnabled": true,
+      "autoReadAloud": true,
+      "amharicVoiceModel": "ADDIS_TTS_SELAM",
+      "speechRate": 1,
+      "preferVoiceInput": false,
+      "extendedTimeLimit": true,
+      "largeClickTargets": true,
+      "createdAt": "2026-11-14T09:38:23.334Z",
+      "updatedAt": "2026-11-14T09:38:23.334Z"
     }
   ],
   "onboardingSessions": [
@@ -270,13 +389,13 @@
       "id": "4b7f62ed-e3a1-4e5d-995f-2d002c97af80",
       "userId": "f00181e0-3bb5-4c70-b9f0-7f99254d44c8",
       "recoveryCode": "OP-K5D9",
-      "currentStepIndex": 1,
+      "currentStepIndex": 3,
       "totalSteps": 6,
       "isCompleted": false,
       "completedAt": null,
-      "lastActiveAt": "2026-11-14T08:40:38.837Z",
+      "lastActiveAt": "2026-11-14T09:48:48.714Z",
       "createdAt": "2026-11-14T07:52:46.802Z",
-      "updatedAt": "2026-11-14T08:40:38.837Z"
+      "updatedAt": "2026-11-14T09:48:48.714Z"
     },
     {
       "id": "7764d208-9fe8-4581-82fc-dbb643603994",
@@ -289,6 +408,18 @@
       "lastActiveAt": "2026-11-14T08:32:20.529Z",
       "createdAt": "2026-11-14T08:32:20.517Z",
       "updatedAt": "2026-11-14T08:32:20.529Z"
+    },
+    {
+      "id": "3422fead-f545-4568-a003-74e69c9a68a6",
+      "userId": "29943412-aa2b-4cde-b904-5328597b18ac",
+      "recoveryCode": "OP-S4K2",
+      "currentStepIndex": 2,
+      "totalSteps": 6,
+      "isCompleted": true,
+      "completedAt": "2026-11-14T09:38:23.340Z",
+      "lastActiveAt": "2026-11-14T09:38:23.340Z",
+      "createdAt": "2026-11-14T09:38:23.335Z",
+      "updatedAt": "2026-11-14T09:38:23.340Z"
     }
   ],
   "onboardingAnswers": [
@@ -319,7 +450,7 @@
       "stepKey": "language_accessibility",
       "answerData": {
         "primaryLanguage": "AMHARIC",
-        "contrastMode": "contrast-high-dark",
+        "contrastMode": "default",
         "fontSize": "normal",
         "autoReadAloud": true,
         "voiceModel": "Addis-Selam-Neural",
@@ -330,7 +461,7 @@
       "transcribedText": null,
       "voiceConfidence": null,
       "createdAt": "2026-11-14T07:53:31.374Z",
-      "updatedAt": "2026-11-14T08:40:38.834Z"
+      "updatedAt": "2026-11-14T09:46:27.164Z"
     },
     {
       "id": "08d2070e-3b5f-4ff6-baf4-c47c269184d6",
@@ -351,6 +482,65 @@
       "voiceConfidence": 0.96,
       "createdAt": "2026-11-14T08:32:20.525Z",
       "updatedAt": "2026-11-14T08:32:20.525Z"
+    },
+    {
+      "id": "1bfc49c7-59cb-453c-a00a-90d9ca004573",
+      "sessionId": "4b7f62ed-e3a1-4e5d-995f-2d002c97af80",
+      "stepIndex": 1,
+      "stepKey": "identity",
+      "answerData": {
+        "fullNameAmharic": "መሀመድ ሳዲቅ",
+        "fullNameEnglish": "",
+        "ageRange": "18-24",
+        "currentRegion": "አዳማ",
+        "idType": "UNHCR_REFUGEE_REGISTRATION",
+        "documentNumber": "",
+        "idNotes": "",
+        "isRefugeeDoc": true
+      },
+      "answeredViaVoice": true,
+      "transcribedText": "መሀመድ ሳዲቅ",
+      "voiceConfidence": null,
+      "createdAt": "2026-11-14T09:14:51.314Z",
+      "updatedAt": "2026-11-14T09:48:48.712Z"
+    },
+    {
+      "id": "f61c5afa-87b0-44c4-a26f-d7f611b57dec",
+      "sessionId": "4b7f62ed-e3a1-4e5d-995f-2d002c97af80",
+      "stepIndex": 2,
+      "stepKey": "contact",
+      "answerData": {
+        "phoneNumber": "099999999",
+        "preferredContactMethod": "PHONE_CALL",
+        "telegramHandle": "",
+        "trustedContactName": "",
+        "trustedContactPhone": ""
+      },
+      "answeredViaVoice": false,
+      "transcribedText": null,
+      "voiceConfidence": null,
+      "createdAt": "2026-11-14T09:15:25.796Z",
+      "updatedAt": "2026-11-14T09:15:25.796Z"
+    },
+    {
+      "id": "148f0961-38db-44e8-809f-0e894cdb581a",
+      "sessionId": "3422fead-f545-4568-a003-74e69c9a68a6",
+      "stepIndex": 1,
+      "stepKey": "identity",
+      "answerData": {
+        "fullNameAmharic": "",
+        "fullNameEnglish": "Yonas Tadesse Abebe",
+        "ageRange": "18-24",
+        "currentRegion": "መልካዲዳ የስደተኞች ካምፕ",
+        "idType": "UNHCR_REFUGEE_REGISTRATION",
+        "documentNumber": "UNHCR-ETH-2026-9812",
+        "isRefugeeDoc": true
+      },
+      "answeredViaVoice": true,
+      "transcribedText": null,
+      "voiceConfidence": null,
+      "createdAt": "2026-11-14T09:38:23.337Z",
+      "updatedAt": "2026-11-14T09:38:23.337Z"
     }
   ],
   "voiceInteractions": [
@@ -990,6 +1180,201 @@
       "confidenceScore": 0.94,
       "errorMessage": null,
       "createdAt": "2026-11-14T08:56:35.553Z"
+    },
+    {
+      "id": "5bca7184-d3b5-416e-9b7f-3e2cc7833f48",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 3፡ አስተማማኝ የመገናኛ ዘዴ። እርስዎን እንዴት ማግኘት እንዳለብን ያሳውቁን። የስልክ ጥሪ፣ የጽሑፍ መልዕክት (SMS)፣ ወይም ቴሌግራም መምረጥ ይችላሉ። እንዲሁም እርስዎን የሚረዳ ታማኝ የቤተሰብ ወይም ማህበረሰብ ተወካይ ማከል ይችላሉ።",
+      "outputText": "Audio synthesized (12.32s)",
+      "status": "SUCCESS",
+      "latencyMs": 1,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:14:51.683Z"
+    },
+    {
+      "id": "9b820507-30e7-4f8f-b1b2-1ae54ae354e9",
+      "sessionId": null,
+      "serviceType": "ADDIS_SCRIBE_STT",
+      "languageCode": "am-ET",
+      "inputText": "Audio [audio/webm, context: preferredContactMethod]",
+      "outputText": null,
+      "status": "SUCCESS",
+      "latencyMs": 1,
+      "confidenceScore": 0,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:15:16.790Z"
+    },
+    {
+      "id": "bcc8b6dd-999c-43fe-9ecf-3c6be41894a4",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 4፡ የትምህርት ዳራ እና አላማ። የትምህርት ደረጃዎ ምን ያህል ነው? እንዲሁም በክፍት መንገድ መማር የሚፈልጉት ዋና ክህሎት ወይም የስራ አላማ ምንድን ነው?",
+      "outputText": "Audio synthesized (8.24s)",
+      "status": "SUCCESS",
+      "latencyMs": 178,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:15:26.187Z"
+    },
+    {
+      "id": "51c8eed0-d2c7-4f32-b4e9-0cf4bd2af098",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 4፡ የትምህርት ዳራ እና አላማ። የትምህርት ደረጃዎ ምን ያህል ነው? እንዲሁም በክፍት መንገድ መማር የሚፈልጉት ዋና ክህሎት ወይም የስራ አላማ ምንድን ነው?",
+      "outputText": "Audio synthesized (8.24s)",
+      "status": "SUCCESS",
+      "latencyMs": 144,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:15:30.288Z"
+    },
+    {
+      "id": "6e4dbe45-bd77-4a1a-b8ee-3c960dfdb57e",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "የማስመለሻ ኮድዎ፡ O P - K 5 D 9 ነው። \n    ይህንን ኮድ በመያዝ በማንኛውም ጊዜ ያቆሙበት ደረጃ ላይ ተመልሰው መቀጠል ይችላሉ።",
+      "outputText": "Audio synthesized (6.96s)",
+      "status": "SUCCESS",
+      "latencyMs": 1,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:15:51.785Z"
+    },
+    {
+      "id": "6712c45e-2024-41a5-9f3b-6edd4c0db14a",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 1፡ ቋንቋ እና የተደራሽነት ምርጫዎች። እንኳን ወደ ክፍት መንገድ በደህና መጡ። እባክዎ የምርጫ ቋንቋዎን እና ለእርስዎ ምቹ የሆነውን የተደራሽነት ሁኔታ ያዘጋጁ። የድምፅ እገዛ፣ የፊደል መጠን፣ እና ከፍተኛ ንፅፅር ይገኛሉ።",
+      "outputText": "Audio synthesized (11.6s)",
+      "status": "SUCCESS",
+      "latencyMs": 1536,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:40:25.254Z"
+    },
+    {
+      "id": "6559f5dc-1c20-45d9-bf88-6c02ed0c085b",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 1፡ ቋንቋ እና የተደራሽነት ምርጫዎች። እንኳን ወደ ክፍት መንገድ በደህና መጡ። እባክዎ የምርጫ ቋንቋዎን እና ለእርስዎ ምቹ የሆነውን የተደራሽነት ሁኔታ ያዘጋጁ። የድምፅ እገዛ፣ የፊደል መጠን፣ እና ከፍተኛ ንፅፅር ይገኛሉ።",
+      "outputText": "Audio synthesized (11.6s)",
+      "status": "SUCCESS",
+      "latencyMs": 1217,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:40:26.093Z"
+    },
+    {
+      "id": "de473bc4-b1f5-4258-a07b-e40ba4ea1559",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 1፡ ቋንቋ እና የተደራሽነት ምርጫዎች። እንኳን ወደ ክፍት መንገድ በደህና መጡ። እባክዎ የምርጫ ቋንቋዎን እና ለእርስዎ ምቹ የሆነውን የተደራሽነት ሁኔታ ያዘጋጁ። የድምፅ እገዛ፣ የፊደል መጠን፣ እና ከፍተኛ ንፅፅር ይገኛሉ።",
+      "outputText": "Audio synthesized (14.5s)",
+      "status": "SUCCESS",
+      "latencyMs": 4869,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:43:22.615Z"
+    },
+    {
+      "id": "ba4dbee0-4083-429a-8592-659c39c05863",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 1፡ ቋንቋ እና የተደራሽነት ምርጫዎች። እንኳን ወደ ክፍት መንገድ በደህና መጡ። እባክዎ የምርጫ ቋንቋዎን እና ለእርስዎ ምቹ የሆነውን የተደራሽነት ሁኔታ ያዘጋጁ። የድምፅ እገዛ፣ የፊደል መጠን፣ እና ከፍተኛ ንፅፅር ይገኛሉ።",
+      "outputText": "Audio synthesized (14.5s)",
+      "status": "SUCCESS",
+      "latencyMs": 4458,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:43:53.011Z"
+    },
+    {
+      "id": "b19efc22-f299-44f1-be9b-deca5d14f802",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 1፡ ቋንቋ እና የተደራሽነት ምርጫዎች። እንኳን ወደ ክፍት መንገድ በደህና መጡ። እባክዎ የምርጫ ቋንቋዎን እና ለእርስዎ ምቹ የሆነውን የተደራሽነት ሁኔታ ያዘጋጁ። የድምፅ እገዛ፣ የፊደል መጠን፣ እና ከፍተኛ ንፅፅር ይገኛሉ።",
+      "outputText": "Audio synthesized (14.5s)",
+      "status": "SUCCESS",
+      "latencyMs": 5499,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:44:34.504Z"
+    },
+    {
+      "id": "1e608cd4-53e6-4e8f-94ea-7e66848862a5",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 2፡ ማንነት እና የግል መረጃ። ሙሉ ስምዎን ያስገቡ። መደበኛ ፓስፖርት ወይም መታወቂያ ከሌለዎት፤ የስደተኞች ምዝገባ ካርድ (UNHCR)፣ የቄበሌ ካርድ፣ ወይም ያለ ሰነድ ራስን ማረጋገጥ መምረጥ ይችላሉ።",
+      "outputText": "Audio synthesized (13.200000000000001s)",
+      "status": "SUCCESS",
+      "latencyMs": 6792,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:46:34.356Z"
+    },
+    {
+      "id": "dcc315b5-ca05-4c22-bc13-19203785e087",
+      "sessionId": null,
+      "serviceType": "ADDIS_SCRIBE_STT",
+      "languageCode": "am-ET",
+      "inputText": "Audio [audio/webm, context: fullNameAmharic]",
+      "outputText": null,
+      "status": "SUCCESS",
+      "latencyMs": 1354,
+      "confidenceScore": 0,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:47:01.933Z"
+    },
+    {
+      "id": "87d03656-bde6-4f3b-a97e-92a3fb059c87",
+      "sessionId": null,
+      "serviceType": "ADDIS_SCRIBE_STT",
+      "languageCode": "am-ET",
+      "inputText": "Audio [audio/webm, context: currentRegion]",
+      "outputText": null,
+      "status": "SUCCESS",
+      "latencyMs": 1231,
+      "confidenceScore": 0,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:48:19.273Z"
+    },
+    {
+      "id": "d0da15f3-6101-4261-a391-7167aac65550",
+      "sessionId": null,
+      "serviceType": "ADDIS_SCRIBE_STT",
+      "languageCode": "am-ET",
+      "inputText": "Audio [audio/webm, context: currentRegion]",
+      "outputText": null,
+      "status": "SUCCESS",
+      "latencyMs": 1168,
+      "confidenceScore": 0,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:48:30.313Z"
+    },
+    {
+      "id": "36932bb9-120e-45b3-88bd-3f666713b08f",
+      "sessionId": null,
+      "serviceType": "ADDIS_TTS",
+      "languageCode": "am-ET",
+      "inputText": "ደረጃ 3፡ አስተማማኝ የመገናኛ ዘዴ። እርስዎን እንዴት ማግኘት እንዳለብን ያሳውቁን። የስልክ ጥሪ፣ የጽሑፍ መልዕክት (SMS)፣ ወይም ቴሌግራም መምረጥ ይችላሉ። እንዲሁም እርስዎን የሚረዳ ታማኝ የቤተሰብ ወይም ማህበረሰብ ተወካይ ማከል ይችላሉ።",
+      "outputText": "Audio synthesized (15.4s)",
+      "status": "SUCCESS",
+      "latencyMs": 4519,
+      "confidenceScore": 0.94,
+      "errorMessage": null,
+      "createdAt": "2026-11-14T09:48:53.615Z"
     }
   ],
   "supportRequests": [
@@ -1018,6 +1403,19 @@
       "isConfidential": true,
       "createdAt": "2026-11-14T08:32:20.528Z",
       "updatedAt": "2026-11-14T08:32:20.528Z"
+    },
+    {
+      "id": "a38b42e5-f6d2-4bae-a069-b9739002d3b3",
+      "userId": "29943412-aa2b-4cde-b904-5328597b18ac",
+      "category": "DOCUMENT_VERIFICATION_HELP",
+      "message": "ስደተኛ ነኝ፣ የመታወቂያ ሰነድ እርዳታ እፈልጋለሁ።",
+      "hasVoiceNote": true,
+      "voiceNoteUrl": null,
+      "contactPhone": "+251 911 223 344",
+      "status": "OPEN",
+      "isConfidential": true,
+      "createdAt": "2026-11-14T09:38:23.339Z",
+      "updatedAt": "2026-11-14T09:38:23.339Z"
     }
   ]
 }

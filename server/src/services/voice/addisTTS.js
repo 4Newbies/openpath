@@ -3,11 +3,39 @@
 // Connects to Addis Voices 2 API (https://api.addisassistant.com/api/v1/voice/generations)
 // ==============================================================================
 
+import crypto from "node:crypto";
+
 export class AddisTTSService {
   constructor(config = {}) {
-    this.apiUrl = config.apiUrl || process.env.ADDIS_TTS_API_URL || "https://api.addisassistant.com/api/v1/voice/generations";
-    this.apiKey = config.apiKey || process.env.ADDIS_TTS_API_KEY || process.env.ADDIS_SCRIBE_API_KEY || "";
-    this.defaultVoice = config.defaultVoice || process.env.ADDIS_TTS_DEFAULT_VOICE || "am-hamen";
+    this.configuredApiUrl = config.apiUrl;
+    this.configuredApiKey = config.apiKey;
+    this.configuredVoice = config.defaultVoice;
+  }
+
+  get apiUrl() {
+    return this.configuredApiUrl || process.env.ADDIS_TTS_API_URL || "https://api.addisassistant.com/api/v1/voice/generations";
+  }
+
+  get apiKey() {
+    return this.configuredApiKey || process.env.ADDIS_TTS_API_KEY || process.env.ADDIS_SCRIBE_API_KEY || "";
+  }
+
+  get defaultVoice() {
+    return this.configuredVoice || process.env.ADDIS_TTS_DEFAULT_VOICE || "am-hamen";
+  }
+
+  /**
+   * Normalize voice ID to match official Addis Voices catalog
+   * Available Amharic voices: am-hamen (female default), am-simon (male calm), am-dawit, etc.
+   */
+  normalizeVoiceId(voiceId) {
+    if (!voiceId) return this.defaultVoice;
+    const lower = voiceId.toLowerCase();
+    if (lower.includes("selam")) return "am-hamen"; // female
+    if (lower.includes("dawit")) return "am-dawit";
+    if (lower.includes("simon")) return "am-simon";
+    if (lower.startsWith("am-")) return voiceId;
+    return this.defaultVoice;
   }
 
   /**
@@ -16,7 +44,7 @@ export class AddisTTSService {
    * @param {string} options.text - Amharic text to speak (e.g. "ሙሉ ስምዎን ያስገቡ")
    * @param {string} options.voice - Voice ID (e.g. "am-hamen")
    * @param {number} options.rate - Speaking rate
-   * @returns {Promise<{audioDataUri: string|null, durationSecs: number, modelUsed: string, text: string, useBrowserSpeech?: boolean}>}
+   * @returns {Promise<{audioDataUri: string|null, durationSecs: number, modelUsed: string, text: string, useBrowserSpeech?: boolean, fromAddisApi?: boolean, errorInfo?: string}>}
    */
   async synthesize({ text, voice = null, rate = 1.0 }) {
     if (!text || !text.trim()) {
@@ -24,20 +52,25 @@ export class AddisTTSService {
     }
 
     const trimmedText = text.trim();
-    const selectedVoice = voice || this.defaultVoice || "am-hamen";
+    const selectedVoice = this.normalizeVoiceId(voice);
     const startTime = Date.now();
+    const apiKey = this.apiKey;
+    const apiUrl = this.apiUrl;
 
     // 1. Call Official Addis Assistant Voice Generations API
-    if (this.apiKey && this.apiKey !== "dev_key") {
+    if (apiKey && apiKey !== "dev_key") {
       try {
-        console.log(`[Addis TTS] Calling ${this.apiUrl} with voice: ${selectedVoice}`);
-        const response = await fetch(this.apiUrl, {
+        const clientRequestId = crypto.randomUUID();
+        console.log(`[Addis TTS] Calling ${apiUrl} with voice: ${selectedVoice}`);
+
+        const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
-            "x-api-key": this.apiKey,
+            "x-api-key": apiKey,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            client_request_id: clientRequestId,
             voice_id: selectedVoice,
             language: "am",
             text: trimmedText,
@@ -77,7 +110,11 @@ export class AddisTTSService {
           }
         } else {
           const errBody = await response.text().catch(() => "");
-          console.warn(`[Addis TTS] API returned ${response.status}: ${errBody}`);
+          if (response.status === 402) {
+            console.warn(`[Addis TTS] Note: Addis account credit balance is insufficient (HTTP 402). Auto-switching to natural browser speech.`);
+          } else {
+            console.warn(`[Addis TTS] API returned HTTP ${response.status}: ${errBody}`);
+          }
         }
       } catch (err) {
         console.warn("[Addis TTS] Live API call failed:", err.message);
