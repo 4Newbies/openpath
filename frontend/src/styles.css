@@ -182,6 +182,9 @@ textarea.op-input {
   outline: 1px solid var(--op-accent);
 }
 .op-option input {
+  position: relative;
+  z-index: 1; /* above the full-row label overlay */
+  font: inherit;
   flex: none;
   width: 1.4em;
   height: 1.4em;
