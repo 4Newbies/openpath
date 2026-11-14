@@ -10,8 +10,10 @@ import {
 import { $, $$, button, mount, wait } from './helpers.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const CSS = fs.readFileSync(path.resolve(here, '../src/styles.css'), 'utf8');
-const JOBS_CSS = fs.readFileSync(path.resolve(here, '../src/jobs.css'), 'utf8');
+// Line endings normalised: Windows checkouts (core.autocrlf) have CRLF.
+const lf = (text) => text.replace(/\r\n/g, '\n');
+const CSS = lf(fs.readFileSync(path.resolve(here, '../src/styles.css'), 'utf8'));
+const JOBS_CSS = lf(fs.readFileSync(path.resolve(here, '../src/jobs.css'), 'utf8'));
 
 const flow = {
   version: '1',
