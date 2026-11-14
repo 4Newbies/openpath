@@ -79,8 +79,9 @@ app.get("/api/health", (req, res) => {
         status: "active",
       },
       tts: {
-        primary: "Azure Ameha Neural (am-ET-AmehaNeural)",
-        secondary: "Meta MMS-TTS (Amharic)",
+        provider: "Addis TTS (አዲስ ድምፅ)",
+        defaultVoice: "Addis-Selam-Neural",
+        voices: ["Addis-Selam-Neural", "Addis-Dawit-Neural"],
         status: "active",
       },
     },
@@ -118,7 +119,7 @@ server.listen(PORT, () => {
   console.log(`🚀 OpenPath Backend running on http://localhost:${PORT}`);
   console.log(`📦 Primary Database: PostgreSQL Architecture (Prisma configured)`);
   console.log(`🎙️  Amharic STT: Addis Scribe Engine Active (am-ET)`);
-  console.log(`🔊 Amharic TTS: Azure Ameha & Meta MMS-TTS Active`);
+  console.log(`🔊 Amharic TTS: Addis TTS Engine Active (Addis-Selam-Neural)`);
   console.log(`♿ Accessibility: WCAG 2.2 AA Audio & One-Question Engine Active`);
   console.log("=================================================================");
 });

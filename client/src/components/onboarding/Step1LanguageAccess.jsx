@@ -78,7 +78,7 @@ export function Step1LanguageAccess() {
               <div>
                 <div className="text-base font-bold text-foreground">አማርኛ (Amharic)</div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  የአማርኛ የድምፅና የጽሑፍ ድጋፍ (Addis Scribe & Azure Ameha)
+                  የአማርኛ የድምፅና የጽሑፍ ድጋፍ (Addis Scribe STT & Addis TTS)
                 </div>
               </div>
               {language === "am" && <Check className="size-5 text-primary shrink-0" />}
@@ -107,65 +107,65 @@ export function Step1LanguageAccess() {
           </div>
         </fieldset>
 
-        {/* 2. Amharic TTS Voice Engine Model */}
+        {/* 2. Addis TTS Voice Engine Model */}
         <fieldset className="p-4 sm:p-5 rounded-xl border border-border bg-surface">
           <legend className="px-2 text-sm font-bold flex items-center gap-1.5 text-primary">
             <Volume2 className="size-4" />
             {language === "am"
-              ? "2. የአማርኛ ንግግርና ድምፅ ሞዴል (Amharic Voice Model)"
-              : "2. Amharic Speech Synthesis Voice Model"}
+              ? "2. የአዲስ (Addis) የአማርኛ ንግግርና ድምፅ ሞዴል"
+              : "2. Addis Amharic Speech Synthesis Voice"}
           </legend>
           <p className="text-xs text-muted-foreground mb-3">
             {language === "am"
-              ? "ጥያቄዎችን እና መመሪያዎችን ጮክ ብሎ ለማንበብ የሚመርጡትን ልዩ የአማርኛ የድምፅ ሞዴል ይምረጡ፡"
-              : "Select the specialized Amharic speech synthesis model tailored for accessibility:"}
+              ? "ጥያቄዎችን እና መመሪያዎችን ጮክ ብሎ ለማንበብ የሚመርጡትን የአዲስ (Addis TTS) ድምፅ ይምረጡ፡"
+              : "Select the Addis Amharic speech synthesis voice tailored for your hearing comfort:"}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => {
-                setVoiceModel("AZURE_AMEHA");
-                announce("Azure Ameha Neural Amharic Voice model selected");
+                setVoiceModel("Addis-Selam-Neural");
+                announce("Addis Selam Amharic Voice selected");
               }}
               className={`p-4 rounded-xl text-left border-2 flex items-start justify-between transition-all ${
-                voiceModel === "AZURE_AMEHA"
+                voiceModel === "Addis-Selam-Neural"
                   ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/40"
                   : "border-border hover:bg-muted"
               }`}
             >
               <div>
-                <span className="font-bold text-sm block">Azure Ameha (አሜሃ - am-ET-AmehaNeural)</span>
+                <span className="font-bold text-sm block">Addis TTS - ሰላም (Selam)</span>
                 <span className="text-xs text-muted-foreground mt-1 block">
                   {language === "am"
-                    ? "ከፍተኛ ጥራት ያለው፣ ግልጽ እና ለአረጋውያንና የማየት እክል ላለባቸው ምቹ የተፈጥሮ አማርኛ ድምፅ"
-                    : "High-clarity neural Amharic voice with natural pacing and Ge'ez phonetic precision."}
+                    ? "ግልጽ፣ የተረጋጋና ለአረጋውያን እንዲሁም ለማየት እክል ላለባቸው ምቹ የተፈጥሮ አማርኛ የሴት ድምፅ"
+                    : "High-clarity female Amharic voice with natural pacing and Ge'ez phonetic precision."}
                 </span>
               </div>
-              {voiceModel === "AZURE_AMEHA" && <Check className="size-5 text-primary shrink-0 ml-2" />}
+              {voiceModel === "Addis-Selam-Neural" && <Check className="size-5 text-primary shrink-0 ml-2" />}
             </button>
 
             <button
               type="button"
               onClick={() => {
-                setVoiceModel("MMS_TTS");
-                announce("Meta MMS-TTS Amharic Voice model selected");
+                setVoiceModel("Addis-Dawit-Neural");
+                announce("Addis Dawit Amharic Voice selected");
               }}
               className={`p-4 rounded-xl text-left border-2 flex items-start justify-between transition-all ${
-                voiceModel === "MMS_TTS"
+                voiceModel === "Addis-Dawit-Neural"
                   ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/40"
                   : "border-border hover:bg-muted"
               }`}
             >
               <div>
-                <span className="font-bold text-sm block">Meta MMS-TTS (mms-tts-amh)</span>
+                <span className="font-bold text-sm block">Addis TTS - ዳዊት (Dawit)</span>
                 <span className="text-xs text-muted-foreground mt-1 block">
                   {language === "am"
-                    ? "ክፍት ምንጭ የሜታ የብዙ ቋንቋዎች የድምፅ ሞዴል፤ በአማርኛ ቃላት ላይ የሰለጠነ"
-                    : "Open-source Massively Multilingual Speech Amharic acoustic model."}
+                    ? "ተፈጥሯዊ የንግግር ቅላጼ እና ጥርት ያለ የወንድ ድምፅ፤ ለሁሉም ተደራሽ"
+                    : "Natural articulate male Amharic speech tailored for clear screen comprehension."}
                 </span>
               </div>
-              {voiceModel === "MMS_TTS" && <Check className="size-5 text-primary shrink-0 ml-2" />}
+              {voiceModel === "Addis-Dawit-Neural" && <Check className="size-5 text-primary shrink-0 ml-2" />}
             </button>
           </div>
         </fieldset>

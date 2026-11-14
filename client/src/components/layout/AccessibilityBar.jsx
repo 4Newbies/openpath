@@ -142,50 +142,50 @@ export function AccessibilityBar({ isOpen, onClose }) {
           <div className="space-y-3">
             <label className="text-sm font-semibold flex items-center gap-1.5">
               <Volume2 className="size-4 text-primary" />
-              {language === "am" ? "የአማርኛ ድምፅ ሞዴል" : "Amharic Voice & AI Models"}
+              {language === "am" ? "የአዲስ (Addis) የአማርኛ ድምፅ" : "Addis Amharic Voice Selection"}
             </label>
 
             <div className="space-y-1.5">
               <button
                 type="button"
                 onClick={() => {
-                  setVoiceModel("AZURE_AMEHA");
-                  announce("የአማርኛ ድምፅ ሞዴል ወደ Azure Ameha Neural ተቀይሯል");
+                  setVoiceModel("Addis-Selam-Neural");
+                  announce("የአማርኛ ድምፅ ወደ አዲስ ሴላም (Addis Selam) ተቀይሯል");
                 }}
                 className={`w-full text-left p-2.5 rounded-md text-xs border flex items-center justify-between ${
-                  voiceModel === "AZURE_AMEHA"
+                  voiceModel === "Addis-Selam-Neural"
                     ? "border-primary bg-primary/10 text-primary font-bold ring-2 ring-primary/30"
                     : "border-border hover:bg-muted"
                 }`}
               >
                 <div>
-                  <div className="font-bold">Azure Ameha (አሜሃ)</div>
+                  <div className="font-bold">Addis TTS - ሰላም (Selam)</div>
                   <div className="text-[11px] opacity-80">
-                    {language === "am" ? "ተፈጥሯዊ የኒውራል አማርኛ ድምፅ" : "Natural Amharic Neural Speech"}
+                    {language === "am" ? "የሴት ድምፅ፡ ግልጽ፣ የተረጋጋና ለተደራሽነት የተመቻቸ" : "Female voice: Clear, calm & accessible"}
                   </div>
                 </div>
-                {voiceModel === "AZURE_AMEHA" && <Check className="size-4 text-primary shrink-0" />}
+                {voiceModel === "Addis-Selam-Neural" && <Check className="size-4 text-primary shrink-0" />}
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  setVoiceModel("MMS_TTS");
-                  announce("የአማርኛ ድምፅ ሞዴል ወደ Meta MMS-TTS ተቀይሯል");
+                  setVoiceModel("Addis-Dawit-Neural");
+                  announce("የአማርኛ ድምፅ ወደ አዲስ ዳዊት (Addis Dawit) ተቀይሯል");
                 }}
                 className={`w-full text-left p-2.5 rounded-md text-xs border flex items-center justify-between ${
-                  voiceModel === "MMS_TTS"
+                  voiceModel === "Addis-Dawit-Neural"
                     ? "border-primary bg-primary/10 text-primary font-bold ring-2 ring-primary/30"
                     : "border-border hover:bg-muted"
                 }`}
               >
                 <div>
-                  <div className="font-bold">Meta MMS-TTS (Amharic)</div>
+                  <div className="font-bold">Addis TTS - ዳዊት (Dawit)</div>
                   <div className="text-[11px] opacity-80">
-                    {language === "am" ? "ክፍት የብዙ ቋንቋዎች የድምፅ ሞዴል" : "Massively Multilingual Speech Model"}
+                    {language === "am" ? "የወንድ ድምፅ፡ ተፈጥሯዊ የንግግር ቅላጼ ያለው" : "Male voice: Natural cadence & articulation"}
                   </div>
                 </div>
-                {voiceModel === "MMS_TTS" && <Check className="size-4 text-primary shrink-0" />}
+                {voiceModel === "Addis-Dawit-Neural" && <Check className="size-4 text-primary shrink-0" />}
               </button>
             </div>
 

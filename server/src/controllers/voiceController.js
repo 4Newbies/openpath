@@ -1,9 +1,9 @@
 // ==============================================================================
-// Voice Controller - Addis Scribe STT & Azure Ameha/MMS-TTS API Handlers
+// Voice Controller - Addis Scribe STT & Addis TTS API Handlers
 // ==============================================================================
 
 import { addisScribeSTT } from "../services/voice/addisScribeSTT.js";
-import { azureAmehaTTS } from "../services/voice/azureAmehaTTS.js";
+import { addisTTS } from "../services/voice/addisTTS.js";
 import { ONBOARDING_PROMPTS, GENERAL_VOICE_FEEDBACK } from "../services/voice/audioPrompts.js";
 import { db } from "../db/dbClient.js";
 
@@ -19,7 +19,6 @@ export const voiceController = {
 
       let audioBuffer = null;
       if (audioData) {
-        // Strip data:audio/*;base64, prefix if present
         const cleanBase64 = audioData.replace(/^data:audio\/\w+;base64,/, "");
         audioBuffer = Buffer.from(cleanBase64, "base64");
       }
@@ -72,32 +71,32 @@ export const voiceController = {
   },
 
   /**
-   * Synthesize Amharic speech via Azure Ameha or Meta MMS-TTS
+   * Synthesize Amharic speech via Addis TTS
    * POST /api/voice/tts
    */
   async handleTTS(req, res) {
     const startTime = Date.now();
     try {
-      const { text, voiceModel = "AZURE_AMEHA", rate = 1.0, sessionId } = req.body || {};
+      const { text, voice = "Addis-Selam-Neural", rate = 1.0, sessionId } = req.body || {};
 
       if (!text) {
         return res.status(400).json({
           success: false,
-          error: "Text is required for TTS synthesis",
+          error: "Text is required for Addis TTS synthesis",
           errorAmharic: "እባክዎ የሚነበበውን ጽሑፍ ያቅርቡ",
         });
       }
 
-      const result = await azureAmehaTTS.synthesize({
+      const result = await addisTTS.synthesize({
         text,
-        voiceModel,
+        voice,
         rate: Number(rate),
       });
 
       // Log Voice Interaction
       await db.voiceInteractions.log({
         sessionId,
-        serviceType: voiceModel === "MMS_TTS" ? "MMS_TTS" : "AZURE_AMEHA_TTS",
+        serviceType: "ADDIS_TTS",
         languageCode: "am-ET",
         inputText: text,
         outputText: `Audio synthesized (${result.durationSecs}s)`,
@@ -116,10 +115,10 @@ export const voiceController = {
         },
       });
     } catch (err) {
-      console.error("[Voice Controller] TTS error:", err);
+      console.error("[Voice Controller] Addis TTS error:", err);
 
       await db.voiceInteractions.log({
-        serviceType: "AZURE_AMEHA_TTS",
+        serviceType: "ADDIS_TTS",
         status: "FAILED",
         errorMessage: err.message,
       });

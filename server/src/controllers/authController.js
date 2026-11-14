@@ -38,7 +38,7 @@ export const authController = {
       const preferences = await db.accessibilityPreferences.upsert(user.id, {
         voiceGuidanceEnabled: true,
         autoReadAloud: true,
-        amharicVoiceModel: "AZURE_AMEHA",
+        amharicVoiceModel: "ADDIS_TTS_SELAM",
         speechRate: 1.0,
       });
 

@@ -179,8 +179,8 @@ enum ContrastMode {
 }
 
 enum AmharicTTSModel {
-  AZURE_AMEHA   // am-ET-AmehaNeural
-  MMS_TTS       // Meta Massively Multilingual Speech Amharic
+  ADDIS_TTS_SELAM   // Addis TTS Selam (Female)
+  ADDIS_TTS_DAWIT   // Addis TTS Dawit (Male)
 }
 
 model AccessibilityPreference {
@@ -198,7 +198,7 @@ model AccessibilityPreference {
   // Voice & Audio Assistance
   voiceGuidanceEnabled Boolean            @default(true)
   autoReadAloud        Boolean            @default(true)
-  amharicVoiceModel    AmharicTTSModel    @default(AZURE_AMEHA)
+  amharicVoiceModel    AmharicTTSModel    @default(ADDIS_TTS_SELAM)
   speechRate           Float              @default(1.0) // 0.75x to 1.5x
   preferVoiceInput     Boolean            @default(false)
 
@@ -259,13 +259,12 @@ model OnboardingAnswer {
 }
 
 // ------------------------------------------------------------------------------
-// 6. Voice-Assisted Interactions Log (Addis Scribe STT & Azure Ameha/MMS TTS)
+// 6. Voice-Assisted Interactions Log (Addis Scribe STT & Addis TTS)
 // ------------------------------------------------------------------------------
 
 enum VoiceServiceType {
   ADDIS_SCRIBE_STT
-  AZURE_AMEHA_TTS
-  MMS_TTS
+  ADDIS_TTS
   BROWSER_SPEECH_RECOGNITION
   BROWSER_SPEECH_SYNTHESIS
 }

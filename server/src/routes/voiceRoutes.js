@@ -6,7 +6,7 @@ const router = Router();
 // Addis Scribe STT endpoint
 router.post("/stt", voiceController.handleSTT);
 
-// Azure Ameha / MMS-TTS endpoint
+// Addis TTS endpoint
 router.post("/tts", voiceController.handleTTS);
 
 // Audio prompts catalog

@@ -231,7 +231,7 @@ export const db = {
         highContrastCursor: prefs.highContrastCursor || false,
         voiceGuidanceEnabled: prefs.voiceGuidanceEnabled !== undefined ? prefs.voiceGuidanceEnabled : true,
         autoReadAloud: prefs.autoReadAloud !== undefined ? prefs.autoReadAloud : true,
-        amharicVoiceModel: prefs.amharicVoiceModel || "AZURE_AMEHA",
+        amharicVoiceModel: prefs.amharicVoiceModel || "ADDIS_TTS_SELAM",
         speechRate: prefs.speechRate || 1.0,
         preferVoiceInput: prefs.preferVoiceInput || false,
         extendedTimeLimit: true,
@@ -345,7 +345,7 @@ export const db = {
       const interaction = {
         id: crypto.randomUUID(),
         sessionId: sessionId || null,
-        serviceType, // ADDIS_SCRIBE_STT, AZURE_AMEHA_TTS, MMS_TTS
+        serviceType, // ADDIS_SCRIBE_STT, ADDIS_TTS
         languageCode,
         inputText: inputText || null,
         outputText: outputText || null,

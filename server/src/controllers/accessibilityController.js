@@ -19,7 +19,7 @@ export const accessibilityController = {
           fontSize: "NORMAL",
           voiceGuidanceEnabled: true,
           autoReadAloud: true,
-          amharicVoiceModel: "AZURE_AMEHA",
+          amharicVoiceModel: "ADDIS_TTS_SELAM",
           speechRate: 1.0,
         });
       }

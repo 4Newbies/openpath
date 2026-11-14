@@ -104,7 +104,7 @@ export const onboardingController = {
           fontSize: answerData.fontSize || "NORMAL",
           voiceGuidanceEnabled: answerData.voiceGuidanceEnabled !== undefined ? Boolean(answerData.voiceGuidanceEnabled) : true,
           autoReadAloud: answerData.autoReadAloud !== undefined ? Boolean(answerData.autoReadAloud) : true,
-          amharicVoiceModel: answerData.amharicVoiceModel || "AZURE_AMEHA",
+          amharicVoiceModel: answerData.amharicVoiceModel || "ADDIS_TTS_SELAM",
           speechRate: answerData.speechRate ? Number(answerData.speechRate) : 1.0,
         });
         if (answerData.primaryLanguage) {

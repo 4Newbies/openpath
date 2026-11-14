@@ -1,5 +1,5 @@
 // ==============================================================================
-// OpenPath Direct Controller & Logic Integration Test
+// OpenPath Direct Controller & Logic Integration Test (Addis STT & Addis TTS)
 // ==============================================================================
 
 import { authController } from "./src/controllers/authController.js";
@@ -7,7 +7,7 @@ import { onboardingController } from "./src/controllers/onboardingController.js"
 import { voiceController } from "./src/controllers/voiceController.js";
 import { supportController } from "./src/controllers/supportController.js";
 import { addisScribeSTT } from "./src/services/voice/addisScribeSTT.js";
-import { azureAmehaTTS } from "./src/services/voice/azureAmehaTTS.js";
+import { addisTTS } from "./src/services/voice/addisTTS.js";
 import { db } from "./src/db/dbClient.js";
 
 // Mock Express response helper
@@ -37,7 +37,7 @@ function createMockRes() {
 
 async function runDirectIntegrationTests() {
   console.log("=================================================================");
-  console.log("🧪 Running OpenPath Core Integration & Accessibility Verification");
+  console.log("🧪 Running OpenPath Core Integration (Addis STT & Addis TTS)");
   console.log("=================================================================");
 
   // 1. Test Session Creation
@@ -59,7 +59,7 @@ async function runDirectIntegrationTests() {
   const { sessionId, recoveryCode, userId } = startRes.body.data;
 
   // 2. Test Addis Scribe STT
-  console.log("\n--- Testing Amharic Speech-to-Text (Addis Scribe) ---");
+  console.log("\n--- Testing Amharic Speech-to-Text (Addis Scribe STT) ---");
   const sttRes = await addisScribeSTT.transcribeAudio({
     contextHint: "fullName",
   });
@@ -70,27 +70,27 @@ async function runDirectIntegrationTests() {
     language: sttRes.language,
   });
 
-  // 3. Test Azure Ameha TTS
-  console.log("\n--- Testing Amharic Text-to-Speech (Azure Ameha & MMS-TTS) ---");
-  const ttsAzure = await azureAmehaTTS.synthesize({
+  // 3. Test Addis TTS (Text-to-Speech)
+  console.log("\n--- Testing Amharic Text-to-Speech (Addis TTS) ---");
+  const ttsSelam = await addisTTS.synthesize({
     text: "ሙሉ ስምዎን ያስገቡ",
-    voiceModel: "AZURE_AMEHA",
+    voice: "Addis-Selam-Neural",
     rate: 1.0,
   });
-  console.log("✅ [Azure Ameha TTS] Audio synthesized for 'ሙሉ ስምዎን ያስገቡ':", {
-    model: ttsAzure.modelUsed,
-    duration: `${ttsAzure.durationSecs}s`,
-    hasAudioData: Boolean(ttsAzure.audioDataUri),
+  console.log("✅ [Addis TTS] Audio synthesized for 'ሙሉ ስምዎን ያስገቡ':", {
+    model: ttsSelam.modelUsed,
+    duration: `${ttsSelam.durationSecs}s`,
+    hasAudioData: Boolean(ttsSelam.audioDataUri),
   });
 
-  const ttsMMS = await azureAmehaTTS.synthesize({
+  const ttsDawit = await addisTTS.synthesize({
     text: "የትምህርት ደረጃዎ ምንድን ነው?",
-    voiceModel: "MMS_TTS",
+    voice: "Addis-Dawit-Neural",
     rate: 1.0,
   });
-  console.log("✅ [Meta MMS-TTS] Audio synthesized for 'የትምህርት ደረጃዎ ምንድን ነው?':", {
-    model: ttsMMS.modelUsed,
-    duration: `${ttsMMS.durationSecs}s`,
+  console.log("✅ [Addis TTS] Audio synthesized for 'የትምህርት ደረጃዎ ምንድን ነው?':", {
+    model: ttsDawit.modelUsed,
+    duration: `${ttsDawit.durationSecs}s`,
   });
 
   // 4. Test Saving Onboarding Answers (One-Question-At-A-Time with JSONB)
@@ -170,7 +170,7 @@ async function runDirectIntegrationTests() {
   });
 
   console.log("\n=================================================================");
-  console.log("🎉 ALL ARCHITECTURAL REQUIREMENTS VERIFIED AND WORKING!");
+  console.log("🎉 ALL ADDIS STT & ADDIS TTS REQUIREMENTS VERIFIED AND WORKING!");
   console.log("=================================================================");
 }
 

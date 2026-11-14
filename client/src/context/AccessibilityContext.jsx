@@ -28,7 +28,7 @@ export function AccessibilityProvider({ children }) {
   const [screenReaderMode, setScreenReaderMode] = useState(() => localStorage.getItem("openpath_screenReader") === "true");
   const [autoReadAloud, setAutoReadAloud] = useState(() => localStorage.getItem("openpath_autoRead") !== "false");
   const [speechRate, setSpeechRate] = useState(() => Number(localStorage.getItem("openpath_speechRate")) || 1.0);
-  const [voiceModel, setVoiceModel] = useState(() => localStorage.getItem("openpath_voiceModel") || "AZURE_AMEHA"); // AZURE_AMEHA | MMS_TTS
+  const [voiceModel, setVoiceModel] = useState(() => localStorage.getItem("openpath_voiceModel") || "Addis-Selam-Neural"); // Addis-Selam-Neural | Addis-Dawit-Neural
 
   // ARIA Live Announcements
   const [politeAnnouncement, setPoliteAnnouncement] = useState("");

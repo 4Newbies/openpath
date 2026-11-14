@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS "AccessibilityPreference" (
     "highContrastCursor" BOOLEAN DEFAULT FALSE NOT NULL,
     "voiceGuidanceEnabled" BOOLEAN DEFAULT TRUE NOT NULL,
     "autoReadAloud" BOOLEAN DEFAULT TRUE NOT NULL,
-    "amharicVoiceModel" VARCHAR(50) DEFAULT 'AZURE_AMEHA' NOT NULL,
+    "amharicVoiceModel" VARCHAR(50) DEFAULT 'ADDIS_TTS_SELAM' NOT NULL,
     "speechRate" REAL DEFAULT 1.0 NOT NULL,
     "preferVoiceInput" BOOLEAN DEFAULT FALSE NOT NULL,
     "extendedTimeLimit" BOOLEAN DEFAULT TRUE NOT NULL,

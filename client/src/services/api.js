@@ -68,7 +68,7 @@ export const api = {
   },
 
   // ----------------------------------------------------------------------------
-  // Amharic Voice Engine: Addis Scribe STT & Azure Ameha / MMS-TTS
+  // Amharic Voice Engine: Addis Scribe STT & Addis TTS
   // ----------------------------------------------------------------------------
   async speechToText({ audioData, audioFormat = "audio/webm", contextHint = "general", sessionId }) {
     const res = await fetch(`${API_BASE}/voice/stt`, {
@@ -79,11 +79,11 @@ export const api = {
     return res.json();
   },
 
-  async textToSpeech({ text, voiceModel = "AZURE_AMEHA", rate = 1.0, sessionId }) {
+  async textToSpeech({ text, voice = "Addis-Selam-Neural", rate = 1.0, sessionId }) {
     const res = await fetch(`${API_BASE}/voice/tts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voiceModel, rate, sessionId }),
+      body: JSON.stringify({ text, voice, rate, sessionId }),
     });
     return res.json();
   },

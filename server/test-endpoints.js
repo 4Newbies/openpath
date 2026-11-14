@@ -1,18 +1,16 @@
 // ==============================================================================
-// OpenPath Backend End-to-End Verification Test
+// OpenPath Backend End-to-End Verification Test (Addis STT & Addis TTS)
 // ==============================================================================
-
-import http from "node:http";
 
 async function runTests() {
   console.log("-----------------------------------------------------------------");
-  console.log("🧪 Starting OpenPath End-to-End API & Voice Engine Tests");
+  console.log("🧪 Starting OpenPath End-to-End API (Addis STT & Addis TTS)");
   console.log("-----------------------------------------------------------------");
 
   // 1. Health check
   const healthRes = await fetch("http://localhost:5000/api/health");
   const health = await healthRes.json();
-  console.log("✓ Health Check:", health.status, "| DB:", health.database.type, "| STT:", health.voiceEngine.stt.provider);
+  console.log("✓ Health Check:", health.status, "| STT:", health.voiceEngine.stt.provider, "| TTS:", health.voiceEngine.tts.provider);
 
   // 2. Start session
   const startRes = await fetch("http://localhost:5000/api/auth/start", {
@@ -36,19 +34,19 @@ async function runTests() {
   const stt = await sttRes.json();
   console.log("✓ Addis Scribe STT:", stt.data.model, "| Text:", stt.data.transcribedText, `(Confidence: ${stt.data.confidence})`);
 
-  // 4. Test Azure Ameha TTS
+  // 4. Test Addis TTS
   const ttsRes = await fetch("http://localhost:5000/api/voice/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       text: "ሙሉ ስምዎን ያስገቡ",
-      voiceModel: "AZURE_AMEHA",
+      voice: "Addis-Selam-Neural",
       rate: 1.0,
       sessionId,
     }),
   });
   const tts = await ttsRes.json();
-  console.log("✓ Azure Ameha TTS:", tts.data.modelUsed, "| Duration:", tts.data.durationSecs, "s | Audio URI generated:", Boolean(tts.data.audioDataUri));
+  console.log("✓ Addis TTS:", tts.data.modelUsed, "| Duration:", tts.data.durationSecs, "s | Audio URI generated:", Boolean(tts.data.audioDataUri));
 
   // 5. Save Step 2 (Identity & UNHCR Refugee ID)
   const answerRes = await fetch("http://localhost:5000/api/onboarding/answer", {
@@ -108,7 +106,7 @@ async function runTests() {
   console.log("✓ Finalize Onboarding:", complete.success ? `Student ID: ${complete.data.studentIdNumber}, Advisor: ${complete.data.assignedAdvisor.name}` : "FAILED");
 
   console.log("-----------------------------------------------------------------");
-  console.log("🎉 ALL TESTS PASSED SUCCESSFULLY!");
+  console.log("🎉 ALL ADDIS STT & TTS TESTS PASSED SUCCESSFULLY!");
   console.log("-----------------------------------------------------------------");
 }
 
