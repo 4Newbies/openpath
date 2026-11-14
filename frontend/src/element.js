@@ -5,7 +5,7 @@ import { loadFlow } from './loader.js';
 import { errorMessage, labelOf, pick, t } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
 import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
-import { getSpeech } from './providers.js';
+import { getSpeech, getVoice, loadVoiceModule, voiceAvailable } from './providers.js';
 import { renderReview } from './review.js';
 import { renderSetup } from './setup.js';
 import { renderStep } from './steps/index.js';
@@ -113,8 +113,168 @@ export class OpenPathFlow extends HTMLElement {
     const lang = this.uiLang;
     return {
       readAloud: getSpeech().isAvailable(lang) || this.flow.questions.some((q) => q.audio?.[lang]),
-      voice: false,
+      voice: voiceAvailable(),
     };
+  }
+
+  // ---- voice input -----------------------------------------------------------
+
+  micAllowed(q) {
+    return (
+      Boolean(this.prefs?.voice) &&
+      q.voice === true &&
+      ['text', 'phone', 'single', 'multi', 'yesno'].includes(q.type) &&
+      this.prefs.voiceConsent !== 'deny' &&
+      voiceAvailable()
+    );
+  }
+
+  /** The mic button (a real toggle button) and a status line under it. */
+  micBlock(q) {
+    const status = this.voiceStatus?.questionId === q.id ? this.voiceStatus.text : '';
+    return h(
+      'div',
+      { class: 'op-voice' },
+      h('button', {
+        type: 'button',
+        class: 'op-button op-secondary op-mic',
+        'aria-pressed': 'false',
+        onclick: () => this.micClicked(q),
+        text: this.tr('speakAnswer'),
+      }),
+      h('p', { class: 'op-voice-status', text: status }),
+    );
+  }
+
+  micClicked(q) {
+    if (this.listening) {
+      this.listenProvider?.stop(); // listen() then settles with what was heard
+      return;
+    }
+    if (this.prefs.voiceConsent === 'allow') this.startListening(q);
+    else this.showConsent(q);
+  }
+
+  showConsent(q) {
+    const block = this.view.querySelector('.op-voice');
+    const textId = `op-${this.uid}-consent`;
+    const text = h('p', { id: textId, class: 'op-consent-text', tabindex: '-1', text: this.tr('consentText') });
+    block.textContent = '';
+    block.append(
+      h(
+        'div',
+        { class: 'op-consent', role: 'group', 'aria-labelledby': textId },
+        text,
+        h(
+          'div',
+          { class: 'op-nav op-consent-actions' },
+          h('button', {
+            type: 'button',
+            class: 'op-button op-primary',
+            text: this.tr('consentAllow'),
+            onclick: () => {
+              this.setPrefs({ voiceConsent: 'allow' });
+              this.render();
+              this.view.querySelector('.op-mic')?.focus();
+              this.startListening(q);
+            },
+          }),
+          h('button', {
+            type: 'button',
+            class: 'op-button op-secondary',
+            text: this.tr('consentDeny'),
+            onclick: () => {
+              this.setPrefs({ voiceConsent: 'deny' });
+              this.render({ focusField: true });
+              this.announce(this.tr('voiceDenied'));
+            },
+          }),
+        ),
+      ),
+    );
+    text.focus();
+  }
+
+  setMic(on) {
+    const b = this.view.querySelector('.op-mic');
+    if (!b) return;
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.textContent = this.tr(on ? 'stopListening' : 'speakAnswer');
+  }
+
+  setVoiceStatus(q, text) {
+    this.voiceStatus = { questionId: q.id, text };
+    const p = this.view.querySelector('.op-voice-status');
+    if (p) p.textContent = text;
+    this.announce(text);
+  }
+
+  async startListening(q) {
+    this.stopSpeech(); // don't let read-aloud talk into the microphone
+    const token = {};
+    this.listenToken = token;
+    let mod;
+    try {
+      mod = await loadVoiceModule();
+      this.listenProvider = await getVoice();
+    } catch {
+      return this.setVoiceStatus(q, this.tr('voice_failed'));
+    }
+    if (this.listenToken !== token) return;
+    this.listening = true;
+    this.setMic(true);
+    this.announce(this.tr('listening'));
+    let text;
+    try {
+      text = String((await this.listenProvider.listen(this.uiLang)) ?? '').trim();
+      if (!text) throw Object.assign(new Error('no_speech'), { code: 'no_speech' });
+    } catch (e) {
+      if (this.listenToken !== token) return; // stopped by a step change or Escape
+      this.listening = false;
+      this.setMic(false);
+      if (e?.code === 'aborted') return this.setVoiceStatus(q, this.tr('stopped'));
+      const known = ['permission', 'no_speech', 'offline', 'no_microphone'];
+      return this.setVoiceStatus(q, this.tr(`voice_${known.includes(e?.code) ? e.code : 'failed'}`));
+    }
+    if (this.listenToken !== token) return;
+    this.listening = false;
+    this.setMic(false);
+    this.useSpokenAnswer(q, text, mod);
+  }
+
+  stopListening() {
+    if (!this.listening) return;
+    this.listenToken = null;
+    this.listening = false;
+    this.listenProvider?.stop();
+    this.setMic(false);
+  }
+
+  // Put what was said into the answer, tell the learner, and give focus to
+  // the field. Never moves on by itself.
+  useSpokenAnswer(q, text, mod) {
+    if (q.type === 'text' || q.type === 'phone') {
+      const field = this.view.querySelector('.op-input');
+      field.value = text;
+      this.store.setAnswer(q.id, text);
+      field.focus();
+      return this.setVoiceStatus(q, this.tr('youSaid', { text }));
+    }
+    const value = mod.matchSpoken(q, text);
+    if (value === undefined) {
+      this.setVoiceStatus(q, this.tr('noMatch', { text }));
+      this.view.querySelector('.op-options input')?.focus();
+      return;
+    }
+    this.store.setAnswer(q.id, value);
+    if (q.setsPreference === 'access') this.accessAnswerChanged(q, value);
+    const shown =
+      q.type === 'yesno'
+        ? this.tr(value ? 'yes' : 'no')
+        : [].concat(value).map((v) => labelOf(q.options.find((o) => o.value === v), this.uiLang, this.simple).text).join(', ');
+    this.voiceStatus = { questionId: q.id, text: this.tr('youSaidChoice', { text, option: shown }) };
+    this.render({ focusField: true });
+    this.announce(this.voiceStatus.text);
   }
 
   // ---- read-aloud ------------------------------------------------------------
@@ -206,6 +366,7 @@ export class OpenPathFlow extends HTMLElement {
     // Turning voice off and on again asks for consent again.
     if (!next.voice) next.voiceConsent = this.prefs.voiceConsent === 'deny' ? null : this.prefs.voiceConsent;
     this.setPrefs(next);
+    if (next.voice) loadVoiceModule().catch(() => {}); // load voice code only once it's chosen
     this.syncAccessAnswer();
     this.setupOpen = false;
     this.go(this.store.state.step ?? this.nav.first(this.store.state.answers));
@@ -261,6 +422,7 @@ export class OpenPathFlow extends HTMLElement {
 
   go(step, { focus = true, returnToReview } = {}) {
     this.stopHelpers(); // speech and listening stop on every step change
+    this.voiceStatus = null;
     this.setupOpen = false;
     if (step !== this.step || returnToReview !== undefined) this.store.setStep(step, returnToReview === undefined ? {} : { returnToReview });
     if (step !== REVIEW) this.submitError = null;
@@ -353,6 +515,9 @@ export class OpenPathFlow extends HTMLElement {
         if (progress) progress.textContent = this.tr('stepOf', { n: pos.index, total: pos.total });
       },
     });
+
+    // The text field always stays; the mic is an extra way to fill it.
+    if (this.micAllowed(q)) step.node.append(this.micBlock(q));
 
     const back = this.nav.back(q.id, answers);
     const form = h(

@@ -26,12 +26,20 @@ export function getSpeech() {
   return (speech ??= createBrowserSpeech());
 }
 
-export function voiceAvailable() {
-  return Boolean(voice?.isAvailable());
+/** Cheap check that doesn't load the voice code. */
+export function voiceAvailable(win = globalThis) {
+  if (voice) return Boolean(voice.isAvailable());
+  return Boolean(win.SpeechRecognition || win.webkitSpeechRecognition);
 }
 
+/** The voice code: loaded only when a learner who chose voice needs it. */
+export const loadVoiceModule = () => import('./voice.js');
+
+/** The voice provider. The browser one is created on first use. */
 export async function getVoice() {
-  return voice;
+  if (voice) return voice;
+  const { createBrowserVoice } = await loadVoiceModule();
+  return (voice ??= createBrowserVoice());
 }
 
 /** Tests only. */
