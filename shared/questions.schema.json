@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openpath.dev/schema/questions.schema.json",
+  "title": "OpenPath question file",
+  "description": "One flow of questions shown one per screen by <openpath-flow>. Validated in the browser (shared/flow.js) and on the server against the same rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "flowId", "title", "questions"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": {
+      "description": "Version of this question file. Changing it discards progress saved in the browser for the old version.",
+      "type": "string",
+      "minLength": 1
+    },
+    "flowId": {
+      "description": "Stable id for this flow. The API only accepts answers for flows it has loaded.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "title": { "$ref": "#/$defs/localized" },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/question" }
+    }
+  },
+  "$defs": {
+    "localized": {
+      "description": "Text in each language. English is required; other languages fall back to English.",
+      "type": "object",
+      "required": ["en"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 1 },
+        "am": { "type": "string", "minLength": 1 }
+      }
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label"],
+      "properties": {
+        "value": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+        "label": { "$ref": "#/$defs/localized" },
+        "simple": { "$ref": "#/$defs/localized" },
+        "hint": { "$ref": "#/$defs/localized" }
+      }
+    },
+    "showIf": {
+      "description": "Only show this question when an earlier question's answer equals the value. For multi questions, the answer must include the value.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "equals"],
+      "properties": {
+        "id": { "type": "string" },
+        "equals": { "type": ["string", "boolean"] }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "label"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$" },
+        "type": { "enum": ["text", "phone", "date", "single", "multi", "yesno", "info"] },
+        "label": { "$ref": "#/$defs/localized" },
+        "simple": { "$ref": "#/$defs/localized", "description": "Plain-words version of the label." },
+        "hint": { "$ref": "#/$defs/localized" },
+        "icon": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$" },
+        "required": { "type": "boolean", "default": false },
+        "voice": { "type": "boolean", "default": false, "description": "Allow voice input for this question (not implemented yet)." },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/option" }
+        },
+        "showIf": { "$ref": "#/$defs/showIf" },
+        "autocomplete": {
+          "description": "HTML autocomplete token for text, phone and date questions, e.g. name, tel, bday.",
+          "type": "string",
+          "pattern": "^[a-z0-9 -]{1,64}$"
+        },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "multiline": { "type": "boolean", "description": "Text questions only: show a multi-line box." },
+        "private": {
+          "type": "boolean",
+          "description": "Sensitive answer: stored apart from the profile and left out of the openpath:complete event."
+        },
+        "setsPreference": {
+          "description": "Multi questions only: copy the answer into the form's display preferences.",
+          "enum": ["access"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["single", "multi"] } } },
+          "then": { "required": ["options"] },
+          "else": { "not": { "required": ["options"] } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "info" } } },
+          "then": { "not": { "required": ["required"] } }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "$schema": "../../../shared/questions.schema.json",
+  "version": "1.0.0",
+  "flowId": "alx-onboarding",
+  "title": { "en": "Join ALX" },
+  "questions": [
+    {
+      "id": "intro",
+      "type": "info",
+      "icon": "info",
+      "label": { "en": "Before you start" },
+      "simple": { "en": "How this form works" },
+      "hint": {
+        "en": "You will see one question at a time. There is no time limit. Your answers are saved as you go, so you can stop and come back later. Questions marked optional can be skipped."
+      }
+    },
+    {
+      "id": "access",
+      "type": "multi",
+      "icon": "access",
+      "required": false,
+      "voice": true,
+      "setsPreference": "access",
+      "label": { "en": "How can we make this form easier for you?" },
+      "simple": { "en": "What help do you want with this form?" },
+      "hint": { "en": "Choose all that apply. You can change these at any time." },
+      "options": [
+        { "value": "larger-text", "label": { "en": "Larger text" } },
+        { "value": "high-contrast", "label": { "en": "Stronger colours (high contrast)" } },
+        { "value": "screen-reader", "label": { "en": "I use a screen reader" } },
+        { "value": "simple-words", "label": { "en": "Simpler words" }, "hint": { "en": "Coming soon" } },
+        { "value": "read-aloud", "label": { "en": "Read the questions aloud" }, "hint": { "en": "Coming soon" } },
+        { "value": "voice-input", "label": { "en": "Answer by speaking" }, "hint": { "en": "Coming soon" } }
+      ]
+    },
+    {
+      "id": "fullName",
+      "type": "text",
+      "icon": "person",
+      "required": true,
+      "voice": true,
+      "autocomplete": "name",
+      "maxLength": 120,
+      "label": { "en": "What is your full name?" },
+      "simple": { "en": "Your name" },
+      "hint": { "en": "Write it the way you want us to use it." }
+    },
+    {
+      "id": "phone",
+      "type": "phone",
+      "icon": "phone",
+      "required": true,
+      "voice": true,
+      "autocomplete": "tel",
+      "label": { "en": "What is your phone number?" },
+      "simple": { "en": "Your phone number" },
+      "hint": { "en": "For example 0911 234 567 or +251 911 234 567." }
+    },
+    {
+      "id": "dateOfBirth",
+      "type": "date",
+      "icon": "calendar",
+      "required": true,
+      "voice": true,
+      "autocomplete": "bday",
+      "label": { "en": "What is your date of birth?" },
+      "simple": { "en": "When were you born?" },
+      "hint": { "en": "For example 27 3 2001." }
+    },
+    {
+      "id": "language",
+      "type": "single",
+      "icon": "language",
+      "required": true,
+      "voice": true,
+      "label": { "en": "Which language do you prefer for learning?" },
+      "simple": { "en": "Which language do you want?" },
+      "options": [
+        { "value": "en", "label": { "en": "English" } },
+        { "value": "am", "label": { "en": "Amharic (አማርኛ)" } },
+        { "value": "om", "label": { "en": "Afaan Oromoo" } },
+        { "value": "ti", "label": { "en": "Tigrinya (ትግርኛ)" } },
+        { "value": "so", "label": { "en": "Somali (Soomaali)" } },
+        { "value": "other", "label": { "en": "Another language" } }
+      ]
+    },
+    {
+      "id": "location",
+      "type": "text",
+      "icon": "location",
+      "required": true,
+      "voice": true,
+      "autocomplete": "address-level2",
+      "maxLength": 120,
+      "label": { "en": "Which city or region do you live in?" },
+      "simple": { "en": "Where do you live?" },
+      "hint": { "en": "For example Addis Ababa, or the name of your camp or town." }
+    },
+    {
+      "id": "idType",
+      "type": "single",
+      "icon": "id-card",
+      "required": true,
+      "voice": true,
+      "label": { "en": "Which ID document do you have?" },
+      "simple": { "en": "What ID do you have?" },
+      "hint": { "en": "You do not need to upload it now. If you have no document, a partner can help." },
+      "options": [
+        { "value": "kebele-id", "label": { "en": "Kebele ID" } },
+        { "value": "passport", "label": { "en": "Passport" } },
+        { "value": "refugee-id", "label": { "en": "Refugee ID" } },
+        { "value": "other-document", "label": { "en": "Another document" } },
+        {
+          "value": "refer-me",
+          "label": { "en": "I don't have a document. Please refer me to a partner who can help." },
+          "simple": { "en": "I have no ID. Please help me." }
+        }
+      ]
+    },
+    {
+      "id": "referringPartner",
+      "type": "text",
+      "icon": "partner",
+      "required": false,
+      "voice": true,
+      "maxLength": 200,
+      "showIf": { "id": "idType", "equals": "refer-me" },
+      "label": { "en": "Which organisation is helping you, if any?" },
+      "simple": { "en": "Who is helping you?" },
+      "hint": { "en": "For example a refugee agency or a local community group. Skip this if no one is helping you yet." }
+    },
+    {
+      "id": "course",
+      "type": "single",
+      "icon": "course",
+      "required": true,
+      "voice": true,
+      "label": { "en": "Which course do you want to join?" },
+      "simple": { "en": "Which course?" },
+      "options": [
+        { "value": "virtual-assistant", "label": { "en": "Virtual Assistant" } },
+        { "value": "software-engineering", "label": { "en": "Software Engineering" } },
+        { "value": "data-analytics", "label": { "en": "Data Analytics" } },
+        { "value": "ai-career-essentials", "label": { "en": "AI Career Essentials" } },
+        { "value": "not-sure", "label": { "en": "I'm not sure yet" } }
+      ]
+    },
+    {
+      "id": "supportRequest",
+      "type": "text",
+      "icon": "lock",
+      "required": false,
+      "private": true,
+      "multiline": true,
+      "maxLength": 1000,
+      "label": { "en": "Is there anything you'd like our support team to know privately?" },
+      "simple": { "en": "Anything private to tell our support team?" },
+      "hint": {
+        "en": "Optional. Only the support team can see this. It is kept apart from your profile. You can skip this question."
+      }
+    }
+  ]
+}
