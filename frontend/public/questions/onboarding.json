@@ -1,6 +1,6 @@
 {
   "$schema": "../../../shared/questions.schema.json",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "flowId": "alx-onboarding",
   "title": { "en": "Join ALX" },
   "questions": [
@@ -40,7 +40,7 @@
       "type": "date",
       "icon": "calendar",
       "required": true,
-      "voice": true,
+      "voice": false,
       "autocomplete": "bday",
       "label": { "en": "What is your date of birth?" },
       "simple": { "en": "When were you born?" },
