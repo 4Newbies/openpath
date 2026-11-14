@@ -34,14 +34,86 @@
 .op-root[data-larger-text] {
   font-size: 1.25em;
 }
+
+/* Dark mode follows the device setting. Hosts can set --openpath-color-dark
+   (a light colour, used with dark text on buttons). Contrast on #1b1b1f:
+   text 15.6:1, muted 10.4:1, accent 9.0:1, error 10.8:1, borders 6.6:1. */
+@media (prefers-color-scheme: dark) {
+  .op-root {
+    --op-accent: var(--openpath-color-dark, #8cb8ff);
+    --op-accent-text: #111;
+    --op-text: #f2f2f2;
+    --op-muted: #c8c8c8;
+    --op-bg: #1b1b1f;
+    --op-border: #9a9a9a;
+    --op-error: #ffb4ab;
+    --op-selected: #23344d;
+    --op-focus: #f2f2f2;
+  }
+}
+
+/* High contrast: chosen by the learner, or asked for by the device. */
 .op-root[data-high-contrast] {
   --op-accent: #000;
+  --op-accent-text: #fff;
   --op-text: #000;
   --op-muted: #000;
+  --op-bg: #fff;
   --op-border: #000;
   --op-error: #8b0000;
   --op-selected: #fff3b0;
+  --op-focus: #000;
   --op-border-width: 3px;
+}
+@media (prefers-contrast: more) {
+  .op-root {
+    --op-accent: #000;
+    --op-accent-text: #fff;
+    --op-text: #000;
+    --op-muted: #000;
+    --op-bg: #fff;
+    --op-border: #000;
+    --op-error: #8b0000;
+    --op-selected: #fff3b0;
+    --op-focus: #000;
+    --op-border-width: 3px;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  .op-root[data-high-contrast] {
+    --op-accent: #ffeb3b;
+    --op-accent-text: #000;
+    --op-text: #fff;
+    --op-muted: #fff;
+    --op-bg: #000;
+    --op-border: #fff;
+    --op-error: #ff9e9e;
+    --op-selected: #333000;
+    --op-focus: #ffeb3b;
+  }
+}
+@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
+  .op-root {
+    --op-accent: #ffeb3b;
+    --op-accent-text: #000;
+    --op-text: #fff;
+    --op-muted: #fff;
+    --op-bg: #000;
+    --op-border: #fff;
+    --op-error: #ff9e9e;
+    --op-selected: #333000;
+    --op-focus: #ffeb3b;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 *,
@@ -62,9 +134,39 @@
   overflow-wrap: anywhere;
 }
 
+.op-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em 1em;
+  margin-bottom: 0.5em;
+}
 .op-title {
-  margin: 0 0 0.25em;
+  margin: 0;
   font-weight: 700;
+}
+.op-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-inline-start: auto;
+}
+.op-small {
+  padding: 0.35em 0.9em;
+  font-weight: 600;
+}
+.op-wide {
+  display: block;
+  width: 100%;
+  margin: 0 0 1.5em;
+}
+.op-push {
+  margin-inline-start: auto;
+}
+.op-subheading {
+  font-weight: 700;
+  margin-bottom: 0.5em;
 }
 .op-progress {
   margin: 0 0 1em;
@@ -226,6 +328,8 @@ textarea.op-input {
 .op-primary {
   background: var(--op-accent);
   color: var(--op-accent-text);
+}
+.op-nav .op-primary {
   margin-inline-start: auto;
 }
 .op-secondary {

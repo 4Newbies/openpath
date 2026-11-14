@@ -26,6 +26,18 @@ const en = {
   errorPrefix: 'Error: ',
   submitFailed: 'We could not send your answers. They are still saved on this device. Please try again.',
   fixBeforeSubmit: 'One answer needs to be fixed before you can send.',
+  settings: 'Settings',
+  setupTitle: 'How do you want to use this?',
+  setupIntro:
+    "You can use your phone or computer's own tools, like a screen reader, voice typing or switch access. Or turn on helpers below. You can change this at any time with the Settings button.",
+  useDeviceTools: "Continue with my device's own tools",
+  helpersLegend: 'Or choose helpers',
+  helperReadAloud: 'Read questions to me',
+  helperVoice: 'I want to speak my answers',
+  helperSimple: 'Simple words',
+  helperLarger: 'Bigger text',
+  helperContrast: 'High contrast',
+  continueWithHelpers: 'Continue with these helpers',
   errors: {
     required_text: 'Please type an answer to this question.',
     required_single: 'Please choose one answer.',

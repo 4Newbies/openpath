@@ -4,13 +4,16 @@ import { h } from './dom.js';
 import { loadFlow } from './loader.js';
 import { errorMessage, pick, t } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
+import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
 import { renderReview } from './review.js';
+import { renderSetup } from './setup.js';
 import { renderStep } from './steps/index.js';
 import { createStore } from './store.js';
 import css from './styles.css?inline';
 
 let counter = 0;
 const DONE = 'done';
+const SETUP = 'setup';
 
 /**
  * <openpath-flow questions="/questions/onboarding.json" api="http://localhost:4000" lang="en">
@@ -59,14 +62,17 @@ export class OpenPathFlow extends HTMLElement {
     this.flow = flow;
     this.store = createStore(flow);
     this.nav = createNavigator(flow);
+    this.prefs = loadPrefs();
     const api = this.getAttribute('api');
     this.api = api ? createApi(api) : null;
-    this.store.subscribe(() => this.applyPreferences());
     this.applyPreferences();
 
     if (this.api && this.store.state.sessionId) await this.checkSession();
     const step = this.nav.resolve(this.store.state.step, this.store.state.answers);
-    this.go(step, { focus: false });
+    if (step !== this.store.state.step) this.store.setStep(step);
+    // First visit: ask how the learner wants to use the form.
+    if (!this.prefs.chosen) this.openSetup({ focus: false });
+    else this.go(step, { focus: false });
   }
 
   // A saved session that was submitted elsewhere, or no longer exists, starts over.
@@ -79,10 +85,61 @@ export class OpenPathFlow extends HTMLElement {
     }
   }
 
-  applyPreferences() {
-    const access = this.store?.state.preferences.access ?? [];
-    this.root.toggleAttribute('data-larger-text', access.includes('larger-text'));
-    this.root.toggleAttribute('data-high-contrast', access.includes('high-contrast'));
+  applyPreferences(prefs = this.prefs) {
+    this.root.toggleAttribute('data-larger-text', Boolean(prefs?.largerText));
+    this.root.toggleAttribute('data-high-contrast', Boolean(prefs?.highContrast));
+    this.root.toggleAttribute('data-simple', Boolean(prefs?.simple));
+  }
+
+  setPrefs(changes) {
+    this.prefs = { ...this.prefs, ...changes };
+    savePrefs(this.prefs);
+    this.applyPreferences();
+  }
+
+  /** Which optional helpers this browser (or a host provider) can offer. */
+  helperAvailability() {
+    return { readAloud: false, voice: false };
+  }
+
+  openSetup({ focus = true } = {}) {
+    this.setupOpen = true;
+    this.render({ focus });
+    this.emit('openpath:step', { flowId: this.flow.flowId, stepId: SETUP, index: 0, total: this.nav.position(null, this.store.state.answers).total });
+  }
+
+  closeSetup(choices) {
+    const available = this.helperAvailability();
+    const next = { chosen: true };
+    for (const k of HELPERS) next[k] = Boolean(choices[k]) && (k in available ? available[k] : true);
+    // Turning voice off and on again asks for consent again.
+    if (!next.voice) next.voiceConsent = this.prefs.voiceConsent === 'deny' ? null : this.prefs.voiceConsent;
+    this.setPrefs(next);
+    this.syncAccessAnswer();
+    this.setupOpen = false;
+    this.go(this.store.state.step ?? this.nav.first(this.store.state.answers));
+  }
+
+  // Keep an access question (setsPreference: "access") in step with the helpers.
+  syncAccessAnswer() {
+    const q = this.flow.questions.find((x) => x.setsPreference === 'access');
+    if (!q) return;
+    const current = this.store.state.answers[q.id];
+    const keep = (Array.isArray(current) ? current : []).filter((v) => !(v in ACCESS_TO_HELPER));
+    const values = [...new Set([...keep, ...helpersToAccess(this.prefs, q)])];
+    const ordered = q.options.map((o) => o.value).filter((v) => values.includes(v));
+    this.store.setAnswer(q.id, ordered.length ? ordered : undefined);
+  }
+
+  accessAnswerChanged(question, values) {
+    const on = new Set(Array.isArray(values) ? values : []);
+    const available = this.helperAvailability();
+    const changes = {};
+    for (const o of question.options) {
+      const helper = ACCESS_TO_HELPER[o.value];
+      if (helper) changes[helper] = on.has(o.value) && (helper in available ? available[helper] : true);
+    }
+    this.setPrefs(changes);
   }
 
   announce(text) {
@@ -98,10 +155,17 @@ export class OpenPathFlow extends HTMLElement {
   }
 
   get step() {
-    return this.done ? DONE : this.store.state.step;
+    if (this.done) return DONE;
+    if (this.setupOpen) return SETUP;
+    return this.store.state.step;
+  }
+
+  tr(key, vars) {
+    return t(this.uiLang, key, vars);
   }
 
   go(step, { focus = true, returnToReview } = {}) {
+    this.setupOpen = false;
     if (step !== this.step || returnToReview !== undefined) this.store.setStep(step, returnToReview === undefined ? {} : { returnToReview });
     if (step !== REVIEW) this.submitError = null;
     this.render({ focus });
@@ -114,9 +178,36 @@ export class OpenPathFlow extends HTMLElement {
     const { answers } = this.store.state;
     this.view.textContent = '';
     const title = pick(this.flow.title, lang);
-    this.view.append(h('p', { class: 'op-title', lang: title.lang !== lang ? title.lang : undefined, text: title.text }));
+    const header = h(
+      'div',
+      { class: 'op-header' },
+      h('p', { class: 'op-title', lang: title.lang !== lang ? title.lang : undefined, text: title.text }),
+    );
+    this.view.append(header);
+    if (this.step !== DONE && this.step !== SETUP) {
+      header.append(
+        h('div', { class: 'op-tools' }, h('button', { type: 'button', class: 'op-button op-secondary op-small', onclick: () => this.openSetup(), text: this.tr('settings') })),
+      );
+    }
 
     if (this.step === DONE) return this.renderDone(focus);
+    if (this.step === SETUP) {
+      const setup = renderSetup({
+        tr: (k, v) => this.tr(k, v),
+        uid: this.uid,
+        prefs: this.prefs,
+        available: this.helperAvailability(),
+        onDeviceTools: () => this.closeSetup({}),
+        onContinue: (choices) => this.closeSetup(choices),
+        // Bigger text and high contrast show straight away (no re-render, focus stays).
+        onPreview: (key, on) => {
+          if (key === 'largerText' || key === 'highContrast') this.applyPreferences({ ...this.prefs, [key]: on });
+        },
+      });
+      this.view.append(setup.node);
+      if (focus) setup.focusHeading();
+      return;
+    }
     if (this.step === REVIEW) {
       const review = renderReview({
         flow: this.flow,
@@ -145,6 +236,7 @@ export class OpenPathFlow extends HTMLElement {
       uid: this.uid,
       onChange: (value) => {
         this.store.setAnswer(q.id, value);
+        if (q.setsPreference === 'access') this.accessAnswerChanged(q, value);
         // A showIf answer can change the number of steps: update the text in
         // place (no re-render, so focus stays where it is).
         const pos = this.nav.position(q.id, this.store.state.answers);

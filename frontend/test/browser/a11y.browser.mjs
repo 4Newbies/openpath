@@ -129,8 +129,11 @@ async function walk(browser, { width, prefs, label }) {
     document.addEventListener('openpath:complete', (e) => window.__events.push(e.detail));
   });
   const host = page.locator('openpath-flow');
-  await host.getByRole('heading', { name: /Before you start/ }).waitFor();
   const at = (s) => `${label} / ${s}`;
+  await host.getByRole('heading', { name: 'How do you want to use this?' }).waitFor();
+  await checkScreen(page, at('setup'));
+  await host.getByRole('button', { name: "Continue with my device's own tools" }).click();
+  await host.getByRole('heading', { name: /Before you start/ }).waitFor();
 
   await checkScreen(page, at('info'));
   await next(page, at('info'));

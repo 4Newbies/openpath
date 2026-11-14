@@ -2,7 +2,11 @@ import { vi } from 'vitest';
 import '../src/index.js';
 
 /** Mount <openpath-flow> with a question file served by a mocked fetch. */
-export async function mount(flow, attrs = {}) {
+export async function mount(flow, attrs = {}, { prefs = { chosen: true } } = {}) {
+  // By default the learner has already answered "How do you want to use
+  // this?" with every helper off. Pass prefs: null to see that step.
+  if (prefs) localStorage.setItem('openpath:prefs', JSON.stringify(prefs));
+  else localStorage.removeItem('openpath:prefs');
   if (flow) {
     globalThis.fetch = vi.fn(async (url) => {
       if (String(url).endsWith('/q.json')) return { ok: true, json: async () => structuredClone(flow) };
