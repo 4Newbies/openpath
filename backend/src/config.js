@@ -15,6 +15,7 @@ export function loadConfig(env = process.env) {
   return {
     port: int('PORT', 4000),
     databaseUrl: env.DATABASE_URL || '',
+    store: env.OPENPATH_STORE === 'memory' ? 'memory' : 'auto',
     corsOrigins: (env.CORS_ORIGINS || '')
       .split(',')
       .map((s) => s.trim())

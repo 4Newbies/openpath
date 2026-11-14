@@ -7,15 +7,28 @@ import { createPgStore } from './store/pg.js';
 const config = loadConfig();
 const flows = loadFlows(config.questionsDir);
 
+const MEMORY_WARNING = [
+  '',
+  '  ************************************************************',
+  '  *  IN-MEMORY STORE: nothing is written to a database.       *',
+  '  *  All sessions and answers are LOST when the API stops or  *',
+  '  *  restarts. For trying things out only.                    *',
+  '  ************************************************************',
+  '',
+].join('\n');
+
+// OPENPATH_STORE=memory (npm run dev:memory) forces the in-memory store.
+const wantMemory = config.store === 'memory' || !config.databaseUrl;
 let store;
-if (config.databaseUrl) {
-  store = createPgStore(config.databaseUrl);
-} else if (process.env.NODE_ENV === 'production') {
-  console.error('[openpath] DATABASE_URL is required in production');
+if (wantMemory && process.env.NODE_ENV === 'production') {
+  console.error('[openpath] The in-memory store is not allowed in production: set DATABASE_URL and unset OPENPATH_STORE.');
   process.exit(1);
-} else {
-  console.warn('[openpath] DATABASE_URL not set: using an in-memory store. Data is lost on restart.');
+} else if (wantMemory) {
+  if (!config.databaseUrl) console.warn('[openpath] DATABASE_URL is not set.');
+  console.warn(MEMORY_WARNING);
   store = createMemoryStore();
+} else {
+  store = createPgStore(config.databaseUrl);
 }
 
 // Postgres may still be starting (e.g. under Docker Compose): retry briefly.
@@ -25,7 +38,7 @@ for (let attempt = 1; ; attempt++) {
     break;
   } catch (e) {
     if (attempt >= 20) throw e;
-    console.warn(`[openpath] database not ready (${e.code || e.message}), retrying…`);
+    console.warn(`[openpath] database not ready (${e.code || e.message}), retrying...`);
     await new Promise((r) => setTimeout(r, 1500));
   }
 }
