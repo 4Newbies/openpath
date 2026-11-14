@@ -1,6 +1,6 @@
 import { cleanAnswer, validateAnswer, validateAnswers } from '../../shared/flow.js';
 import { ApiError, createApi } from './api.js';
-import { h } from './dom.js';
+import { h, setText } from './dom.js';
 import { loadFlow } from './loader.js';
 import { errorMessage, FALLBACK_LANG, hasPack, LANG_CODE_RE, labelOf, langAttrs, loadPack, packInfo, pick, t, tList } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
@@ -279,13 +279,13 @@ export class OpenPathFlow extends HTMLElement {
     const b = this.view.querySelector('.op-mic');
     if (!b) return;
     b.classList.toggle('op-mic-on', on);
-    b.textContent = this.tr(on ? 'stopListening' : 'speakAnswer');
+    setText(b, this.tr(on ? 'stopListening' : 'speakAnswer'));
   }
 
   setVoiceStatus(q, text) {
     this.voiceStatus = { questionId: q.id, text };
     const p = this.view.querySelector('.op-voice-status');
-    if (p) p.textContent = text;
+    if (p) setText(p, text);
     this.announce(text);
   }
 
@@ -421,7 +421,7 @@ export class OpenPathFlow extends HTMLElement {
     this.speaking = on;
     // Update the button in place so keyboard focus stays on it.
     const b = this.view.querySelector('.op-listen');
-    if (b) b.textContent = this.tr(on ? 'stopReading' : 'listen');
+    if (b) setText(b, this.tr(on ? 'stopReading' : 'listen'));
   }
 
   stopHelpers({ announce = false } = {}) {
@@ -484,7 +484,7 @@ export class OpenPathFlow extends HTMLElement {
     // Clear first so the same message is announced again.
     this.live.textContent = '';
     setTimeout(() => {
-      this.live.textContent = text;
+      setText(this.live, text);
     }, 50);
   }
 
@@ -601,7 +601,7 @@ export class OpenPathFlow extends HTMLElement {
         // place (no re-render, so focus stays where it is).
         const pos = this.nav.position(q.id, this.store.state.answers);
         const progress = this.view.querySelector('.op-progress');
-        if (progress) progress.textContent = this.tr('stepOf', { n: pos.index, total: pos.total });
+        if (progress) setText(progress, this.tr('stepOf', { n: pos.index, total: pos.total }));
       },
       // Date questions: the learner switched calendar. Show the other fields,
       // keep focus on the switch and say which calendar is in use now.
@@ -737,7 +737,7 @@ export class OpenPathFlow extends HTMLElement {
     const button = this.view.querySelector('.op-primary');
     if (button) {
       button.setAttribute('aria-disabled', 'true');
-      button.textContent = this.tr('submitting');
+      setText(button, this.tr('submitting'));
     }
     this.announce(this.tr('submitting'));
     let sessionId = null;

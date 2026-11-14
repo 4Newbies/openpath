@@ -104,6 +104,22 @@ function catalogs(lang, simple) {
   return list.filter(Boolean);
 }
 
+const isEnglish = (catalog) => catalog === en.strings || catalog === en.simple;
+
+/**
+ * Interface text that fell back to English in a form in another language.
+ * It behaves like a string; dom.js reads .lang and .dir and marks the
+ * element (or wraps the text) with lang="en", and dir="ltr" in a
+ * right-to-left form, so screen readers use the right voice.
+ */
+export class FallbackText extends String {
+  constructor(text, lang, dir) {
+    super(text);
+    this.lang = lang;
+    this.dir = dir;
+  }
+}
+
 /** A list (for example month names) from the pack, falling back to English. */
 export function tList(lang, key, simple = false) {
   for (const c of catalogs(lang, simple)) {
@@ -115,12 +131,19 @@ export function tList(lang, key, simple = false) {
 
 export function t(lang, key, vars = {}, simple = false) {
   let raw;
+  let from;
   for (const c of catalogs(lang, simple)) {
     raw = lookup(c, key);
-    if (typeof raw === 'string') break;
+    if (typeof raw === 'string') {
+      from = c;
+      break;
+    }
   }
   if (typeof raw !== 'string') raw = key;
-  return raw.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? String(vars[k]) : `{${k}}`));
+  const text = raw.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? String(vars[k]) : `{${k}}`));
+  if (lang === en.code || !isEnglish(from)) return text;
+  const { dir } = packInfo(lang);
+  return new FallbackText(text, en.code, dir !== en.dir ? en.dir : undefined);
 }
 
 /** Plain-language message for an answer error code from shared/flow.js. */

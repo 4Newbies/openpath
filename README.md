@@ -150,8 +150,9 @@ OpenPath.setVoiceProvider({
 
 English is built into `openpath.js`. Other packs are fetched only when used. A missing
 string, a broken pack or a failed download falls back to English; the form keeps working.
-`lang` and `dir` on the form come from the pack. Question text that has no translation
-is shown in English and marked `lang="en"` (and `dir="ltr"` in a right-to-left form).
+`lang` and `dir` on the form come from the pack. Anything shown in English because it has
+no translation (a missing interface string or untranslated question text) is marked
+`lang="en"`, and `dir="ltr"` in a right-to-left form, so screen readers switch voice.
 
 ### Add a language (one JSON file)
 

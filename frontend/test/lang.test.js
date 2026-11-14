@@ -49,8 +49,10 @@ describe('language pack files', () => {
   it('a missing string falls back to English, a missing list too', () => {
     registerPack({ code: 'zz', name: 'Zed', dir: 'ltr', strings: { next: 'Zed next' } });
     expect(t('zz', 'next')).toBe('Zed next');
-    expect(t('zz', 'back')).toBe('Back');
-    expect(t('zz', 'errors.invalid_date')).toBe(en.strings.errors.invalid_date);
+    expect(String(t('zz', 'back'))).toBe('Back');
+    expect(t('zz', 'back')).toMatchObject({ lang: 'en' }); // marked as English
+    expect(typeof t('zz', 'next')).toBe('string'); // translated text is a plain string
+    expect(String(t('zz', 'errors.invalid_date'))).toBe(en.strings.errors.invalid_date);
     expect(tList('zz', 'gregorianMonths')[0]).toBe('January');
   });
 
@@ -125,6 +127,29 @@ describe('<openpath-flow> languages', () => {
     const q = $(el, 'h2 label span');
     expect([q.textContent, q.getAttribute('lang'), q.getAttribute('dir')]).toEqual(['Your name', 'en', 'ltr']);
     expect($(el, '.op-title').getAttribute('lang')).toBe('en');
+  });
+
+  it('interface text that falls back to English is marked lang="en" (and dir="ltr" in a right-to-left form)', async () => {
+    // A right-to-left pack that only translates "Next" and the error for an empty answer.
+    registerPack({ code: 'zz', name: 'Zed', dir: 'rtl', strings: { next: 'Zed-next', errors: { required_text: 'Zed-required' } } });
+    const el = await mount({ ...flow, questions: [{ ...flow.questions[0] }, { id: 'more', type: 'text', label: { en: 'More' } }] }, { lang: 'zz' });
+    const next = button(el, 'Zed-next');
+    expect([next.getAttribute('lang'), next.getAttribute('dir')]).toEqual([null, null]);
+    const settings = button(el, 'Settings');
+    expect([settings.getAttribute('lang'), settings.getAttribute('dir')]).toEqual(['en', 'ltr']);
+    const progress = $(el, '.op-progress');
+    expect([progress.textContent, progress.getAttribute('lang')]).toEqual(['Step 1 of 2', 'en']);
+    next.click();
+    expect($(el, '.op-error').textContent).toContain('Zed-required');
+    expect($(el, '.op-error .op-sr').getAttribute('lang')).toBe('en'); // "Error: " came from English
+    expect($(el, '.op-error [lang]:not(.op-sr)')).toBeNull(); // the translated message is not marked
+    el.remove();
+
+    // In a left-to-right pack only lang is added.
+    registerPack({ code: 'yy', name: 'Why', dir: 'ltr', strings: { next: 'Why-next' } });
+    const ltr = await mount(flow, { lang: 'yy' });
+    expect([button(ltr, 'Settings').getAttribute('lang'), button(ltr, 'Settings').getAttribute('dir')]).toEqual(['en', null]);
+    expect(button(ltr, 'Why-next').getAttribute('lang')).toBeNull();
   });
 
   it('the stylesheet uses only logical properties, so it works in both directions', () => {
