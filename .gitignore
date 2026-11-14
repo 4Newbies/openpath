@@ -1,4 +1,11 @@
 node_modules/
 dist/
-.env
 *.log
+
+# Secrets: never commit real environment files, anywhere in the repo.
+.env
+.env.*
+!.env.example
+
+# Runtime data written by the prototype server (contains personal data and tokens).
+server/data/

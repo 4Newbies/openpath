@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Secrets and runtime data
+.env
+.env.*
+!.env.example
+data/
