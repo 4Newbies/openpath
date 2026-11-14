@@ -195,7 +195,9 @@ async function walk(browser, mode) {
   // 1. How do you want to use this?
   await host.getByRole('heading', { name: 'How do you want to use this?' }).waitFor();
   await checkScreen(page, at('setup'));
-  const firstControl = await shadow(page, `return root.querySelector('button, input').textContent;`);
+  // After the language switcher (when the host offers languages), the first
+  // control keeps every helper off.
+  const firstControl = await shadow(page, `return [...root.querySelectorAll('button, input')].find((c) => !c.closest('.op-lang')).textContent;`);
   if (firstControl !== "Continue with my device's own tools") fail(at('setup'), `first control is "${firstControl}"`);
   if (mode.helpers.length) {
     for (const label of mode.helpers) await host.getByLabel(label, { exact: true }).check();

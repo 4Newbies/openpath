@@ -4,7 +4,9 @@ import { h } from './dom.js';
 // everything off, so screen reader, voice typing and switch users can go
 // straight on with their own tools.
 
-export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContinue, onPreview }) {
+// When the host offers several languages, a language switcher comes right
+// after the heading: each language is written in itself, with its own lang.
+export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContinue, onPreview, languages = [], current, onLanguage }) {
   const headingId = `op-${uid}-setup-heading`;
   const introId = `op-${uid}-setup-intro`;
   const options = [
@@ -31,10 +33,35 @@ export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContin
 
   const chosen = () => Object.fromEntries(Object.entries(boxes).map(([k, el]) => [k, el.checked]));
   const heading = h('h2', { id: headingId, class: 'op-question', tabindex: '-1', text: tr('setupTitle') });
+  const languageSwitcher =
+    languages.length > 1
+      ? h(
+          'fieldset',
+          { class: 'op-group op-lang' },
+          h('legend', { class: 'op-legend op-subheading', text: tr('language') }),
+          h(
+            'div',
+            { class: 'op-lang-list' },
+            languages.map((l) =>
+              h('button', {
+                type: 'button',
+                class: 'op-button op-secondary op-small',
+                lang: l.code,
+                dir: l.dir,
+                'data-lang': l.code,
+                'aria-pressed': l.code === current ? 'true' : 'false',
+                onclick: () => l.code !== current && onLanguage(l.code),
+                text: l.name,
+              }),
+            ),
+          ),
+        )
+      : null;
   const node = h(
     'div',
     { class: 'op-step op-setup' },
     heading,
+    languageSwitcher,
     h('p', { id: introId, class: 'op-hint', text: tr('setupIntro') }),
     h('button', { type: 'button', class: 'op-button op-primary op-wide', onclick: onDeviceTools, text: tr('useDeviceTools') }),
     h(

@@ -168,6 +168,18 @@
   font-weight: 700;
   margin-bottom: 0.5em;
 }
+.op-lang {
+  margin-bottom: 1em;
+}
+.op-lang-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+}
+.op-lang [aria-pressed='true'] {
+  background: var(--op-accent);
+  color: var(--op-accent-text);
+}
 .op-progress {
   margin: 0 0 1em;
   color: var(--op-muted);

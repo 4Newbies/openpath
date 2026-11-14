@@ -1,5 +1,20 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { vi } from 'vitest';
 import '../src/index.js';
+
+const LANG_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../lang');
+
+/** Serve frontend/lang/<code>.json for a .../lang/<code>.json URL (404 if missing). */
+export function langFile(url) {
+  const m = /\/lang\/([a-zA-Z-]+)\.json$/.exec(String(url));
+  if (!m) return null;
+  const file = path.join(LANG_DIR, `${m[1]}.json`);
+  if (!fs.existsSync(file)) return { ok: false, status: 404 };
+  const text = fs.readFileSync(file, 'utf8');
+  return { ok: true, status: 200, json: async () => JSON.parse(text) };
+}
 
 /** Mount <openpath-flow> with a question file served by a mocked fetch. */
 export async function mount(flow, attrs = {}, { prefs = { chosen: true } } = {}) {
@@ -10,6 +25,8 @@ export async function mount(flow, attrs = {}, { prefs = { chosen: true } } = {})
   if (flow) {
     globalThis.fetch = vi.fn(async (url) => {
       if (String(url).endsWith('/q.json')) return { ok: true, json: async () => structuredClone(flow) };
+      const pack = langFile(url);
+      if (pack) return pack;
       throw new Error(`unexpected fetch ${url}`);
     });
   }

@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createBrowserSpeech } from '../src/speech.js';
 import { createBrowserVoice, matchSpoken } from '../src/voice.js';
+import en from '../lang/en.json';
+import am from '../lang/am.json';
+
+const matchSpokenWith = matchSpoken;
 
 // ---- fakes ------------------------------------------------------------------
 
@@ -205,8 +209,10 @@ describe('matching spoken words to options', () => {
     expect(matchSpoken(multi, 'nothing')).toBeUndefined();
   });
 
-  it('understands yes and no in English and Amharic', () => {
+  it('understands yes and no in English and Amharic (words from the language packs)', () => {
+    const words = { yes: [...en.strings.voiceYes, ...am.strings.voiceYes], no: [...en.strings.voiceNo, ...am.strings.voiceNo] };
     const yn = { type: 'yesno' };
+    const matchSpoken = (q, said) => matchSpokenWith(q, said, words);
     expect(matchSpoken(yn, 'yes please')).toBe(true);
     expect(matchSpoken(yn, 'አዎ')).toBe(true);
     expect(matchSpoken(yn, 'no')).toBe(false);

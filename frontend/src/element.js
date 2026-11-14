@@ -2,7 +2,7 @@ import { validateAnswer, validateAnswers } from '../../shared/flow.js';
 import { ApiError, createApi } from './api.js';
 import { h } from './dom.js';
 import { loadFlow } from './loader.js';
-import { errorMessage, labelOf, pick, t } from './messages.js';
+import { errorMessage, FALLBACK_LANG, hasPack, LANG_CODE_RE, labelOf, loadPack, packInfo, pick, t, tList } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
 import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
 import { getSpeech, getVoice, loadVoiceModule, voiceAvailable } from './providers.js';
@@ -16,8 +16,25 @@ let counter = 0;
 const DONE = 'done';
 const SETUP = 'setup';
 
+// Language packs live next to the script by default:
+// <script src=".../openpath.js"> loads packs from ".../lang/<code>.json".
+// (Read while the classic script runs; null when imported as a module.)
+const SCRIPT_LANG_BASE = (() => {
+  try {
+    const src = document.currentScript?.src;
+    return src ? new URL('lang/', src).href : null;
+  } catch {
+    return null;
+  }
+})();
+
 /**
- * <openpath-flow questions="/questions/onboarding.json" api="http://localhost:4000" lang="en">
+ * <openpath-flow questions="/questions/onboarding.json" api="http://localhost:4000" lang="en"
+ *                languages="am,en,ar" lang-path="/openpath/lang/">
+ *
+ * lang:      starting language (default en). Packs other than English are fetched
+ *            from lang-path (default: the "lang" folder next to openpath.js).
+ * languages: optional; shows a language switcher on the first screen and in Settings.
  *
  * Events (bubble and cross the shadow boundary):
  *   openpath:step      detail { flowId, stepId, index, total }
@@ -25,7 +42,7 @@ const SETUP = 'setup';
  */
 export class OpenPathFlow extends HTMLElement {
   static get observedAttributes() {
-    return ['lang'];
+    return ['lang', 'languages', 'lang-path'];
   }
 
   constructor() {
@@ -37,8 +54,69 @@ export class OpenPathFlow extends HTMLElement {
     this.saveChain = Promise.resolve();
   }
 
+  /** The interface language actually in use (English until its pack has loaded). */
   get uiLang() {
-    return this.getAttribute('lang') === 'am' ? 'am' : 'en';
+    return this.activeLang ?? FALLBACK_LANG;
+  }
+
+  langBase() {
+    const attr = this.getAttribute('lang-path');
+    try {
+      if (attr) return new URL(attr.endsWith('/') ? attr : `${attr}/`, document.baseURI).href;
+      return SCRIPT_LANG_BASE ?? new URL('lang/', document.baseURI).href;
+    } catch {
+      return 'lang/';
+    }
+  }
+
+  /** Codes from the languages="am,en,ar" attribute, in the host's order. */
+  languageList() {
+    const list = (this.getAttribute('languages') ?? '').split(/[\s,]+/).filter((c) => LANG_CODE_RE.test(c));
+    return [...new Set(list)];
+  }
+
+  requestedLang() {
+    const list = this.languageList();
+    const saved = this.prefs?.lang;
+    if (saved && list.includes(saved)) return saved; // the learner's own choice
+    const attr = (this.getAttribute('lang') ?? '').trim();
+    if (LANG_CODE_RE.test(attr)) return attr;
+    return list[0] ?? FALLBACK_LANG;
+  }
+
+  /**
+   * Load the packs needed (the wanted language and every switcher language,
+   * so each option can show its own name) and switch to the wanted one.
+   * A pack that fails to load means English. Returns false if a newer
+   * call took over.
+   */
+  async resolveLanguage() {
+    const token = {};
+    this.langToken = token;
+    const base = this.langBase();
+    const list = this.languageList();
+    const wanted = this.requestedLang();
+    const codes = [...new Set([wanted, ...list])].filter((c) => c !== FALLBACK_LANG);
+    await Promise.all(codes.map((c) => loadPack(c, base)));
+    if (this.langToken !== token) return false;
+    this.activeLang = hasPack(wanted) ? wanted : FALLBACK_LANG;
+    this.switcherLangs = list.filter(hasPack).map(packInfo);
+    this.applyLanguage();
+    return true;
+  }
+
+  applyLanguage() {
+    this.root.setAttribute('lang', this.uiLang);
+    this.root.setAttribute('dir', packInfo(this.uiLang).dir);
+  }
+
+  async switchLanguage(code) {
+    this.setPrefs({ lang: code });
+    if (!(await this.resolveLanguage())) return;
+    this.stopHelpers();
+    this.render();
+    // Focus stays on the language just chosen (now pressed).
+    this.view.querySelector(`.op-lang [data-lang="${code}"]`)?.focus();
   }
 
   connectedCallback() {
@@ -46,7 +124,7 @@ export class OpenPathFlow extends HTMLElement {
     const shadow = this.attachShadow({ mode: 'open' });
     this.live = h('div', { class: 'op-sr', 'aria-live': 'polite' });
     this.view = h('div', { class: 'op-card' }, h('p', { text: this.tr('loading') }));
-    this.root = h('div', { class: 'op-root', lang: this.uiLang }, this.view, this.live);
+    this.root = h('div', { class: 'op-root', lang: FALLBACK_LANG, dir: 'ltr' }, this.view, this.live);
     shadow.append(h('style', { text: css }), this.root);
     // Escape stops read-aloud and voice input. Nothing else is taken over.
     this.root.addEventListener('keydown', (e) => {
@@ -59,19 +137,19 @@ export class OpenPathFlow extends HTMLElement {
     this.stopHelpers();
   }
 
-  attributeChangedCallback(name) {
-    if (name === 'lang' && this.root) {
-      this.root.setAttribute('lang', this.uiLang);
-      if (this.flow) this.render();
-    }
+  attributeChangedCallback(name, oldValue, value) {
+    if (!this.flow || oldValue === value) return;
+    // A host that sets lang later means it: it replaces a saved choice.
+    if (name === 'lang' && this.prefs?.lang) this.setPrefs({ lang: null });
+    this.resolveLanguage().then((ok) => ok && this.render());
   }
 
   async start() {
-    const { flow } = await loadFlow(this.getAttribute('questions'));
+    this.prefs = loadPrefs();
+    const [{ flow }] = await Promise.all([loadFlow(this.getAttribute('questions')), this.resolveLanguage()]);
     this.flow = flow;
     this.store = createStore(flow);
     this.nav = createNavigator(flow);
-    this.prefs = loadPrefs();
     const api = this.getAttribute('api');
     this.api = api ? createApi(api) : null;
     this.applyPreferences();
@@ -261,7 +339,8 @@ export class OpenPathFlow extends HTMLElement {
       field.focus();
       return this.setVoiceStatus(q, this.tr('youSaid', { text }));
     }
-    const value = mod.matchSpoken(q, text);
+    const words = (k) => [...tList(this.uiLang, k), ...tList(FALLBACK_LANG, k)];
+    const value = mod.matchSpoken(q, text, { yes: words('voiceYes'), no: words('voiceNo') });
     if (value === undefined) {
       this.setVoiceStatus(q, this.tr('noMatch', { text }));
       this.view.querySelector('.op-options input')?.focus();
@@ -472,6 +551,9 @@ export class OpenPathFlow extends HTMLElement {
         uid: this.uid,
         prefs: this.prefs,
         available: this.helperAvailability(),
+        languages: this.switcherLangs ?? [],
+        current: this.uiLang,
+        onLanguage: (code) => this.switchLanguage(code),
         onDeviceTools: () => this.closeSetup({}),
         onContinue: (choices) => this.closeSetup(choices),
         // Bigger text and high contrast show straight away (no re-render, focus stays).

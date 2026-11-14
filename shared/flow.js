@@ -8,6 +8,8 @@ export const QUESTION_TYPES = ['text', 'phone', 'date', 'single', 'multi', 'yesn
 const ID_RE = /^[a-zA-Z][a-zA-Z0-9_]{0,63}$/;
 const FLOW_ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const OPTION_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+// Language codes in question files and sessions: "en", "am", "ar", "pt-BR" ...
+export const LANG_RE = /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/;
 const DEFAULT_MAX_LENGTH = 500;
 const QUESTION_KEYS = new Set([
   'id', 'type', 'label', 'simple', 'hint', 'icon', 'required', 'voice', 'options',
@@ -31,7 +33,7 @@ function checkLocalized(value, path, errors, { required = false } = {}) {
     errors.push(`${path}.en must be a non-empty string`);
   }
   for (const [k, v] of Object.entries(value)) {
-    if (k !== 'en' && k !== 'am') errors.push(`${path}.${k} is not a supported language (use en or am)`);
+    if (!LANG_RE.test(k)) errors.push(`${path}.${k} is not a language code (use codes like en, am, ar)`);
     else if (typeof v !== 'string' || v.trim() === '') errors.push(`${path}.${k} must be a non-empty string`);
   }
 }
@@ -92,7 +94,7 @@ export function validateFlow(flow) {
         errors.push(`${where}.audio must be an object like { "en": "audio/q1.mp3" }`);
       } else {
         for (const [k, v] of Object.entries(q.audio)) {
-          if (k !== 'en' && k !== 'am') errors.push(`${where}.audio.${k} is not a supported language (use en or am)`);
+          if (!LANG_RE.test(k)) errors.push(`${where}.audio.${k} is not a language code (use codes like en, am, ar)`);
           else if (typeof v !== 'string' || !AUDIO_URL_RE.test(v)) errors.push(`${where}.audio.${k} must be an http(s) URL or a relative path`);
         }
       }

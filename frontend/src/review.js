@@ -1,8 +1,6 @@
 import { isEmpty, visibleQuestions } from '../../shared/flow.js';
 import { h, sr } from './dom.js';
-import { labelOf, t } from './messages.js';
-
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+import { labelOf, t, tList } from './messages.js';
 
 /** Human-readable answer text for the review screen. */
 export function displayAnswer(q, value, lang, simple = false) {
@@ -20,7 +18,8 @@ export function displayAnswer(q, value, lang, simple = false) {
       return t(lang, value ? 'yes' : 'no', {}, simple);
     case 'date': {
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-      return m && MONTHS[Number(m[2]) - 1] ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : value;
+      const month = m && tList(lang, 'gregorianMonths')[Number(m[2]) - 1];
+      return month ? t(lang, 'dateFormat', { day: Number(m[3]), month, year: m[1] }) : value;
     }
     default:
       return String(value);

@@ -26,15 +26,17 @@
     }
   },
   "$defs": {
+    "langCode": {
+      "description": "A language code: en, am, ar, or a code with a region such as pt-BR.",
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$"
+    },
     "localized": {
-      "description": "Text in each language. English is required; other languages fall back to English.",
+      "description": "Text in each language, keyed by language code. English is required; other languages fall back to English.",
       "type": "object",
       "required": ["en"],
-      "additionalProperties": false,
-      "properties": {
-        "en": { "type": "string", "minLength": 1 },
-        "am": { "type": "string", "minLength": 1 }
-      }
+      "propertyNames": { "$ref": "#/$defs/langCode" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
     },
     "audioUrl": {
       "description": "Audio file URL: http(s) or a path relative to the page. No other schemes (javascript:, data: ...).",
@@ -44,12 +46,9 @@
     "audio": {
       "description": "Recorded audio of the question for read-aloud, per language. Played instead of a synthetic voice; loaded only when played.",
       "type": "object",
-      "additionalProperties": false,
       "minProperties": 1,
-      "properties": {
-        "en": { "$ref": "#/$defs/audioUrl" },
-        "am": { "$ref": "#/$defs/audioUrl" }
-      }
+      "propertyNames": { "$ref": "#/$defs/langCode" },
+      "additionalProperties": { "$ref": "#/$defs/audioUrl" }
     },
     "option": {
       "type": "object",

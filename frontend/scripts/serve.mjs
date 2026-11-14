@@ -1,5 +1,6 @@
 // Zero-dependency static server for the demo. Serves:
 //   /openpath.js   -> dist/openpath.js (run `npm run build` first)
+//   /lang/*        -> dist/lang/* (language packs)
 //   /questions/*   -> public/questions/*
 //   /savanna/*     -> public/savanna/*
 //   /demo/*        -> demo/*
@@ -14,6 +15,7 @@ const port = Number(process.env.PORT || 5173);
 const MOUNTS = [
   ['/openpath.js.map', path.join(root, 'dist/openpath.js.map')],
   ['/openpath.js', path.join(root, 'dist/openpath.js')],
+  ['/lang/', path.join(root, 'dist/lang/')], // language packs, next to the script
   ['/questions/', path.join(root, 'public/questions/')],
   ['/savanna/', path.join(root, 'public/savanna/')],
   ['/demo/', path.join(root, 'demo/')],

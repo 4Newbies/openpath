@@ -24,11 +24,11 @@ describe('questions.schema.json', () => {
     'unknown type': (f) => (q(f, 'phone').type = 'slider'),
     'choice without options': (f) => delete q(f, 'language').options,
     'text with options': (f) => (q(f, 'fullName').options = [{ value: 'a', label: { en: 'A' } }]),
-    'unsupported language': (f) => (f.title.fr = 'Rejoindre'),
+    'not a language code': (f) => (f.title.French = 'Rejoindre'),
     'unknown question field': (f) => (q(f, 'fullName').colour = 'red'),
     'required info screen': (f) => (q(f, 'intro').required = true),
     'audio with a javascript: URL': (f) => (q(f, 'fullName').audio = { en: 'javascript:alert(1)' }),
-    'audio in an unsupported language': (f) => (q(f, 'fullName').audio = { fr: 'a.mp3' }),
+    'audio under a non-language key': (f) => (q(f, 'fullName').audio = { French: 'a.mp3' }),
   };
 
   it('schema and validator both accept audio files per language', () => {

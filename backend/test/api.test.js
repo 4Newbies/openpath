@@ -59,7 +59,7 @@ for (const [name, makeStore] of stores) {
       it('rejects unknown flows and languages with the standard error shape', async () => {
         const r = await request(app).post('/v1/sessions').send({ flowId: 'nope' }).expect(400);
         expect(r.body).toEqual({ error: { code: 'unknown_flow', message: expect.any(String), field: 'flowId' } });
-        const l = await request(app).post('/v1/sessions').send({ flowId: 'alx-onboarding', lang: 'fr' }).expect(400);
+        const l = await request(app).post('/v1/sessions').send({ flowId: 'alx-onboarding', lang: 'French' }).expect(400);
         expect(l.body.error.code).toBe('invalid_lang');
       });
 

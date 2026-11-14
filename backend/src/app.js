@@ -2,12 +2,11 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
-import { validateAnswers } from '../../shared/flow.js';
+import { LANG_RE, validateAnswers } from '../../shared/flow.js';
 import { ApiError, answerError, errorBody, errorHandler } from './errors.js';
 import { newResumeCode, newSessionId, SESSION_ID_RE } from './ids.js';
 import { StoreConflict, StoreDuplicate } from './store/memory.js';
 
-const LANGS = new Set(['en', 'am']);
 
 /**
  * Build the Express app.
@@ -110,7 +109,9 @@ export function createApp({ store, flows, config, log = console }) {
     if (typeof flowId !== 'string' || !flows.has(flowId)) {
       throw new ApiError(400, 'unknown_flow', 'This question flow is not known to the server.', 'flowId');
     }
-    if (!LANGS.has(lang)) throw new ApiError(400, 'invalid_lang', 'Language must be "en" or "am".', 'lang');
+    if (typeof lang !== 'string' || !LANG_RE.test(lang)) {
+      throw new ApiError(400, 'invalid_lang', 'Language must be a language code such as "en", "am" or "ar".', 'lang');
+    }
     const flow = flows.get(flowId);
     for (let attempt = 0; attempt < 5; attempt++) {
       try {

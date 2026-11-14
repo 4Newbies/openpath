@@ -29,7 +29,7 @@ paths:
               additionalProperties: false
               properties:
                 flowId: { type: string, example: alx-onboarding }
-                lang: { type: string, enum: [en, am], default: en }
+                lang: { type: string, pattern: '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$', default: en, example: am, description: 'Interface language of the form (en, am, ar ...).' }
       responses:
         '201':
           description: Session created
@@ -168,7 +168,7 @@ components:
         resumeCode: { type: string }
         flowId: { type: string }
         flowVersion: { type: string }
-        lang: { type: string, enum: [en, am] }
+        lang: { type: string, example: am }
         status: { type: string, enum: [open, submitted] }
         step: { type: [string, 'null'] }
         answers: { $ref: '#/components/schemas/Answers' }

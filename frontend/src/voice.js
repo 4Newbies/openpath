@@ -87,11 +87,11 @@ const norm = (s) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const YES = ['yes', 'yeah', 'yep', 'yup', 'sure', 'correct', 'አዎ', 'አዎን', 'እሺ'];
-const NO = ['no', 'nope', 'not', 'አይ', 'አይደለም', 'የለም'];
 
 function candidates(option) {
-  const texts = [option.label?.en, option.label?.am, option.simple?.en, option.simple?.am, option.value.replace(/[-_]/g, ' ')];
+  // Option text in every language the question file has, so an answer in
+  // another language still matches.
+  const texts = [...Object.values(option.label ?? {}), ...Object.values(option.simple ?? {}), option.value.replace(/[-_]/g, ' ')];
   const out = new Set();
   for (const t of texts) {
     if (!t) continue;
@@ -117,14 +117,16 @@ function score(said, option) {
  * Turn what the learner said into an answer for a choice question.
  * single -> option value, multi -> [values], yesno -> true/false;
  * undefined when nothing matches (the answer is left empty).
+ * `words` holds the yes/no words from the language packs (voiceYes, voiceNo).
  */
-export function matchSpoken(question, transcript) {
+export function matchSpoken(question, transcript, words = {}) {
   const said = norm(transcript);
   if (!said) return undefined;
   if (question.type === 'yesno') {
-    const words = said.split(' ');
-    const yes = words.some((w) => YES.includes(w));
-    const no = words.some((w) => NO.includes(w));
+    const YES = (words.yes ?? []).map(norm);
+    const NO = (words.no ?? []).map(norm);
+    const yes = said.split(' ').some((w) => YES.includes(w));
+    const no = said.split(' ').some((w) => NO.includes(w));
     return yes === no ? undefined : yes;
   }
   const scored = (question.options ?? []).map((o) => ({ value: o.value, s: score(said, o) })).filter((x) => x.s > 0);

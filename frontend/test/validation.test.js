@@ -13,7 +13,7 @@ describe('validateFlow', () => {
     const errors = validateFlow({
       version: '1',
       flowId: 'Bad Id',
-      title: { en: 'T', fr: 'x' },
+      title: { en: 'T', French: 'x' },
       questions: [
         { id: 'a', type: 'single', label: { en: 'A' } },
         { id: 'a', type: 'text', label: { en: 'dup' } },
@@ -27,7 +27,7 @@ describe('validateFlow', () => {
     expect(errors).toEqual(
       expect.arrayContaining([
         expect.stringMatching(/flowId/),
-        expect.stringMatching(/title\.fr is not a supported language/),
+        expect.stringMatching(/title\.French is not a language code/),
         expect.stringMatching(/"a"\) needs a non-empty options list/),
         expect.stringMatching(/id is used twice/),
         expect.stringMatching(/type must be one of/),

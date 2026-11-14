@@ -23,6 +23,7 @@ export function defaultPrefs() {
     largerText: false,
     highContrast: false,
     voiceConsent: null, // null = not asked yet, 'allow' or 'deny'
+    lang: null, // language chosen in the switcher (only used when the host offers it)
   };
 }
 
@@ -41,6 +42,7 @@ export function loadPrefs(store = storage()) {
     const out = defaultPrefs();
     for (const k of [...HELPERS, 'chosen']) out[k] = saved[k] === true;
     if (saved.voiceConsent === 'allow' || saved.voiceConsent === 'deny') out.voiceConsent = saved.voiceConsent;
+    if (typeof saved.lang === 'string' && /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/.test(saved.lang)) out.lang = saved.lang;
     return out;
   } catch {
     return defaultPrefs();
