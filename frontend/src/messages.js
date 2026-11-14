@@ -135,7 +135,8 @@ export function errorMessage(lang, question, code, simple = false, vars = {}, va
   // Phone errors give an example number for the question's country.
   const country = question.type === 'phone' ? PHONE_COUNTRIES[phoneCountry(question)] : null;
   if (code === 'invalid_phone' && question.type === 'phone' && !country) key = 'invalid_phone_any';
-  return t(lang, `errors.${key}`, { max: question.maxLength ?? 500, example: country?.example ?? '', ...vars }, simple);
+  const examples = { example: country?.example ?? '', intlExample: '+254 712 345 678' };
+  return t(lang, `errors.${key}`, { max: question.maxLength ?? 500, ...examples, ...vars }, simple);
 }
 
 /**

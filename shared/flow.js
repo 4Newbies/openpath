@@ -23,9 +23,10 @@ export const DEFAULT_PHONE_COUNTRY = 'ET';
 export const phoneCountry = (q) => q.country ?? DEFAULT_PHONE_COUNTRY;
 
 /**
- * A phone number in any accepted local or international form -> "+251911234567",
- * or null when it is not a valid number for the country.
- * Accepts 0911 234 567, 911 234 567, +251 911 234 567, 00251..., 251...
+ * A phone number in any accepted form -> international format, or null.
+ * For the country (ET): 0911 234 567, 911 234 567, +251 911 234 567,
+ * 00251..., 251... -> "+251911234567" (must be a valid number there).
+ * Any other country: + and 8 to 15 digits -> "+447700900123".
  */
 export function normalizePhone(value, country = DEFAULT_PHONE_COUNTRY) {
   const c = PHONE_COUNTRIES[country];
@@ -35,7 +36,7 @@ export function normalizePhone(value, country = DEFAULT_PHONE_COUNTRY) {
   const cc = c.callingCode;
   let national;
   if (compact.startsWith('+')) {
-    if (!compact.startsWith(`+${cc}`)) return null;
+    if (!compact.startsWith(`+${cc}`)) return /^\+\d{8,15}$/.test(compact) ? compact : null;
     national = compact.slice(cc.length + 1);
   } else if (compact.startsWith(`00${cc}`)) national = compact.slice(cc.length + 2);
   else if (compact.startsWith(cc) && compact.length > cc.length + 8) national = compact.slice(cc.length);

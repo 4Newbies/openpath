@@ -20,7 +20,16 @@ describe('phone numbers for a country (default ET)', () => {
     expect(cleanAnswer(et, typed)).toBe(stored);
   });
 
-  it.each(['12', '0811 234 567', '0911 234 56', '09112345678', '+44 7700 900123', 'call me', '+251 911 234 567 ext 2'])(
+  it.each([
+    ['+44 7700 900123', '+447700900123'],
+    ['+254 712 345 678', '+254712345678'],
+    ['+1 (202) 555-0143', '+12025550143'],
+  ])('accepts the international number %s and stores %s', (typed, stored) => {
+    expect(validateAnswer(et, typed)).toBeNull();
+    expect(cleanAnswer(et, typed)).toBe(stored);
+  });
+
+  it.each(['12', '0811 234 567', '0911 234 56', '09112345678', '+251 811 234 567', '+1234567', '+1234567890123456', '+44 abc', 'call me', '+251 911 234 567 ext 2'])(
     'rejects %s',
     (typed) => expect(validateAnswer(et, typed)).toBe('invalid_phone'),
   );
@@ -66,14 +75,14 @@ describe('phone question in the form', () => {
     expect(input.getAttribute('autocomplete')).toBe('tel-national');
     expect(input.getAttribute('dir')).toBe('ltr');
     const firstDesc = el.shadowRoot.getElementById(input.getAttribute('aria-describedby').split(' ')[0]);
-    expect(firstDesc.textContent).toBe('The country code +251 is already added.');
+    expect(firstDesc.textContent).toBe('The country code +251 is already added. For a number from another country, start with +.');
   });
 
   it('gives an example in the error message, in the learner’s language', async () => {
     const el = await mount(flow);
     type($(el, 'input[type=tel]'), '0811');
     button(el, 'Next').click();
-    expect($(el, '.op-error').textContent).toContain('Type it like this: 0911 234 567.');
+    expect($(el, '.op-error').textContent).toContain('Type it like this: 0911 234 567. For a number from another country, start with + and the country code, for example +254 712 345 678.');
     expect(active(el)).toBe($(el, 'input[type=tel]'));
     el.remove();
 
@@ -81,6 +90,15 @@ describe('phone question in the form', () => {
     type($(am, 'input[type=tel]'), '0811');
     button(am, 'ቀጣይ').click();
     expect($(am, '.op-error').textContent).toContain('እንዲህ ይጻፉት፦ 0911 234 567።');
+    expect($(am, '.op-error').textContent).toContain('+254 712 345 678');
+  });
+
+  it('keeps a number from another country as typed, in international format', async () => {
+    const el = await mount(flow);
+    type($(el, 'input[type=tel]'), '+44 7700 900123');
+    button(el, 'Next').click();
+    expect(el.store.state.answers.phone).toBe('+447700900123');
+    expect($(el, '.op-review-item dd').textContent).toBe('+447700900123');
   });
 
   it('stores the number in international format and reads it back on review', async () => {

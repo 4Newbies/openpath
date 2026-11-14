@@ -216,7 +216,10 @@ Ethiopian calendar.
 
 `country` defaults to `"ET"`: the form shows **+251** as text before the box, accepts
 `0911 234 567`, `0711 234 567`, `911 234 567` or `+251 911 234 567`, and stores
-`+251911234567`. The error message gives an example (*Type it like this: 0911 234 567.*).
+`+251911234567`. A number from another country is accepted when it starts with `+` and
+has 8 to 15 digits (`+44 7700 900123` is stored as `+447700900123`). The error message
+gives both examples (*Type it like this: 0911 234 567. For a number from another country,
+start with + and the country code, for example +254 712 345 678.*).
 `"country": "any"` is a plain phone box (7 to 15 digits, stored as typed). To add a
 country, add one entry to `PHONE_COUNTRIES` in `shared/flow.js` (calling code, trunk
 prefix, number pattern, example) and its code to the `country` enum in

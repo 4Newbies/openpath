@@ -1,6 +1,6 @@
 {
   "$schema": "../../../shared/questions.schema.json",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "flowId": "alx-onboarding",
   "title": { "en": "Join ALX", "am": "ALXን ይቀላቀሉ" },
   "questions": [
@@ -37,7 +37,10 @@
       "autocomplete": "tel-national",
       "label": { "en": "What is your phone number?", "am": "ስልክ ቁጥርዎ ስንት ነው?" },
       "simple": { "en": "Your phone number", "am": "ስልክ ቁጥርዎ" },
-      "hint": { "en": "For example 0911 234 567 or 0711 234 567.", "am": "ለምሳሌ 0911 234 567 ወይም 0711 234 567።" }
+      "hint": {
+        "en": "For example 0911 234 567 or 0711 234 567. For a number from another country, start with + and the country code.",
+        "am": "ለምሳሌ 0911 234 567 ወይም 0711 234 567። የሌላ አገር ቁጥር ከሆነ በ+ እና በአገሩ መለያ ቁጥር ይጀምሩ።"
+      }
     },
     {
       "id": "dateOfBirth",
