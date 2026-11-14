@@ -142,6 +142,17 @@ export function pick(localized, lang) {
   return { text: localized.en ?? '', lang: 'en' };
 }
 
+/**
+ * lang (and dir, when the direction differs) for text shown in another
+ * language than the form's, e.g. English question text in an Arabic form.
+ * Spread into the element's attributes: h('span', { ...langAttrs(used, lang) }).
+ */
+export function langAttrs(used, lang) {
+  if (!used || used === lang) return {};
+  const dir = packInfo(used).dir;
+  return { lang: used, dir: dir !== packInfo(lang).dir ? dir : undefined };
+}
+
 /** The question (or option) text to show: its `simple` version in simple mode. */
 export function labelOf(item, lang, simple) {
   return pick(simple && item.simple ? item.simple : item.label, lang);

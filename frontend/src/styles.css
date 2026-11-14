@@ -1,5 +1,8 @@
 /* <openpath-flow> styles. Lives inside the shadow root, so host page CSS
    can't break it. Hosts theme it with --openpath-color and --openpath-font.
+   Only logical properties (inline/block, start/end), so the same rules lay
+   out left-to-right and right-to-left: dir on .op-root comes from the
+   language pack, and flex rows (Back / Next) follow it.
    Contrast (on white): text #1b1b1b 16.9:1, hint #474747 9.3:1,
    default accent #0b5cad 6.6:1, error #b3261e 6.5:1, borders #5c5c5c 6.7:1. */
 
@@ -27,6 +30,7 @@
   font-family: var(--openpath-font, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Noto Sans Ethiopic', sans-serif);
   font-size: 1em;
   line-height: 1.5;
+  text-align: start;
   color: var(--op-text);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -125,10 +129,11 @@
 .op-card {
   background: var(--op-bg);
   color: var(--op-text);
-  max-width: 40rem;
-  width: 100%;
+  max-inline-size: 40rem;
+  inline-size: 100%;
   margin-inline: auto;
-  padding: clamp(1rem, 4vw, 2rem);
+  padding-block: clamp(1rem, 4vw, 2rem);
+  padding-inline: clamp(1rem, 4vw, 2rem);
   border: 1px solid var(--op-border);
   border-radius: 0.5rem;
   overflow-wrap: anywhere;
@@ -140,7 +145,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5em 1em;
-  margin-bottom: 0.5em;
+  margin-block-end: 0.5em;
 }
 .op-title {
   margin: 0;
@@ -153,23 +158,25 @@
   margin-inline-start: auto;
 }
 .op-small {
-  padding: 0.35em 0.9em;
+  padding-block: 0.35em;
+  padding-inline: 0.9em;
   font-weight: 600;
 }
 .op-wide {
   display: block;
-  width: 100%;
-  margin: 0 0 1.5em;
+  inline-size: 100%;
+  margin-block: 0 1.5em;
+  margin-inline: 0;
 }
 .op-push {
   margin-inline-start: auto;
 }
 .op-subheading {
   font-weight: 700;
-  margin-bottom: 0.5em;
+  margin-block-end: 0.5em;
 }
-.op-lang {
-  margin-bottom: 1em;
+.op-group.op-lang {
+  margin-block-end: 1em;
 }
 .op-lang-list {
   display: flex;
@@ -181,7 +188,8 @@
   color: var(--op-accent-text);
 }
 .op-progress {
-  margin: 0 0 1em;
+  margin-block: 0 1em;
+  margin-inline: 0;
   color: var(--op-muted);
 }
 
@@ -189,7 +197,8 @@
   display: flex;
   gap: 0.5em;
   align-items: flex-start;
-  margin: 0 0 0.5em;
+  margin-block: 0 0.5em;
+  margin-inline: 0;
   font-size: 1.4em;
   line-height: 1.3;
   font-weight: 700;
@@ -199,7 +208,7 @@
 }
 .op-icon {
   flex: none;
-  margin-top: 0.05em;
+  margin-block-start: 0.05em;
   color: var(--op-accent);
 }
 .op-optional {
@@ -209,17 +218,20 @@
 }
 
 .op-hint {
-  margin: 0 0 1em;
+  margin-block: 0 1em;
+  margin-inline: 0;
   color: var(--op-muted);
 }
 .op-body {
-  margin: 0 0 1em;
+  margin-block: 0 1em;
+  margin-inline: 0;
 }
 
 .op-error {
-  margin: 0 0 1em;
-  padding-left: 0.6em;
-  border-left: 5px solid var(--op-error);
+  margin-block: 0 1em;
+  margin-inline: 0;
+  padding-inline-start: 0.6em;
+  border-inline-start: 5px solid var(--op-error);
   color: var(--op-error);
   font-weight: 700;
 }
@@ -228,18 +240,20 @@
   border: 0;
   margin: 0;
   padding: 0;
-  min-width: 0;
+  min-inline-size: 0;
 }
 .op-legend {
   padding: 0;
-  max-width: 100%;
+  max-inline-size: 100%;
+  text-align: start;
 }
 
 .op-input {
   display: block;
-  width: 100%;
-  min-height: 2.75em;
-  padding: 0.5em 0.6em;
+  inline-size: 100%;
+  min-block-size: 2.75em;
+  padding-block: 0.5em;
+  padding-inline: 0.6em;
   font: inherit;
   color: var(--op-text);
   background: var(--op-bg);
@@ -247,7 +261,7 @@
   border-radius: 0.3em;
 }
 textarea.op-input {
-  min-height: 7em;
+  min-block-size: 7em;
   resize: vertical;
 }
 .op-input[aria-invalid='true'] {
@@ -262,14 +276,14 @@ textarea.op-input {
 }
 .op-date-part label {
   display: block;
-  margin-bottom: 0.25em;
+  margin-block-end: 0.25em;
 }
 .op-date-day,
 .op-date-month {
-  width: 4.5em;
+  inline-size: 4.5em;
 }
 .op-date-year {
-  width: 6.5em;
+  inline-size: 6.5em;
 }
 
 .op-options {
@@ -284,8 +298,9 @@ textarea.op-input {
   display: flex;
   align-items: flex-start;
   gap: 0.6em;
-  min-height: 2.75em;
-  padding: 0.5em 0.75em;
+  min-block-size: 2.75em;
+  padding-block: 0.5em;
+  padding-inline: 0.75em;
   border: var(--op-border-width) solid var(--op-border);
   border-radius: 0.3em;
   background: var(--op-bg);
@@ -300,9 +315,10 @@ textarea.op-input {
   z-index: 1; /* above the full-row label overlay */
   font: inherit;
   flex: none;
-  width: 1.4em;
-  height: 1.4em;
-  margin: 0.05em 0 0;
+  inline-size: 1.4em;
+  block-size: 1.4em;
+  margin-block: 0.05em 0;
+  margin-inline: 0;
   accent-color: var(--op-accent);
 }
 .op-option label {
@@ -325,12 +341,13 @@ textarea.op-input {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75em;
-  margin-top: 1.5em;
+  margin-block-start: 1.5em;
 }
 .op-button {
-  min-height: 2.75em;
-  min-width: 2.75em;
-  padding: 0.5em 1.2em;
+  min-block-size: 2.75em;
+  min-inline-size: 2.75em;
+  padding-block: 0.5em;
+  padding-inline: 1.2em;
   font: inherit;
   font-weight: 700;
   border-radius: 0.3em;
@@ -354,20 +371,22 @@ textarea.op-input {
 }
 
 .op-voice {
-  margin-top: 1em;
+  margin-block-start: 1em;
 }
 .op-mic.op-mic-on {
   background: var(--op-accent);
   color: var(--op-accent-text);
 }
 .op-voice-status {
-  margin: 0.5em 0 0;
+  margin-block: 0.5em 0;
+  margin-inline: 0;
 }
 .op-voice-status:empty {
   display: none;
 }
 .op-consent {
-  padding: 0.75em 1em;
+  padding-block: 0.75em;
+  padding-inline: 1em;
   border: var(--op-border-width) solid var(--op-border);
   border-radius: 0.3em;
 }
@@ -376,14 +395,15 @@ textarea.op-input {
   font-weight: 600;
 }
 .op-consent-actions {
-  margin-top: 0.75em;
+  margin-block-start: 0.75em;
 }
 .op-consent-actions .op-primary {
   margin-inline-start: 0;
 }
 
 .op-review {
-  margin: 0 0 1em;
+  margin-block: 0 1em;
+  margin-inline: 0;
   padding: 0;
 }
 .op-review-item {
@@ -391,8 +411,9 @@ textarea.op-input {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25em 1em;
-  padding: 0.75em 0;
-  border-bottom: 1px solid var(--op-border);
+  padding-block: 0.75em;
+  padding-inline: 0;
+  border-block-end: 1px solid var(--op-border);
 }
 .op-review-item dt {
   flex: 1 1 100%;
@@ -431,8 +452,8 @@ textarea.op-input {
 
 .op-sr {
   position: absolute !important;
-  width: 1px;
-  height: 1px;
+  inline-size: 1px;
+  block-size: 1px;
   margin: -1px;
   padding: 0;
   overflow: hidden;

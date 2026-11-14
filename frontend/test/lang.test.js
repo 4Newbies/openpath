@@ -116,6 +116,23 @@ describe('<openpath-flow> languages', () => {
     expect($$(el, '.op-lang button')).toHaveLength(2);
   });
 
+  it('Arabic (draft pack) lays the form out right to left; English fallback text keeps lang="en" dir="ltr"', async () => {
+    expect(readPack('ar.json')).toMatchObject({ dir: 'rtl', draft: true, note: expect.stringMatching(/DRAFT.*native Arabic speaker/s) });
+    const el = await mount(flow, { lang: 'ar' });
+    expect($(el, '.op-root').getAttribute('dir')).toBe('rtl');
+    expect($(el, '.op-root').getAttribute('lang')).toBe('ar');
+    expect(button(el, 'التالي')).toBeTruthy();
+    const q = $(el, 'h2 label span');
+    expect([q.textContent, q.getAttribute('lang'), q.getAttribute('dir')]).toEqual(['Your name', 'en', 'ltr']);
+    expect($(el, '.op-title').getAttribute('lang')).toBe('en');
+  });
+
+  it('the stylesheet uses only logical properties, so it works in both directions', () => {
+    const css = fs.readFileSync(path.resolve(LANG_DIR, '../src/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const physical = css.match(/(^|[\s;{])((margin|padding|border)-(left|right|top|bottom)|left|right|top|bottom|float|(min-|max-)?(width|height))\s*:|text-align:\s*(left|right)/gm);
+    expect(physical).toBeNull();
+  });
+
   it('ignores a saved choice the host no longer offers, and shows no switcher without languages', async () => {
     const el = await mount(flow, { lang: 'en' }, { prefs: { chosen: false, lang: 'am' } });
     expect($(el, '.op-root').getAttribute('lang')).toBe('en');

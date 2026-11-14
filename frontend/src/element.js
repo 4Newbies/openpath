@@ -2,7 +2,7 @@ import { validateAnswer, validateAnswers } from '../../shared/flow.js';
 import { ApiError, createApi } from './api.js';
 import { h } from './dom.js';
 import { loadFlow } from './loader.js';
-import { errorMessage, FALLBACK_LANG, hasPack, LANG_CODE_RE, labelOf, loadPack, packInfo, pick, t, tList } from './messages.js';
+import { errorMessage, FALLBACK_LANG, hasPack, LANG_CODE_RE, labelOf, langAttrs, loadPack, packInfo, pick, t, tList } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
 import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
 import { getSpeech, getVoice, loadVoiceModule, voiceAvailable } from './providers.js';
@@ -535,7 +535,7 @@ export class OpenPathFlow extends HTMLElement {
     const header = h(
       'div',
       { class: 'op-header' },
-      h('p', { class: 'op-title', lang: title.lang !== lang ? title.lang : undefined, text: title.text }),
+      h('p', { class: 'op-title', ...langAttrs(title.lang, lang), text: title.text }),
     );
     this.view.append(header);
     const tools = h('div', { class: 'op-tools' });

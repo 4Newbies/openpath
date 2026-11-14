@@ -1,6 +1,6 @@
 import { h, ids, sr } from '../dom.js';
 import { icon } from '../icons.js';
-import { labelOf, pick, t } from '../messages.js';
+import { labelOf, langAttrs, pick, t } from '../messages.js';
 
 /**
  * Every step gets a context:
@@ -20,7 +20,7 @@ export function idsFor(ctx) {
 /** Text with a lang attribute when it fell back to another language. */
 export function localized(tag, attrs, value, lang) {
   const { text, lang: used } = pick(value, lang);
-  return h(tag, { ...attrs, lang: used !== lang ? used : undefined, text });
+  return h(tag, { ...attrs, ...langAttrs(used, lang), text });
 }
 
 /**
@@ -32,11 +32,11 @@ export function heading(ctx, { labelFor } = {}) {
   const i = idsFor(ctx);
   // Simple words mode shows the plain-words text and the question's icon.
   const { text, lang: used } = labelOf(q, lang, simple);
-  const textLang = used !== lang ? used : undefined;
+  const textLang = langAttrs(used, lang);
   const optional = !q.required && q.type !== 'info' ? [' ', h('span', { class: 'op-optional', text: t(lang, 'optional', {}, simple) })] : [];
   const inner = labelFor
-    ? h('label', { for: labelFor }, h('span', { lang: textLang, text }), optional)
-    : h('span', {}, h('span', { lang: textLang, text }), optional);
+    ? h('label', { for: labelFor }, h('span', { ...textLang, text }), optional)
+    : h('span', {}, h('span', { ...textLang, text }), optional);
   return h('h2', { id: i.heading, class: 'op-question', tabindex: '-1' }, simple ? icon(q.icon) : null, inner);
 }
 

@@ -1,7 +1,7 @@
 import { h } from '../dom.js';
 import { describedBy, errorText, heading, hint, idsFor } from './common.js';
 
-export function renderText(ctx, { type = 'text', autocomplete, inputmode } = {}) {
+export function renderText(ctx, { type = 'text', autocomplete, inputmode, dir } = {}) {
   const { q } = ctx;
   const i = idsFor(ctx);
   const attrs = {
@@ -10,6 +10,7 @@ export function renderText(ctx, { type = 'text', autocomplete, inputmode } = {})
     class: 'op-input',
     autocomplete: q.autocomplete ?? autocomplete ?? 'off',
     inputmode,
+    dir,
     'aria-required': q.required ? 'true' : undefined,
     'aria-invalid': ctx.error ? 'true' : undefined,
     'aria-describedby': describedBy(ctx),

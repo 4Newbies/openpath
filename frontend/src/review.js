@@ -1,6 +1,6 @@
 import { isEmpty, visibleQuestions } from '../../shared/flow.js';
 import { h, sr } from './dom.js';
-import { labelOf, t, tList } from './messages.js';
+import { labelOf, langAttrs, t, tList } from './messages.js';
 
 /** Human-readable answer text for the review screen. */
 export function displayAnswer(q, value, lang, simple = false) {
@@ -41,7 +41,7 @@ export function renderReview({ flow, answers, lang, simple = false, uid, onEdit,
       return h(
         'div',
         { class: 'op-review-item' },
-        h('dt', { lang: label.lang !== lang ? label.lang : undefined, text: label.text }),
+        h('dt', { ...langAttrs(label.lang, lang), text: label.text }),
         h('dd', { class: isEmpty(answers[q.id]) ? 'op-review-empty' : undefined, text: displayAnswer(q, answers[q.id], lang, simple) }),
         h(
           'dd',
