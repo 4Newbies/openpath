@@ -646,6 +646,7 @@ export class OpenPathFlow extends HTMLElement {
   announce(text) {
     // Clear first so the same message is announced again. A newer message
     // replaces one that has not been announced yet.
+    this.announced = (this.announced ?? 0) + 1;
     clearTimeout(this.announceTimer);
     this.live.textContent = '';
     this.announceTimer = setTimeout(() => {
@@ -880,18 +881,22 @@ export class OpenPathFlow extends HTMLElement {
       if (announce) this.announce(this.tr('saved'));
       return this.saveChain;
     }
+    // The server may answer late: by then the learner may have caused a newer
+    // message (an error on the next step). "Saved" must never replace it.
+    const mark = this.announced ?? 0;
+    const say = (key) => announce && (this.announced ?? 0) === mark && this.announce(this.tr(key));
     this.saveChain = this.saveChain.then(async () => {
       try {
         await this.pushAnswers();
         this.setOffline(false);
-        if (announce) this.announce(this.tr('saved'));
+        say('saved');
       } catch (e) {
         if (isUnreachable(e)) {
-          // Kept on the device; sent when the connection returns.
+          // Kept on the device; sent when the connection returns. The note says so too.
           this.setOffline(true);
           this.startRetry();
-          if (announce) this.announce(this.tr('savedOffline'));
-        } else if (announce) this.announce(this.tr('savedLocal'));
+          say('savedOffline');
+        } else say('savedLocal');
       }
     });
     return this.saveChain;

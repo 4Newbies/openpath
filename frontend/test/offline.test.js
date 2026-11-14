@@ -53,6 +53,28 @@ async function mountWithApi() {
   return el;
 }
 
+describe('announcements', () => {
+  it('a late "Saved." never replaces a newer message such as an error', async () => {
+    const two = { ...flow, questions: [...flow.questions, { id: 'city', type: 'text', required: true, label: { en: 'Your city' } }] };
+    const el = await mount(two, { api: 'http://api.test' });
+    let answer;
+    globalThis.fetch = vi.fn(() => new Promise((resolve) => (answer = resolve))); // the server is slow
+    type($(el, 'input'), 'Hana');
+    button(el, 'Next').click(); // saving starts
+    button(el, 'Next').click(); // empty city: error
+    await vi.waitFor(() => expect($(el, '[aria-live]').textContent).toBe('Please type an answer to this question.'));
+    for (let i = 0; i < 5 && answer; i++) {
+      const done = answer;
+      answer = null;
+      done({ ok: true, status: 200, json: async () => ({ id: 'sid1', resumeCode: 'AAAA-BBBB' }) });
+      await wait(20);
+    }
+    await el.saveChain;
+    await wait();
+    expect($(el, '[aria-live]').textContent).toBe('Please type an answer to this question.');
+  });
+});
+
 describe('when the API cannot be reached', () => {
   it('keeps working: the answer stays on the device, a note says so and it is announced', async () => {
     const el = await mountWithApi();

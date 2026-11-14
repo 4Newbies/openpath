@@ -25,6 +25,8 @@ on http://localhost:4000 and serves the demo on http://localhost:5173:
 
 - http://localhost:5173/demo/ — the form (English, Amharic, Arabic)
 - http://localhost:5173/savanna/index.html — Savanna, with "Start accessible onboarding"
+- http://localhost:5173/demo/jobs.html — Career Gateway job list (filter, apply)
+- http://localhost:5173/demo/employer.html — employer form: post a job and the support offered
 
 Press Ctrl+C to stop both. **Nothing is saved to a database: every session and answer is
 lost when the API stops or restarts.** That is fine for trying the form and for frontend
@@ -62,11 +64,14 @@ cd backend  && npm install && npm test        # API + schema tests (in-memory st
 TEST_DATABASE_URL=postgres://openpath:local-dev-only@localhost:5433/openpath_test npm test
 
 cd frontend && npm install && npm test        # unit, element and axe (jsdom) tests
-npm run build && npm run test:browser         # real Chrome/Edge, whole form in en, am and ar (right to left),
+npm run build && npm run test:browser         # real Chrome/Edge: the onboarding form, the job list (filter,
+                                              # apply) and the employer form, in en, am and ar (right to left),
                                               # with each helper on and all off: axe incl. contrast,
                                               # 320px/200%/400% reflow, dark mode, focus, targets
-                                              # (21 walks send ~350 API requests, within the default
-                                              # rate limit; OPENPATH_LANGS=ar runs one language)
+                                              # (OPENPATH_LANGS=ar and OPENPATH_PAGES=jobs,employer run fewer;
+                                              # the employer walks post test jobs, so prefer npm run dev:memory;
+                                              # one full run is ~600 API requests: two runs within 15 minutes
+                                              # can reach the default rate limit)
 npm run review:amharic                        # rebuild docs/amharic-review.md after changing Amharic text
 ```
 
@@ -79,9 +84,11 @@ npm run review:amharic                        # rebuild docs/amharic-review.md a
 | `shared/ethiopian.js` | Ethiopian ⇄ Gregorian calendar conversion |
 | `frontend/lang/` | Language packs: `en.json` (built in), `am.json`, `ar.json` (draft) |
 | `docs/amharic-review.md` | All Amharic beside its English, for a native speaker to check |
-| `frontend/public/questions/onboarding.json` | Default onboarding flow (also bundled into `openpath.js` as the fallback) |
-| `frontend/src/` | `<openpath-flow>`: loader, store, navigator, one step component per type, review |
-| `frontend/demo/` | `index.html` (plain host page) and `onboarding.html` (opened from Savanna) |
+| `frontend/public/questions/` | The flows folder: `onboarding.json` (also bundled as the fallback), `job-application.json`, `employer-accommodations.json` |
+| `frontend/public/jobs/jobs.json` | Six sample jobs (schema.org/JobPosting, English and Amharic) |
+| `shared/jobs.js`, `shared/support-tags.js` | JobPosting validation and the shared list of support tags |
+| `frontend/src/` | `<openpath-flow>` (`element.js`: loader, store, navigator, steps, review) and `<openpath-jobs>` (`jobs.js`) |
+| `frontend/demo/` | `index.html` (plain host page), `onboarding.html` (opened from Savanna), `jobs.html` and `employer.html` |
 | `frontend/public/savanna/` | Savanna static pages, unchanged except one link in `index.html` |
 | `backend/` | Express API under `/v1`, Postgres store, `openapi.yaml` |
 | `client/`, `server/` | Earlier prototype, untouched |
@@ -164,6 +171,107 @@ OpenPath.setVoiceProvider({
 ```
 
 `lang` is the form's language code (`"en"`, `"am"`, `"ar"` ...). Pass `null` to go back to the browser's own provider.
+
+## Career Gateway
+
+A second tag, `<openpath-jobs>`, lists jobs from employers who say which support they
+offer, lets learners filter privately by the support they need, and opens the job
+application form (with all the accessibility helpers) for the job they pick.
+
+```html
+<script src="openpath.js"></script>
+<openpath-jobs src="/jobs/jobs.json" api="https://api.example.org" lang="en" languages="en,am,ar"></openpath-jobs>
+```
+
+Try it: `npm run demo:nodocker`, then http://localhost:5173/demo/jobs.html (job seekers) and
+http://localhost:5173/demo/employer.html (employers).
+
+| Attribute | What it does |
+|-----------|--------------|
+| `src` | URL of the jobs: schema.org/JobPosting JSON (a list, one job, or JSON-LD with `@graph`). |
+| `api` | Also lists the API's jobs (`GET /v1/jobs`; the API's version of a job wins) and saves applications there. Without it the file alone is used; if the API is down the file still shows. |
+| `lang`, `languages` | Language, as for `<openpath-flow>`. The learner's choice and helpers from "How do you want to use this?" are followed. |
+| `apply-flow` | Question file opened by *Apply* (default `job-application`), from `flows-path` (default: the `questions/` folder next to `openpath.js`). |
+| `heading-level` | Level of the "Jobs" heading (default 2); job titles are one level below. |
+
+The list:
+
+- Every job title is a heading, each job has exactly one button, *Apply for &lt;title&gt;*.
+- Facts are in a description list; dates show in the Ethiopian calendar in Amharic.
+- It is keyboard and screen reader friendly and reflows at 200% and 400% zoom.
+- The jobs are also written into the host page as JSON-LD
+  (`<script type="application/ld+json">`), so search engines and other platforms can
+  read them.
+
+### Private "Support I need" filter
+
+Learners tick the support they need; the list shows only jobs offering all of it, and
+the number of results is announced. The screen says: *"Only you can see this. Employers
+are not told."* The filter runs only in the browser: it is never sent to a server, never
+put in the URL, never included in an event or the application, and not stored unless the
+learner ticks *Remember on this device*.
+
+### Applying
+
+*Apply* opens `<openpath-flow flow="job-application">` for that job:
+
+- Name and phone are filled in from the onboarding answers (no retyping, WCAG 3.3.7).
+  Questions with `"prefillFrom": "alx-onboarding.fullName"` start with that earlier
+  answer. Answers to `"reuse": true` questions are kept on the device after sending, and
+  the done screen says so and offers *Forget them on this device*.
+- Short questions about experience and availability take voice answers.
+- *"Do you need any support for the interview?"* is optional and private. It asks for no
+  medical details, is stored apart from the application and is left out of
+  `openpath:complete`.
+- Disability information is never required to apply.
+- The job (`{ jobId, jobTitle, organisation }`) is sent with the session and included in
+  `openpath:complete` as `context`.
+
+### Employers
+
+`<openpath-flow flow="employer-accommodations">` asks for the job title, organisation,
+location, type, a description and the support offered (the same tags). Submitting it
+creates a job in the API. Partner platforms can also create or update jobs with
+`POST /v1/jobs` (a JobPosting, matched by `identifier`) when `JOBS_API_KEY` is set; send
+it as `Authorization: Bearer <key>`. In production `POST /v1/jobs` is off without a key.
+
+**Before real use:** the employer form is open to anyone and its jobs are listed straight
+away. Add employer sign-in or a review step first.
+
+### JobPosting format
+
+Only schema.org terms are used. Text in several languages uses JSON-LD language-tagged
+values. **Accommodations are stored in `jobBenefits`**, one text per support tag, using the
+tag's English text from `shared/support-tags.js`. OpenPath maps them back to the tags and
+shows them in the learner's language; other `jobBenefits` text is shown as written.
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "JobPosting",
+  "identifier": "sample-data-entry-addis",
+  "title": [{ "@value": "Data entry clerk", "@language": "en" }, { "@value": "የመረጃ መዝጋቢ", "@language": "am" }],
+  "description": [{ "@value": "Enter customer records ...", "@language": "en" }],
+  "hiringOrganization": { "@type": "Organization", "name": "Addis Digital Services" },
+  "jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": "Addis Ababa", "addressCountry": "ET" } },
+  "employmentType": "FULL_TIME",
+  "datePosted": "2026-11-02",
+  "validThrough": "2027-06-30",
+  "jobBenefits": ["Screen-reader-friendly application", "Step-free workplace"]
+}
+```
+
+Also accepted: `jobLocationType: "TELECOMMUTE"` with `applicantLocationRequirements`
+(`{ "@type": "Country", "name": "ET" }`), `url` and `directApply`. `employmentType` is one or
+more of `FULL_TIME`, `PART_TIME`, `CONTRACTOR`, `TEMPORARY`, `INTERN`, `VOLUNTEER`,
+`PER_DIEM`, `OTHER`. Jobs past `validThrough` are not listed.
+
+The support tags are: screen-reader-friendly application, sign language interpreter at
+interview, step-free workplace, flexible hours, remote work possible, written
+instructions, and extra time in assessments.
+
+`frontend/public/jobs/jobs.json` has six fictional sample jobs in Ethiopia, in English
+and Amharic.
 
 ## Languages
 
@@ -287,7 +395,7 @@ The form keeps working offline or when the API is down:
 | Event | `detail` |
 |-------|----------|
 | `openpath:step` | `{ flowId, stepId, index, total }` (`stepId` is `"setup"` on "How do you want to use this?" and `"review"` on the review screen) |
-| `openpath:complete` | `{ flowId, sessionId, answers }`, leaving out answers to `private` questions. Fired when the server has the answers (or at once without `api`). |
+| `openpath:complete` | `{ flowId, sessionId, answers, context? }`, leaving out answers to `private` questions; `context` is the job for an application. Fired when the server has the answers (or at once without `api`). |
 | `openpath:queued` | `{ flowId }`: *Send* was pressed while the server couldn't be reached; the answers wait on the device and `openpath:complete` follows when they are sent. |
 
 Both bubble and cross the shadow boundary (`composed: true`). Theme with

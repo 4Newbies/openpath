@@ -10,6 +10,25 @@ import en from '../lang/en.json';
 const css = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/styles.css'), 'utf8');
 
 describe('Amharic content', () => {
+  it.each(['job-application', 'employer-accommodations'])('every question in %s.json has Amharic too', (name) => {
+    const other = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), `../public/questions/${name}.json`), 'utf8'));
+    const missing = [];
+    if (!other.title.am) missing.push('title');
+    for (const q of other.questions) {
+      for (const k of ['label', 'simple', 'hint']) if (q[k] && !q[k].am?.trim()) missing.push(`${q.id}.${k}`);
+      for (const o of q.options ?? []) for (const k of ['label', 'simple', 'hint']) if (o[k] && !o[k].am?.trim()) missing.push(`${q.id}/${o.value}.${k}`);
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it('every sample job has an Amharic title, description and place', () => {
+    const jobs = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public/jobs/jobs.json'), 'utf8'))['@graph'];
+    const am = (v) => [].concat(v).find((x) => x['@language'] === 'am')?.['@value'] ?? '';
+    for (const job of jobs) {
+      for (const v of [job.title, job.description, job.jobLocation.address.addressLocality]) expect(am(v), job.identifier).toMatch(/\p{Script=Ethiopic}/u);
+    }
+  });
+
   it('every question has Amharic for its question, simple words, hint and answers', () => {
     const missing = [];
     const check = (where, obj) => {

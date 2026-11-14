@@ -1,8 +1,12 @@
-// Real-browser accessibility check for <openpath-flow>, using the Chrome or
+// Real-browser accessibility check for <openpath-flow> and <openpath-jobs>, using the Chrome or
 // Edge already installed on this machine (playwright-core, no download).
 //
 //   npm run build && npm run test:browser          (all languages)
-//   OPENPATH_LANGS=ar npm run test:browser         (only some)
+//   OPENPATH_LANGS=ar npm run test:browser         (only some languages)
+//   OPENPATH_PAGES=jobs,employer npm run test:browser  (only some pages: flow, jobs, employer)
+//
+// The employer walks post test jobs to the API; run against the in-memory
+// API (npm run dev:memory) if you don't want them in your database.
 //
 // Walks the whole default flow in English, Amharic and Arabic (right to
 // left), once per mode: every helper off, each helper on by itself, bigger
@@ -428,6 +432,240 @@ async function speak(page, where, lang, words, check) {
   if (!(await check())) fail(where, `the spoken answer "${words}" was not filled in`);
 }
 
+// ---- Career Gateway pages: job list (+ filter + apply) and employer form -----
+
+const JOB_FLOW = readJson('public/questions/job-application.json');
+const EMPLOYER_FLOW = readJson('public/questions/employer-accommodations.json');
+const PAGES = (process.env.OPENPATH_PAGES || 'flow,jobs,employer').split(',');
+const qText = (flow, lang, id) => {
+  const q = flow.questions.find((x) => x.id === id);
+  return q.label[lang] ?? q.label.en;
+};
+
+// Find elements and focus through nested shadow roots (the application form
+// opens inside the job list's shadow root).
+const DEEP = () => {
+  window.__deepAll = (sel, root = document) => {
+    const out = [...root.querySelectorAll(sel)];
+    for (const el of root.querySelectorAll('*')) if (el.shadowRoot) out.push(...window.__deepAll(sel, el.shadowRoot));
+    return out;
+  };
+  window.__deepActive = () => {
+    let a = document.activeElement;
+    while (a && a.shadowRoot && a.shadowRoot.activeElement) a = a.shadowRoot.activeElement;
+    return a;
+  };
+};
+
+/** The same checks as checkScreen, across every OpenPath shadow root on the page. */
+async function checkDeep(page, where, lang) {
+  const violations = await page.evaluate(async () => {
+    const r = await window.axe.run(document, {
+      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
+    });
+    return r.violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => JSON.stringify(n.target)).join(', ')}`);
+  });
+  violations.forEach((v) => fail(where, `axe ${v}`));
+  const scroll = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+  if (scroll[0] > scroll[1]) fail(where, `sideways scroll: content ${scroll[0]}px in a ${scroll[1]}px viewport`);
+  const problems = await page.evaluate(({ lang, dir }) => {
+    const out = [];
+    const visible = (el) => el.getClientRects().length > 0;
+    for (const el of window.__deepAll('button, input:not([type=radio]):not([type=checkbox]), select, textarea, .op-option')) {
+      if (!visible(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 44 || r.height < 44) out.push(`target ${el.className || el.tagName} is ${Math.round(r.width)}x${Math.round(r.height)}`);
+    }
+    for (const el of window.__deepAll('.op-root p, .op-root label, .op-root button, .op-root input, .op-root dt, .op-root dd, .op-root li, .op-root legend, .op-root h2, .op-root h3')) {
+      if (el.closest('.op-sr') || !visible(el)) continue;
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      if (fs < 18) out.push(`text ${el.tagName} "${el.textContent.trim().slice(0, 30)}" is ${fs}px`);
+    }
+    for (const root of window.__deepAll('.op-root')) {
+      if (root.getAttribute('lang') !== lang) out.push(`lang is "${root.getAttribute('lang')}", expected ${lang}`);
+      if (root.getAttribute('dir') !== dir) out.push(`dir is "${root.getAttribute('dir')}", expected ${dir}`);
+    }
+    return out;
+  }, { lang, dir: PACKS[lang].dir });
+  problems.forEach((p) => fail(where, p));
+}
+
+async function careerContext(browser, mode, lang, extra = {}) {
+  const context = await browser.newContext({ viewport: { width: mode.width, height: 800 }, colorScheme: mode.colorScheme ?? 'light' });
+  const page = await context.newPage();
+  await page.addInitScript(axeSource);
+  await page.addInitScript(DEEP);
+  await page.addInitScript(FAKE_PROVIDERS);
+  await page.addInitScript(
+    ([prefs, profile]) => {
+      if (sessionStorage.getItem('__seeded')) return; // only before the first load
+      sessionStorage.setItem('__seeded', '1');
+      localStorage.setItem('openpath:prefs', JSON.stringify(prefs));
+      if (profile) localStorage.setItem('openpath:profile', JSON.stringify(profile));
+    },
+    [{ chosen: true, lang, largerText: Boolean(mode.big), highContrast: Boolean(mode.big) }, extra.profile ?? null],
+  );
+  const pageErrors = [];
+  const requests = [];
+  page.on('pageerror', (e) => pageErrors.push(e.message));
+  page.on('request', (r) => {
+    requests.push(`${r.method()} ${r.url()} ${r.postData() ?? ''}`);
+    if (new URL(r.url()).hostname !== 'localhost') fail(`${lang} / ${mode.label}`, `request left this machine: ${r.url()}`);
+  });
+  page.on('response', async (r) => {
+    if (r.status() >= 400 && (r.url().includes(':4000/') || r.url().includes('/lang/') || r.url().includes('/questions/'))) {
+      fail(`${lang} / ${mode.label}`, `${r.request().method()} ${r.url()} -> ${r.status()}`);
+    }
+  });
+  return { context, page, pageErrors, requests };
+}
+
+const CAREER_MODES = [
+  { label: '1280px', width: 1280 },
+  { label: '640px (200% zoom)', width: 640 },
+  { label: 'bigger text + high contrast, 320px (400% zoom)', width: 320, big: true },
+];
+
+async function jobsWalk(browser, mode, lang, apiUp) {
+  const at = (s) => `${lang} / jobs / ${mode.label} / ${s}`;
+  const s = (key, vars) => S(lang, key, false, vars);
+  const { context, page, pageErrors, requests } = await careerContext(browser, mode, lang, {
+    profile: { 'alx-onboarding.fullName': 'Hana Tesfaye', 'alx-onboarding.phone': '+251911234567' },
+  });
+  await page.goto(`${BASE}/demo/jobs.html`);
+  await page.evaluate(() => {
+    window.__events = [];
+    document.addEventListener('openpath:complete', (e) => window.__events.push(e.detail));
+  });
+  const host = page.locator('openpath-jobs');
+  await host.locator('.op-job').first().waitFor();
+  await checkDeep(page, at('list'), lang);
+
+  // A heading per job and one clearly named Apply button.
+  const jobs = await host.locator('.op-job').evaluateAll((els) =>
+    els.map((el) => ({ title: el.querySelector('h3')?.textContent, buttons: [...el.querySelectorAll('button')].map((b) => b.textContent), id: el.querySelector('button')?.dataset.job })),
+  );
+  if (jobs.length < 6) fail(at('list'), `only ${jobs.length} jobs listed`);
+  for (const j of jobs) {
+    if (!j.title) fail(at('list'), 'a job has no heading');
+    if (j.buttons.length !== 1 || j.buttons[0] !== s('applyFor', { title: j.title })) fail(at('list'), `job "${j.title}" buttons: ${j.buttons.join(' | ')}`);
+  }
+  if ((await host.locator('.op-jobs-count').textContent()) !== s('jobsCount', { count: jobs.length })) fail(at('count'), 'wrong count text');
+  const ld = await page.evaluate(() => JSON.parse(document.querySelector('script[type="application/ld+json"][data-openpath-jobs]')?.textContent ?? 'null'));
+  if (ld?.['@context'] !== 'https://schema.org' || ld['@graph']?.length !== jobs.length) fail(at('json-ld'), 'no JobPosting JSON-LD for every job in the host page');
+
+  // The private filter: announced, never leaves the browser, not stored.
+  if (!(await host.getByText(s('supportFilterPrivacy')).isVisible())) fail(at('filter'), 'the privacy sentence is not shown');
+  const url = page.url();
+  const sent = requests.length;
+  await host.locator('input[value="remote-work"]').check();
+  const announced = await host.locator('[aria-live]').filter({ hasText: /\d/ }).first().textContent({ timeout: 3000 }).catch(() => '');
+  const countText = await host.locator('.op-jobs-count').textContent();
+  if (!announced || announced !== countText) fail(at('filter'), `live region said "${announced}", count says "${countText}"`);
+  if (requests.length !== sent) fail(at('filter'), `the filter caused requests: ${requests.slice(sent).join(', ')}`);
+  if (requests.some((r) => r.includes('remote-work'))) fail(at('filter'), 'the chosen support was sent somewhere');
+  if (page.url() !== url) fail(at('filter'), 'the filter changed the URL');
+  if (await page.evaluate(() => localStorage.getItem('openpath:support-filter'))) fail(at('filter'), 'the filter was stored without "Remember"');
+  await checkDeep(page, at('filtered'), lang);
+
+  // Apply: the application form, prefilled from onboarding, with the private question.
+  const apply = host.locator('.op-apply').first();
+  const jobId = await apply.getAttribute('data-job');
+  const [jobTitle, jobOrg] = await host.locator('.op-job').first().evaluate((el) => [el.querySelector('h3').textContent, el.querySelector('dd').textContent]);
+  await apply.click();
+  const focused = await page.evaluate(() => window.__deepActive()?.textContent ?? '');
+  if (focused !== s('applyingFor', { title: jobTitle, organisation: jobOrg })) fail(at('apply'), `focus after Apply: "${focused}"`);
+  const form = host.locator('openpath-flow');
+  const button = (name) => form.getByRole('button', { name, exact: true });
+  const next = async (where) => {
+    await button(s('next')).click();
+    if (!(await page.evaluate(() => window.__deepActive()?.matches('h2.op-question') ?? false))) fail(at(where), 'focus did not move to the next question');
+  };
+  await form.getByRole('heading', { name: qText(JOB_FLOW, lang, 'intro') }).waitFor();
+  await checkDeep(page, at('application intro'), lang);
+  await next('intro');
+  if ((await form.locator('[name=fullName]').inputValue()) !== 'Hana Tesfaye') fail(at('prefill'), 'name was not prefilled from onboarding');
+  if (!(await form.locator('.op-prefilled').isVisible())) fail(at('prefill'), 'no "filled in from your earlier answers" note');
+  await checkDeep(page, at('prefilled name'), lang);
+  await next('name');
+  if ((await form.locator('[name=phone]').inputValue()) !== '911234567') fail(at('prefill'), 'phone was not prefilled');
+  await next('phone');
+  await form.locator('input[value="1-3"]').check();
+  await next('experience years');
+  await button(s('skip')).click();
+  await form.locator('input[value="now"]').check();
+  await next('start');
+  await form.locator('input[value="part-time"]').check();
+  await next('hours');
+  await form.locator('input[value="extra-time"]').check();
+  await checkDeep(page, at('private support question'), lang);
+  await next('support');
+  await form.getByRole('heading', { name: s('reviewTitle') }).waitFor();
+  await checkDeep(page, at('application review'), lang);
+  await button(s('submit')).click();
+  await form.getByRole('heading', { name: apiUp ? s('doneTitle') : s('queuedTitle') }).waitFor();
+  await checkDeep(page, at('application sent'), lang);
+  if (apiUp) {
+    const events = await page.evaluate(() => window.__events);
+    const e = events[0];
+    if (!e || e.context?.jobId !== jobId) fail(at('complete'), `the application event has no job: ${JSON.stringify(e?.context)}`);
+    if (e && ('interviewSupport' in e.answers || 'supportFilter' in e)) fail(at('complete'), 'private answers or the filter are in the event');
+    if (e && !e.sessionId) fail(at('complete'), 'no sessionId');
+  }
+  await host.locator('.op-back-to-jobs').click();
+  const back = await page.evaluate(() => window.__deepActive()?.dataset?.job);
+  if (back !== jobId) fail(at('back'), 'focus did not return to the Apply button');
+  pageErrors.forEach((e) => fail(at('page'), `uncaught error: ${e}`));
+  await context.close();
+}
+
+async function employerWalk(browser, mode, lang, apiUp) {
+  const at = (s) => `${lang} / employer / ${mode.label} / ${s}`;
+  const s = (key, vars) => S(lang, key, false, vars);
+  const { context, page, pageErrors } = await careerContext(browser, mode, lang);
+  await page.goto(`${BASE}/demo/employer.html`);
+  const form = page.locator('openpath-flow');
+  const button = (name) => form.getByRole('button', { name, exact: true });
+  const next = async (where) => {
+    await button(s('next')).click();
+    if (!(await page.evaluate(() => window.__deepActive()?.matches('h2.op-question') ?? false))) fail(at(where), 'focus did not move to the next question');
+  };
+  await form.getByRole('heading', { name: qText(EMPLOYER_FLOW, lang, 'intro') }).waitFor();
+  await checkDeep(page, at('intro'), lang);
+  await next('intro');
+  const title = `Browser test job ${lang} ${mode.width}`;
+  await button(s('next')).click(); // empty: error
+  await checkDeep(page, at('job title with error'), lang);
+  await form.locator('[name=jobTitle]').fill(title);
+  await next('job title');
+  await form.locator('[name=organisation]').fill('OpenPath browser test');
+  await next('organisation');
+  await form.locator('[name=location]').fill('Adama');
+  await next('location');
+  await form.locator('input[value="part-time"]').check();
+  await next('type');
+  await button(s('skip')).click();
+  await form.locator('input[value="step-free-workplace"]').check();
+  await form.locator('input[value="written-instructions"]').check();
+  await checkDeep(page, at('support offered'), lang);
+  await next('support offered');
+  await form.getByRole('heading', { name: s('reviewTitle') }).waitFor();
+  await checkDeep(page, at('review'), lang);
+  await button(s('submit')).click();
+  await form.getByRole('heading', { name: apiUp ? s('doneTitle') : s('queuedTitle') }).waitFor();
+  await checkDeep(page, at('sent'), lang);
+  if (apiUp) {
+    const list = await (await fetch('http://localhost:4000/v1/jobs')).json();
+    const job = list['@graph'].find((j) => JSON.stringify(j.title).includes(title));
+    if (!job) fail(at('api'), 'the new job is not in GET /v1/jobs');
+    else if (JSON.stringify(job.jobBenefits) !== JSON.stringify(['Step-free workplace', 'Written instructions'])) fail(at('api'), `support stored as ${JSON.stringify(job.jobBenefits)}`);
+  }
+  pageErrors.forEach((e) => fail(at('page'), `uncaught error: ${e}`));
+  await context.close();
+}
+
 // ---- run --------------------------------------------------------------------
 let server;
 if (!(await reachable(`${BASE}/demo/index.html`))) {
@@ -444,11 +682,20 @@ console.log(`demo: ${BASE}/demo/  api: ${apiUp ? 'running (answers go to the ser
 const browser = await launch();
 try {
   for (const lang of LANGS) {
-    for (const mode of MODES) {
+    for (const mode of PAGES.includes('flow') ? MODES : []) {
       const before = failures.length;
       const done = await walk(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${mode.label}`, `stopped: ${e.message.split('\n')[0]}`));
       if (apiUp && done && !done.sessionId) fail(`${lang} / ${mode.label}`, 'the API is running but the complete event has no sessionId');
       console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${lang} ${PACKS[lang].dir}  ${mode.label}`);
+    }
+    // Career Gateway: the job list (filter, apply) and the employer form.
+    for (const [page, run, modes] of [['jobs', jobsWalk, CAREER_MODES], ['employer', employerWalk, CAREER_MODES.filter((m) => m.width !== 640)]]) {
+      if (!PAGES.includes(page)) continue;
+      for (const mode of modes) {
+        const before = failures.length;
+        await run(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${page} / ${mode.label}`, `stopped: ${e.message.split('\n')[0]}`));
+        console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${lang} ${PACKS[lang].dir}  ${page}: ${mode.label}`);
+      }
     }
   }
 } finally {

@@ -22,17 +22,24 @@ const row = (...cells) => `| ${cells.map(cell).join(' | ')} |`;
 const ERRORS_BY_TYPE = {
   text: ['required_text', 'too_long'],
   phone: ['required_text', 'invalid_phone', 'invalid_phone_any'],
-  date: ['required_date', 'invalid_date', 'invalid_date_ethiopian', 'future_date', 'calendar_mismatch'],
+  date: ['required_date', 'invalid_date', 'invalid_date_ethiopian', 'future_date', 'calendar_mismatch'], // either calendar
   single: ['required_single', 'invalid_option'],
   multi: ['required_multi', 'invalid_option'],
   yesno: ['required_single'],
   info: [],
 };
 
+const FLOWS = [
+  ['onboarding', 'Onboarding questions'],
+  ['job-application', 'Job application questions'],
+  ['employer-accommodations', 'Employer form questions'],
+];
+
 export function buildReview() {
   const en = read('lang/en.json');
   const am = read('lang/am.json');
-  const flow = read('public/questions/onboarding.json');
+  const flows = FLOWS.map(([file, name]) => [read(`public/questions/${file}.json`), name, file]);
+  const jobs = read('public/jobs/jobs.json')['@graph'];
   const out = [];
   const table = (head) => out.push(row(...head), row(...head.map(() => '---')));
 
@@ -44,7 +51,8 @@ export function buildReview() {
     'How to review: write your fix in the **Correction** column (leave it empty if the Amharic is right), or edit the files directly:',
     '',
     '- interface text: `frontend/lang/am.json`',
-    '- questions: `frontend/public/questions/onboarding.json`',
+    ...flows.map(([, name, file]) => `- ${name.toLowerCase()}: \`frontend/public/questions/${file}.json\``),
+    '- sample jobs: `frontend/public/jobs/jobs.json`',
     '',
     'Words in `{curly brackets}` are filled in by the form (a number, a name, what the learner said). Keep them as they are.',
     '"Simple words" is a helper the learner can turn on: short, plain versions of the same text.',
@@ -53,34 +61,48 @@ export function buildReview() {
     '',
   );
 
-  // ---- questions -------------------------------------------------------------
-  out.push('## 1. Onboarding questions', '', `Question file version ${flow.version}.`, '');
-  table(['Where', 'English', 'Amharic', 'Correction']);
-  out.push(row('Form title', flow.title.en, flow.title.am, ''));
-  for (const q of flow.questions) {
-    for (const k of ['label', 'simple', 'hint']) {
-      if (q[k]) out.push(row(`${q.id}: ${k === 'label' ? 'question' : k === 'simple' ? 'question (simple words)' : 'hint'}`, q[k].en, q[k].am, ''));
+  // ---- questions, one section per flow ------------------------------------------
+  let section = 0;
+  for (const [flow, name] of flows) {
+    out.push(`## ${++section}. ${name}`, '', `Question file \`${flow.flowId}\`, version ${flow.version}.`, '');
+    table(['Where', 'English', 'Amharic', 'Correction']);
+    out.push(row('Form title', flow.title.en, flow.title.am, ''));
+    for (const q of flow.questions) {
+      for (const k of ['label', 'simple', 'hint']) {
+        if (q[k]) out.push(row(`${q.id}: ${k === 'label' ? 'question' : k === 'simple' ? 'question (simple words)' : 'hint'}`, q[k].en, q[k].am, ''));
+      }
+      for (const o of q.options ?? []) {
+        out.push(row(`${q.id}: answer "${o.value}"`, o.label.en, o.label.am, ''));
+        if (o.simple) out.push(row(`${q.id}: answer "${o.value}" (simple words)`, o.simple.en, o.simple.am, ''));
+      }
     }
-    for (const o of q.options ?? []) {
-      out.push(row(`${q.id}: answer "${o.value}"`, o.label.en, o.label.am, ''));
-      if (o.simple) out.push(row(`${q.id}: answer "${o.value}" (simple words)`, o.simple.en, o.simple.am, ''));
+    out.push('');
+  }
+
+  // ---- error messages per question ---------------------------------------------
+  out.push(`## ${++section}. Error messages for each question`, '', 'Shown under a question when an answer needs fixing. The same message is used by every question of that kind.', '');
+  table(['Form', 'Question', 'Error', 'English', 'Amharic', 'Amharic (simple words)', 'Correction']);
+  for (const [flow] of flows) {
+    for (const q of flow.questions) {
+      for (const code of ERRORS_BY_TYPE[q.type]) {
+        if (code.startsWith('required') && !q.required) continue;
+        if (code === 'invalid_phone_any' && q.country !== 'any') continue;
+        if (code === 'invalid_phone' && q.country === 'any') continue;
+        out.push(row(flow.flowId, q.id, en.strings.errors[code], am.strings.errors[code], am.simple?.errors?.[code], '').replace(`| ${en.strings.errors[code]}`, `| ${code} | ${en.strings.errors[code]}`));
+      }
     }
   }
   out.push('');
 
-  // ---- error messages per question ---------------------------------------------
-  out.push('## 2. Error messages for each question', '', 'Shown under a question when an answer needs fixing. The same message is used by every question of that kind.', '');
-  table(['Question', 'Error', 'English', 'Amharic', 'Amharic (simple words)', 'Correction']);
-  for (const q of flow.questions) {
-    for (const code of ERRORS_BY_TYPE[q.type]) {
-      if (code.startsWith('required') && !q.required) continue;
-      const ethiopian = q.calendar === 'ethiopian';
-      if ((code === 'calendar_mismatch' || code === 'invalid_date_ethiopian') && !ethiopian) continue;
-      if (code === 'invalid_date' && ethiopian) continue;
-      if (code === 'invalid_phone_any' && q.country !== 'any') continue;
-      if (code === 'invalid_phone' && q.country === 'any') continue;
-      out.push(row(q.id, code, en.strings.errors[code], am.strings.errors[code], am.simple?.errors?.[code], ''));
-    }
+  // ---- sample jobs ---------------------------------------------------------------
+  const lang = (v, code) => (typeof v === 'string' ? v : [].concat(v).find((x) => x['@language'] === code)?.['@value']);
+  out.push(`## ${++section}. Sample jobs`, '', 'The six sample jobs in `jobs.json` (fictional, for the demo).', '');
+  table(['Job', 'What', 'English', 'Amharic', 'Correction']);
+  for (const job of jobs) {
+    out.push(row(job.identifier, 'title', lang(job.title, 'en'), lang(job.title, 'am'), ''));
+    out.push(row(job.identifier, 'description', lang(job.description, 'en'), lang(job.description, 'am'), ''));
+    const place = job.jobLocation?.address?.addressLocality;
+    if (place) out.push(row(job.identifier, 'place', lang(place, 'en'), lang(place, 'am'), ''));
   }
   out.push('');
 
@@ -89,7 +111,7 @@ export function buildReview() {
     Object.entries(o).flatMap(([k, v]) => (v && typeof v === 'object' && !Array.isArray(v) ? flat(v, `${prefix}${k}.`) : [[`${prefix}${k}`, v]]));
   const isList = (v) => Array.isArray(v);
   const enStrings = flat(en.strings);
-  out.push('## 3. Interface text', '', 'Buttons, messages and help text around the questions.', '');
+  out.push(`## ${++section}. Interface text`, '', 'Buttons, messages and help text around the questions and in the job list.', '');
   table(['Key', 'English', 'Amharic', 'Amharic (simple words)', 'Correction']);
   const amFlat = Object.fromEntries(flat(am.strings));
   const amSimple = Object.fromEntries(flat(am.simple ?? {}));
@@ -100,7 +122,7 @@ export function buildReview() {
   out.push('');
 
   // ---- lists ------------------------------------------------------------------------
-  out.push('## 4. Month names and voice words', '');
+  out.push(`## ${++section}. Month names and voice words`, '');
   table(['List', 'English', 'Amharic', 'Correction']);
   for (const [key, value] of enStrings) {
     if (!isList(value)) continue;
