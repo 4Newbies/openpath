@@ -9,13 +9,13 @@ export class ApiError extends Error {
   }
 }
 
-export function createApi(base, { fetchImpl = globalThis.fetch } = {}) {
+export function createApi(base, { fetchImpl } = {}) {
   const root = base.replace(/\/+$/, '').replace(/\/v1$/, '') + '/v1';
 
   async function call(method, path, body) {
     let res;
     try {
-      res = await fetchImpl(root + path, {
+      res = await (fetchImpl ?? globalThis.fetch)(root + path, {
         method,
         credentials: 'omit',
         headers: body ? { 'Content-Type': 'application/json' } : {},

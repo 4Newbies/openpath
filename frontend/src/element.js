@@ -143,7 +143,14 @@ export class OpenPathFlow extends HTMLElement {
       lang,
       error,
       uid: this.uid,
-      onChange: (value) => this.store.setAnswer(q.id, value),
+      onChange: (value) => {
+        this.store.setAnswer(q.id, value);
+        // A showIf answer can change the number of steps: update the text in
+        // place (no re-render, so focus stays where it is).
+        const pos = this.nav.position(q.id, this.store.state.answers);
+        const progress = this.view.querySelector('.op-progress');
+        if (progress) progress.textContent = t(lang, 'stepOf', { n: pos.index, total: pos.total });
+      },
     });
 
     const back = this.nav.back(q.id, answers);
