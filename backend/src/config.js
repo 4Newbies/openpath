@@ -3,8 +3,16 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-function int(name, fallback) {
-  const raw = process.env[name];
+// Rate limit: requests per IP address per window. Many learners in one
+// training centre or school can share one public IP address, and one
+// learner going through the form makes about 15 requests, so the default
+// (1000 per 15 minutes) allows about 60 learners per address in that time.
+// RATE_LIMIT_MAX=0 turns the limit off (only behind your own protection).
+export const DEFAULT_RATE_LIMIT_MAX = 1000;
+export const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+
+function int(env, name, fallback) {
+  const raw = env[name];
   if (raw === undefined || raw === '') return fallback;
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n) || n < 0) throw new Error(`${name} must be a non-negative whole number`);
@@ -13,7 +21,7 @@ function int(name, fallback) {
 
 export function loadConfig(env = process.env) {
   return {
-    port: int('PORT', 4000),
+    port: int(env, 'PORT', 4000),
     databaseUrl: env.DATABASE_URL || '',
     store: env.OPENPATH_STORE === 'memory' ? 'memory' : 'auto',
     corsOrigins: (env.CORS_ORIGINS || '')
@@ -22,8 +30,10 @@ export function loadConfig(env = process.env) {
       .filter(Boolean),
     questionsDir: env.QUESTIONS_DIR || path.resolve(here, '../../frontend/public/questions'),
     bodyLimit: env.BODY_LIMIT || '32kb',
-    rateLimitWindowMs: int('RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000),
-    rateLimitMax: int('RATE_LIMIT_MAX', 300),
-    trustProxy: int('TRUST_PROXY', 0),
+    rateLimitWindowMs: Math.max(1000, int(env, 'RATE_LIMIT_WINDOW_MS', DEFAULT_RATE_LIMIT_WINDOW_MS)),
+    rateLimitMax: int(env, 'RATE_LIMIT_MAX', DEFAULT_RATE_LIMIT_MAX),
+    // Number of reverse proxies in front of the API. Without it, behind a proxy
+    // every learner looks like the proxy's address and shares one limit.
+    trustProxy: int(env, 'TRUST_PROXY', 0),
   };
 }

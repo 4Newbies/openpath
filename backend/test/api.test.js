@@ -208,6 +208,14 @@ for (const [name, makeStore] of stores) {
         expect(r.headers['x-powered-by']).toBeUndefined();
       });
 
+      it('the rate limit comes from the environment, and 0 turns it off', async () => {
+        expect(loadConfig({}).rateLimitMax).toBe(1000);
+        expect(loadConfig({ RATE_LIMIT_MAX: '5000', RATE_LIMIT_WINDOW_MS: '60000' })).toMatchObject({ rateLimitMax: 5000, rateLimitWindowMs: 60000 });
+        expect(() => loadConfig({ RATE_LIMIT_MAX: 'lots' })).toThrow(/RATE_LIMIT_MAX/);
+        const open = createApp({ store, flows, config: { ...config, rateLimitMax: 0 }, log: silent });
+        for (let i = 0; i < 5; i++) await request(open).get('/v1/health').expect(200);
+      });
+
       it('rate limits with the standard error shape', async () => {
         const limited = createApp({ store, flows, config: { ...config, rateLimitMax: 2 }, log: silent });
         await request(limited).get('/v1/sessions/CCCCCCCCCCCCCCCCCCCCCC');

@@ -47,6 +47,11 @@ const app = createApp({ store, flows, config });
 const server = app.listen(config.port, () => {
   console.log(`[openpath] API on http://localhost:${config.port}/v1  flows: ${[...flows.keys()].join(', ')}`);
   if (!config.corsOrigins.length) console.warn('[openpath] CORS_ORIGINS is empty: browsers on other origins will be blocked.');
+  console.log(
+    config.rateLimitMax > 0
+      ? `[openpath] rate limit: ${config.rateLimitMax} requests per IP address per ${Math.round(config.rateLimitWindowMs / 60000)} min (RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)`
+      : '[openpath] rate limit: off (RATE_LIMIT_MAX=0)',
+  );
 });
 
 function shutdown() {

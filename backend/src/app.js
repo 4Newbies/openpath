@@ -28,7 +28,8 @@ export function createApp({ store, flows, config, log = console }) {
   );
 
   const v1 = express.Router();
-  v1.use(
+  // Per IP address; RATE_LIMIT_MAX=0 turns it off (see config.js).
+  if (config.rateLimitMax > 0) v1.use(
     rateLimit({
       windowMs: config.rateLimitWindowMs,
       limit: config.rateLimitMax,

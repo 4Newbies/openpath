@@ -9,8 +9,12 @@ export class ApiError extends Error {
   }
 }
 
-/** The server could not be reached at all (offline, not running, gateway down). */
-export const isUnreachable = (e) => e instanceof ApiError && [0, 502, 503, 504].includes(e.status);
+/**
+ * The server can't take the request right now: offline, not running, a
+ * gateway is down, or too many requests (429, e.g. a whole class on one IP
+ * address). The answers stay on the device and are sent later.
+ */
+export const isUnreachable = (e) => e instanceof ApiError && [0, 429, 502, 503, 504].includes(e.status);
 
 /** A random key that makes "create a session" safe to repeat (see the API's clientKey). */
 export function newClientKey(cryptoImpl = globalThis.crypto) {

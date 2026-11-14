@@ -39,9 +39,8 @@ cd frontend && npm install && npm test        # unit, element and axe (jsdom) te
 npm run build && npm run test:browser         # real Chrome/Edge, whole form in en, am and ar (right to left),
                                               # with each helper on and all off: axe incl. contrast,
                                               # 320px/200%/400% reflow, dark mode, focus, targets
-                                              # (21 walks send ~320 API requests: start the API with
-                                              # RATE_LIMIT_MAX=2000, or stop it to test device-only mode;
-                                              # OPENPATH_LANGS=ar runs one language)
+                                              # (21 walks send ~350 API requests, within the default
+                                              # rate limit; OPENPATH_LANGS=ar runs one language)
 npm run review:amharic                        # rebuild docs/amharic-review.md after changing Amharic text
 ```
 
@@ -225,6 +224,21 @@ start with + and the country code, for example +254 712 345 678.*).
 country, add one entry to `PHONE_COUNTRIES` in `shared/flow.js` (calling code, trunk
 prefix, number pattern, example) and its code to the `country` enum in
 `shared/questions.schema.json`.
+
+## Rate limit
+
+The API limits requests **per IP address**. In a training centre, school or camp, many
+learners often share one public IP address, so set the limit for the size of the group:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `RATE_LIMIT_MAX` | `1000` | Requests allowed per IP address per window. One learner makes about 15 requests to finish the form, so 1000 is about 60 learners per 15 minutes from one address. `0` turns the limit off (only if something else protects the API). |
+| `RATE_LIMIT_WINDOW_MS` | `900000` (15 min) | Length of the window, in milliseconds. |
+| `TRUST_PROXY` | `0` | Number of reverse proxies in front of the API. Set it (usually `1`) behind a proxy or load balancer, otherwise every learner looks like the proxy's address and they all share one limit. |
+
+Set them in `.env` (Docker Compose) or the environment (`npm start`). The API prints the
+limit it uses when it starts. Over the limit, requests get `429` with code `rate_limited`;
+the form keeps the answers on the device and tries again later.
 
 ## When the server can't be reached
 
