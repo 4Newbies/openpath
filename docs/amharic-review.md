@@ -65,7 +65,7 @@ Question file `alx-onboarding`, version 1.6.1.
 | course: answer "not-sure" | I'm not sure yet | እስካሁን እርግጠኛ አይደለሁም |  |
 | supportRequest: question | Is there anything you'd like our support team to know privately? | የድጋፍ ቡድናችን በምስጢር እንዲያውቀው የሚፈልጉት ነገር አለ? |  |
 | supportRequest: question (simple words) | Anything private to tell our support team? | ለድጋፍ ቡድናችን በምስጢር የሚነግሩት ነገር አለ? |  |
-| supportRequest: hint | Optional. Only the support team can see this. It is kept apart from your profile. You can skip this question. | አማራጭ ነው። ይህን ማየት የሚችለው የድጋፍ ቡድኑ ብቻ ነው። ከመገለጫዎ ተለይቶ ይቀመጣል። ይህን ጥያቄ መዝለል ይችላሉ። |  |
+| supportRequest: hint | Only the support team can see this. It is kept apart from your profile. | ይህን ማየት የሚችለው የድጋፍ ቡድኑ ብቻ ነው። ከመገለጫዎ ተለይቶ ይቀመጣል። |  |
 
 ## 2. Job application questions
 
@@ -104,7 +104,7 @@ Question file `job-application`, version 1.0.0.
 | workHours: answer "weekends" | Weekends | ቅዳሜና እሁድ |  |
 | interviewSupport: question | Do you need any support for the interview? | ለቃለ መጠይቁ ምንም ዓይነት ድጋፍ ያስፈልግዎታል? |  |
 | interviewSupport: question (simple words) | Any help for the interview? | ለቃለ መጠይቁ እርዳታ ይፈልጋሉ? |  |
-| interviewSupport: hint | Optional. Choose what would help. Do not include medical details. Only the hiring team's support staff see this, and it is kept apart from your application. | አማራጭ ነው። የሚረዳዎትን ይምረጡ። የሕክምና ዝርዝር አያካትቱ። ይህን የሚያዩት የቅጥር ቡድኑ የድጋፍ ሠራተኞች ብቻ ናቸው፤ ከማመልከቻዎም ተለይቶ ይቀመጣል። |  |
+| interviewSupport: hint | Choose what would help. Do not include medical details. Only the hiring team's support staff see this, and it is kept apart from your application. | የሚረዳዎትን ይምረጡ። የሕክምና ዝርዝር አያካትቱ። ይህን የሚያዩት የቅጥር ቡድኑ የድጋፍ ሠራተኞች ብቻ ናቸው፤ ከማመልከቻዎም ተለይቶ ይቀመጣል። |  |
 | interviewSupport: answer "sign-language-interpreter" | Sign language interpreter | የምልክት ቋንቋ አስተርጓሚ |  |
 | interviewSupport: answer "extra-time" | Extra time | ተጨማሪ ጊዜ |  |
 | interviewSupport: answer "step-free-access" | Step-free access | ደረጃ የሌለው መግቢያ |  |

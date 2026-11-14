@@ -9,6 +9,17 @@ import en from '../lang/en.json';
 
 const css = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/styles.css'), 'utf8');
 
+describe('wording', () => {
+  // An optional question already shows "(optional)" after the question; the hint must not say it again.
+  it.each(['onboarding', 'job-application', 'employer-accommodations'])('%s.json says "optional" only once per question', (name) => {
+    const file = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), `../public/questions/${name}.json`), 'utf8'));
+    for (const q of file.questions.filter((x) => x.type !== 'info' && !x.required && x.hint)) {
+      expect(q.hint.en, q.id).not.toMatch(/\boptional\b|skip this question/i);
+      if (q.hint.am) expect(q.hint.am, q.id).not.toMatch(/አማራጭ|ይህን ጥያቄ መዝለል/);
+    }
+  });
+});
+
 describe('Amharic content', () => {
   it.each(['job-application', 'employer-accommodations'])('every question in %s.json has Amharic too', (name) => {
     const other = JSON.parse(fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), `../public/questions/${name}.json`), 'utf8'));

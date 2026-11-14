@@ -166,8 +166,8 @@
       },
       "simple": { "en": "Anything private to tell our support team?", "am": "ለድጋፍ ቡድናችን በምስጢር የሚነግሩት ነገር አለ?" },
       "hint": {
-        "en": "Optional. Only the support team can see this. It is kept apart from your profile. You can skip this question.",
-        "am": "አማራጭ ነው። ይህን ማየት የሚችለው የድጋፍ ቡድኑ ብቻ ነው። ከመገለጫዎ ተለይቶ ይቀመጣል። ይህን ጥያቄ መዝለል ይችላሉ።"
+        "en": "Only the support team can see this. It is kept apart from your profile.",
+        "am": "ይህን ማየት የሚችለው የድጋፍ ቡድኑ ብቻ ነው። ከመገለጫዎ ተለይቶ ይቀመጣል።"
       }
     }
   ]

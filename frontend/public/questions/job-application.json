@@ -111,8 +111,8 @@
       "label": { "en": "Do you need any support for the interview?", "am": "ለቃለ መጠይቁ ምንም ዓይነት ድጋፍ ያስፈልግዎታል?" },
       "simple": { "en": "Any help for the interview?", "am": "ለቃለ መጠይቁ እርዳታ ይፈልጋሉ?" },
       "hint": {
-        "en": "Optional. Choose what would help. Do not include medical details. Only the hiring team's support staff see this, and it is kept apart from your application.",
-        "am": "አማራጭ ነው። የሚረዳዎትን ይምረጡ። የሕክምና ዝርዝር አያካትቱ። ይህን የሚያዩት የቅጥር ቡድኑ የድጋፍ ሠራተኞች ብቻ ናቸው፤ ከማመልከቻዎም ተለይቶ ይቀመጣል።"
+        "en": "Choose what would help. Do not include medical details. Only the hiring team's support staff see this, and it is kept apart from your application.",
+        "am": "የሚረዳዎትን ይምረጡ። የሕክምና ዝርዝር አያካትቱ። ይህን የሚያዩት የቅጥር ቡድኑ የድጋፍ ሠራተኞች ብቻ ናቸው፤ ከማመልከቻዎም ተለይቶ ይቀመጣል።"
       },
       "options": [
         { "value": "sign-language-interpreter", "label": { "en": "Sign language interpreter", "am": "የምልክት ቋንቋ አስተርጓሚ" } },
