@@ -18,6 +18,7 @@ import css from './styles.css?inline';
 let counter = 0;
 const DONE = 'done';
 const SETUP = 'setup';
+const LANGUAGE = 'language'; // first screen when the host offers several languages
 const QUEUED = 'queued'; // answers wait on the device until the server can be reached
 const RETRY_MS = 20000;
 
@@ -179,9 +180,61 @@ export class OpenPathFlow extends HTMLElement {
     if (step !== this.store.state.step) this.store.setStep(step);
     // Browser voices load late; wait briefly only when read-aloud may be offered.
     if (!this.prefs.chosen || this.prefs.readAloud) await getSpeech().whenReady?.(1000);
-    // First visit: ask how the learner wants to use the form.
-    if (!this.prefs.chosen) this.openSetup({ focus: false });
+    // First visit: the language (when several are offered), then how the
+    // learner wants to use the form.
+    if (this.needsLanguage()) this.openLanguage({ focus: false });
+    else if (!this.prefs.chosen) this.openSetup({ focus: false });
     else this.go(step, { focus: false });
+  }
+
+  /** Several languages offered and the learner hasn't chosen one yet. */
+  needsLanguage() {
+    const offered = this.switcherLangs ?? [];
+    return offered.length > 1 && !offered.some((l) => l.code === this.prefs?.lang);
+  }
+
+  openLanguage({ focus = true } = {}) {
+    this.stopHelpers();
+    this.languageOpen = true;
+    this.render({ focus });
+    this.emit('openpath:step', { flowId: this.flow.flowId, stepId: LANGUAGE, index: 0, total: this.nav.position(null, this.store.state.answers).total });
+  }
+
+  /** The language screen: a heading in every offered language and one big button per language. */
+  renderLanguage(focus) {
+    const headingId = `op-${this.uid}-language-heading`;
+    const seen = new Set();
+    const parts = [];
+    for (const l of this.switcherLangs) {
+      const text = t(l.code, 'chooseLanguage');
+      if (seen.has(String(text))) continue; // a pack without its own wording falls back to English
+      seen.add(String(text));
+      if (parts.length) parts.push(h('span', { 'aria-hidden': 'true', text: ' · ' }));
+      parts.push(h('span', { lang: text.lang ?? l.code, dir: text.dir ?? l.dir, text: String(text) }));
+    }
+    const heading = h('h2', { id: headingId, class: 'op-question op-language-heading', tabindex: '-1' }, parts);
+    const buttons = this.switcherLangs.map((l) =>
+      h('button', {
+        type: 'button',
+        class: 'op-button op-secondary op-wide op-lang-choice',
+        lang: l.code,
+        dir: l.dir,
+        'data-lang': l.code,
+        text: l.name,
+        onclick: () => this.chooseFirstLanguage(l.code),
+      }),
+    );
+    this.view.append(h('div', { class: 'op-step op-language' }, heading, h('div', { role: 'group', 'aria-labelledby': headingId, class: 'op-lang-choices' }, buttons)));
+    if (focus) heading.focus();
+  }
+
+  async chooseFirstLanguage(code) {
+    this.setPrefs({ lang: code });
+    if (!(await this.resolveLanguage())) return;
+    this.languageOpen = false;
+    // The whole form now continues in that language.
+    if (!this.prefs.chosen) this.openSetup({ focus: true });
+    else this.go(this.store.state.step ?? this.nav.first(this.store.state.answers));
   }
 
   // A saved session that was submitted elsewhere, or no longer exists, starts over.
@@ -578,6 +631,7 @@ export class OpenPathFlow extends HTMLElement {
         .map((p) => p.trim())
         .reduce((out, p) => (out ? `${out}${/[.?!።፧]$/.test(out) ? '' : '.'} ${p}` : p), '');
     if (this.step === SETUP) return { text: join(tr('setupTitle'), tr('setupIntro')) };
+    if (this.step === LANGUAGE) return { text: tr('chooseLanguage') };
     if (this.step === DONE) return { text: join(tr('doneTitle'), tr('doneBody')) };
     if (this.step === QUEUED) return { text: join(tr('queuedTitle'), tr('queuedBody')) };
     if (this.step === REVIEW) {
@@ -706,6 +760,7 @@ export class OpenPathFlow extends HTMLElement {
   get step() {
     if (this.done) return DONE;
     if (this.queued) return QUEUED;
+    if (this.languageOpen) return LANGUAGE;
     if (this.setupOpen) return SETUP;
     return this.store.state.step;
   }
@@ -754,12 +809,13 @@ export class OpenPathFlow extends HTMLElement {
     const tools = h('div', { class: 'op-tools' });
     header.append(tools);
     if (this.offline) this.view.append(this.offlineNote());
-    if (this.step !== DONE && this.step !== SETUP && this.step !== QUEUED) {
+    if (![DONE, SETUP, QUEUED, LANGUAGE].includes(this.step)) {
       tools.append(h('button', { type: 'button', class: 'op-button op-secondary op-small', onclick: () => this.openSetup(), text: this.tr('settings') }));
     }
 
     if (this.step === DONE) return this.renderDone(focus);
     if (this.step === QUEUED) return this.renderQueued(focus);
+    if (this.step === LANGUAGE) return this.renderLanguage(focus);
     if (this.step === SETUP) {
       const setup = renderSetup({
         tr: (k, v) => this.tr(k, v),

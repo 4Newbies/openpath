@@ -173,6 +173,7 @@
     "myDetails": "በዚህ መሣሪያ ላይ ያሉ መረጃዎቼ",
     "forgetMyDetails": "መረጃዎቼን አጥፋ",
     "formFailed": "ይህን ቅጽ መጫን አልተቻለም። እባክዎ ቆይተው እንደገና ይሞክሩ።",
+    "chooseLanguage": "ቋንቋዎን ይምረጡ",
     "errors": {
       "required_text": "እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ።",
       "required_single": "እባክዎ አንድ መልስ ይምረጡ።",

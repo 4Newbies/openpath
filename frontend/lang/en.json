@@ -176,6 +176,7 @@
     "myDetails": "My details on this device",
     "forgetMyDetails": "Forget my details",
     "formFailed": "This form could not be loaded. Please try again later.",
+    "chooseLanguage": "Choose your language",
     "errors": {
       "required_text": "Please type an answer to this question.",
       "required_single": "Please choose one answer.",

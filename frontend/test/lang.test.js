@@ -94,21 +94,48 @@ describe('<openpath-flow> languages', () => {
     expect(warn).toHaveBeenCalledOnce();
   });
 
-  it('languages="..." shows a switcher on the first screen, each option in its own language', async () => {
+  it('with several languages, the first screen asks only for the language', async () => {
     const el = await mount(flow, { lang: 'en', languages: 'am,en' }, { prefs: null });
+    // A heading in every offered language, each part marked with its language.
+    expect([...$(el, 'h2').querySelectorAll('span[lang]')].map((s) => [s.lang, s.textContent])).toEqual([
+      ['am', 'ቋንቋዎን ይምረጡ'],
+      ['en', 'Choose your language'],
+    ]);
+    const choices = $$(el, '.op-lang-choice');
+    expect(choices.map((b) => [b.textContent, b.getAttribute('lang')])).toEqual([
+      ['አማርኛ', 'am'],
+      ['English', 'en'],
+    ]);
+    expect($$(el, 'button').length).toBe(2); // nothing else: no Settings, no helpers yet
+    expect($(el, '.op-lang-choices').getAttribute('aria-labelledby')).toBe($(el, 'h2').id);
+
+    choices[0].click();
+    await vi.waitFor(() => expect(heading(el)).toBe('ይህን እንዴት መጠቀም ይፈልጋሉ?'));
+    expect($(el, '.op-root').getAttribute('lang')).toBe('am');
+    expect(active(el)).toBe($(el, 'h2'));
+    expect(JSON.parse(localStorage.getItem('openpath:prefs')).lang).toBe('am');
+  });
+
+  it('skips the language screen with one language, or once a language is chosen', async () => {
+    const one = await mount(flow, { lang: 'en', languages: 'en' }, { prefs: null });
+    expect(heading(one)).toBe('How do you want to use this?');
+    one.remove();
+    const chosen = await mount(flow, { lang: 'en', languages: 'en,am' }, { prefs: { chosen: false, lang: 'am' } });
+    expect(heading(chosen)).toBe('ይህን እንዴት መጠቀም ይፈልጋሉ?');
+  });
+
+  it('the language can still be changed in Settings, each option in its own language', async () => {
+    const el = await mount(flow, { lang: 'en', languages: 'am,en' }, { prefs: { chosen: true, lang: 'en' } });
+    button(el, 'Settings').click();
     const options = $$(el, '.op-lang button');
     expect(options.map((b) => [b.textContent, b.getAttribute('lang'), b.getAttribute('aria-pressed')])).toEqual([
       ['አማርኛ', 'am', 'false'],
       ['English', 'en', 'true'],
     ]);
-    expect($(el, '.op-lang legend').textContent).toBe('Language');
-
     options[0].click();
     await vi.waitFor(() => expect(active(el)?.dataset.lang).toBe('am'));
-    expect($(el, '.op-root').getAttribute('lang')).toBe('am');
     expect(heading(el)).toBe('ይህን እንዴት መጠቀም ይፈልጋሉ?');
     expect(active(el).getAttribute('aria-pressed')).toBe('true');
-    expect(JSON.parse(localStorage.getItem('openpath:prefs')).lang).toBe('am');
   });
 
   it('remembers the choice, and Settings shows the switcher again', async () => {

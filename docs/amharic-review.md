@@ -357,6 +357,7 @@ Buttons, messages and help text around the questions and in the job list.
 | myDetails | My details on this device | በዚህ መሣሪያ ላይ ያሉ መረጃዎቼ | – |  |
 | forgetMyDetails | Forget my details | መረጃዎቼን አጥፋ | – |  |
 | formFailed | This form could not be loaded. Please try again later. | ይህን ቅጽ መጫን አልተቻለም። እባክዎ ቆይተው እንደገና ይሞክሩ። | – |  |
+| chooseLanguage | Choose your language | ቋንቋዎን ይምረጡ | – |  |
 | errors.required_text | Please type an answer to this question. | እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ። | እባክዎ መልስ ይጻፉ። |  |
 | errors.required_single | Please choose one answer. | እባክዎ አንድ መልስ ይምረጡ። | እባክዎ አንዱን ይምረጡ። |  |
 | errors.required_multi | Please choose at least one answer. | እባክዎ ቢያንስ አንድ መልስ ይምረጡ። | እባክዎ አንድ ወይም ከዚያ በላይ ይምረጡ። |  |

@@ -221,16 +221,16 @@ async function walk(browser, mode, lang, apiUp) {
     if (!(await focusedIsHeading(page))) fail(where, 'focus did not move to the next question heading');
   };
 
-  // 1. How do you want to use this? Choose the language with the switcher.
-  await host.getByRole('heading', { name: S('en', 'setupTitle') }).waitFor();
-  if (lang !== 'en') {
-    const choice = host.locator(`.op-lang button[lang="${lang}"]`);
-    if ((await choice.textContent()) !== PACKS[lang].name) fail(at('switcher'), `the ${lang} option is not written in ${lang}`);
-    await choice.click();
-    await host.getByRole('heading', { name: S(lang, 'setupTitle') }).waitFor();
-    const focus = await shadow(page, `const a = root.activeElement; return a && a.getAttribute('lang') + ' ' + a.getAttribute('aria-pressed');`);
-    if (focus !== `${lang} true`) fail(at('switcher'), `focus after choosing a language: ${focus}`);
-  }
+  // 1. The first screen asks only for the language (the demo offers three).
+  await host.locator('.op-lang-choice').first().waitFor();
+  await checkScreen(page, at('language'), 'en');
+  const offered = await host.locator('.op-lang-choice').evaluateAll((els) => els.map((b) => [b.getAttribute('lang'), b.textContent]));
+  for (const [code, name] of offered) if (PACKS[code] && name !== PACKS[code].name) fail(at('language'), `the ${code} button is not written in ${code}`);
+  if ((await shadow(page, `return root.querySelectorAll('button').length;`)) !== offered.length) fail(at('language'), 'the language screen has other buttons');
+  await host.locator(`.op-lang-choice[lang="${lang}"]`).click();
+  // 2. How do you want to use this? Now in that language, focus on its heading.
+  await host.getByRole('heading', { name: S(lang, 'setupTitle') }).waitFor();
+  if (!(await focusedIsHeading(page))) fail(at('language'), 'focus did not move to the next screen');
   await checkScreen(page, at('setup'), lang);
   // After the language switcher, the first control keeps every helper off.
   const firstControl = await shadow(page, `return [...root.querySelectorAll('button, input')].find((c) => !c.closest('.op-lang')).textContent;`);
