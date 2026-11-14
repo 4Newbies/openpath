@@ -12,7 +12,33 @@ form driven by a JSON question file (WCAG 2.2 AA).
 Put the `lang/` folder (from `frontend/dist/lang/`) next to `openpath.js`.
 English is built in; other languages are loaded from there only when used.
 
-## Run it
+## Run without Docker
+
+All you need is Node.js 20 or newer. From the repo root:
+
+```sh
+npm run demo:nodocker
+```
+
+This installs the dependencies the first time, starts the API with an **in-memory store**
+on http://localhost:4000 and serves the demo on http://localhost:5173:
+
+- http://localhost:5173/demo/ — the form (English, Amharic, Arabic)
+- http://localhost:5173/savanna/index.html — Savanna, with "Start accessible onboarding"
+
+Press Ctrl+C to stop both. **Nothing is saved to a database: every session and answer is
+lost when the API stops or restarts.** That is fine for trying the form and for frontend
+work; use Docker (below) when you need data to stay. If the Docker API is already running
+on port 4000, the command uses it instead. Other ports: `API_PORT=4100 DEMO_PORT=5180 npm run demo:nodocker`
+(the demo page itself calls `http://localhost:4000`).
+
+Only the API, in memory: `cd backend && npm install && npm run dev:memory`.
+
+The form also works with no API at all: answers stay on the device, a note says they will
+be sent when the server is back, and they are sent then (see
+[When the server can't be reached](#when-the-server-cant-be-reached)).
+
+## Run with Docker (API + Postgres)
 
 ```sh
 # 1. API + Postgres (one command; uses .env if present, see .env.example)
