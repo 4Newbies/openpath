@@ -159,6 +159,13 @@
     "profileKept": "ለሥራ ሲያመለክቱ ዳግም እንዳይጽፉት ስምዎና ስልክ ቁጥርዎ በዚህ መሣሪያ ላይ ተቀምጠዋል።",
     "forgetProfile": "በዚህ መሣሪያ ላይ እንዲረሱ አድርግ",
     "profileForgotten": "ተደርጓል። ከእንግዲህ በዚህ መሣሪያ ላይ አይቀመጡም።",
+    "rememberProfileQuestion": "ለሥራ ሲያመለክቱ እንዲጠቀሙበት ስምዎና ስልክ ቁጥርዎ በዚህ መሣሪያ ላይ ይቀመጡ?",
+    "rememberProfileHint": "ሌሎች ሰዎችም ይህን መሣሪያ የሚጠቀሙ ከሆነ «አይ»ን ይምረጡ።",
+    "rememberProfileNo": "አይ፣ አይቀመጡ",
+    "rememberProfileYes": "አዎ፣ ይቀመጡ",
+    "profileNotKept": "ስምዎና ስልክ ቁጥርዎ በዚህ መሣሪያ ላይ አልተቀመጡም።",
+    "myDetails": "በዚህ መሣሪያ ላይ ያሉ መረጃዎቼ",
+    "forgetMyDetails": "መረጃዎቼን አጥፋ",
     "formFailed": "ይህን ቅጽ መጫን አልተቻለም። እባክዎ ቆይተው እንደገና ይሞክሩ።",
     "errors": {
       "required_text": "እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ።",

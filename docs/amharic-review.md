@@ -343,6 +343,13 @@ Buttons, messages and help text around the questions and in the job list.
 | profileKept | Your name and phone number are kept on this device, so you do not have to type them again when you apply for a job. | ለሥራ ሲያመለክቱ ዳግም እንዳይጽፉት ስምዎና ስልክ ቁጥርዎ በዚህ መሣሪያ ላይ ተቀምጠዋል። | – |  |
 | forgetProfile | Forget them on this device | በዚህ መሣሪያ ላይ እንዲረሱ አድርግ | – |  |
 | profileForgotten | Done. They are no longer kept on this device. | ተደርጓል። ከእንግዲህ በዚህ መሣሪያ ላይ አይቀመጡም። | – |  |
+| rememberProfileQuestion | Remember my name and phone on this device for job applications? | ለሥራ ሲያመለክቱ እንዲጠቀሙበት ስምዎና ስልክ ቁጥርዎ በዚህ መሣሪያ ላይ ይቀመጡ? | – |  |
+| rememberProfileHint | Choose No if other people use this device. | ሌሎች ሰዎችም ይህን መሣሪያ የሚጠቀሙ ከሆነ «አይ»ን ይምረጡ። | – |  |
+| rememberProfileNo | No, do not remember | አይ፣ አይቀመጡ | – |  |
+| rememberProfileYes | Yes, remember them | አዎ፣ ይቀመጡ | – |  |
+| profileNotKept | Your name and phone number are not kept on this device. | ስምዎና ስልክ ቁጥርዎ በዚህ መሣሪያ ላይ አልተቀመጡም። | – |  |
+| myDetails | My details on this device | በዚህ መሣሪያ ላይ ያሉ መረጃዎቼ | – |  |
+| forgetMyDetails | Forget my details | መረጃዎቼን አጥፋ | – |  |
 | formFailed | This form could not be loaded. Please try again later. | ይህን ቅጽ መጫን አልተቻለም። እባክዎ ቆይተው እንደገና ይሞክሩ። | – |  |
 | errors.required_text | Please type an answer to this question. | እባክዎ ለዚህ ጥያቄ መልስ ይጻፉ። | እባክዎ መልስ ይጻፉ። |  |
 | errors.required_single | Please choose one answer. | እባክዎ አንድ መልስ ይምረጡ። | እባክዎ አንዱን ይምረጡ። |  |

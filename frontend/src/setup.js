@@ -1,4 +1,4 @@
-import { h } from './dom.js';
+import { h, setText } from './dom.js';
 
 // "How do you want to use this?" The first control is the button that keeps
 // everything off, so screen reader, voice typing and switch users can go
@@ -6,7 +6,9 @@ import { h } from './dom.js';
 
 // When the host offers several languages, a language switcher comes right
 // after the heading: each language is written in itself, with its own lang.
-export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContinue, onPreview, languages = [], current, onLanguage }) {
+// "My details on this device" says whether a name and phone are kept here
+// and, when they are, offers "Forget my details" (for shared computers).
+export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContinue, onPreview, languages = [], current, onLanguage, detailsKept = false, onForgetDetails }) {
   const headingId = `op-${uid}-setup-heading`;
   const introId = `op-${uid}-setup-intro`;
   const options = [
@@ -57,6 +59,29 @@ export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContin
           ),
         )
       : null;
+  const detailsNote = h('p', { class: 'op-hint op-details-note', text: tr(detailsKept ? 'profileKept' : 'profileNotKept') });
+  const forget =
+    detailsKept && onForgetDetails
+      ? h('button', {
+          type: 'button',
+          class: 'op-button op-secondary',
+          text: tr('forgetMyDetails'),
+          onclick: () => {
+            onForgetDetails();
+            setText(detailsNote, tr('profileForgotten'));
+            detailsNote.setAttribute('tabindex', '-1');
+            forget.remove();
+            detailsNote.focus();
+          },
+        })
+      : null;
+  const details = h(
+    'section',
+    { class: 'op-group op-details', 'aria-labelledby': `op-${uid}-details-heading` },
+    h('h3', { id: `op-${uid}-details-heading`, class: 'op-legend op-subheading', text: tr('myDetails') }),
+    detailsNote,
+    forget,
+  );
   const node = h(
     'div',
     { class: 'op-step op-setup' },
@@ -75,6 +100,7 @@ export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContin
       { class: 'op-nav' },
       h('button', { type: 'button', class: 'op-button op-secondary op-push', onclick: () => onContinue(chosen()), text: tr('continueWithHelpers') }),
     ),
+    details,
   );
   return { node, focusHeading: () => heading.focus() };
 }

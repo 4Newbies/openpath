@@ -147,7 +147,7 @@ describe('<openpath-flow flow="job-application">', () => {
 });
 
 describe('remembering the name and phone for next time', () => {
-  it('keeps "reuse" answers after sending, says so, and forgets them on request', async () => {
+  async function sendOnboarding() {
     const el = await mountFlow('onboarding');
     el.store.setAnswer('fullName', 'Hana Tesfaye');
     el.store.setAnswer('phone', '+251911234567');
@@ -158,12 +158,56 @@ describe('remembering the name and phone for next time', () => {
     el.store.setAnswer('course', 'data-analytics');
     el.go('review');
     button(el, 'Send my answers').click();
-    await vi.waitFor(() => expect($(el, '.op-profile-note')).not.toBeNull());
+    await vi.waitFor(() => expect($(el, '.op-remember')).not.toBeNull());
+    return el;
+  }
+  const question = 'Remember my name and phone on this device for job applications?';
+
+  it('keeps nothing by default: it asks after sending, with No first', async () => {
+    const el = await sendOnboarding();
+    expect(localStorage.getItem(PROFILE_KEY)).toBeNull();
+    const group = $(el, '.op-remember');
+    expect(group.getAttribute('role')).toBe('group');
+    expect(el.shadowRoot.getElementById(group.getAttribute('aria-labelledby')).textContent).toBe(question);
+    expect([...group.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['No, do not remember', 'Yes, remember them']);
+  });
+
+  it('No keeps nothing and clears an earlier copy of the same answers', async () => {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify({ 'alx-onboarding.fullName': 'Someone Else', 'other.flow': 'x' }));
+    const el = await sendOnboarding();
+    button(el, 'No, do not remember').click();
+    expect(JSON.parse(localStorage.getItem(PROFILE_KEY))).toEqual({ 'other.flow': 'x' });
+    expect($(el, '.op-remember')).toBeNull();
+    expect($(el, '.op-profile-note').textContent).toBe('Your name and phone number are not kept on this device.');
+    expect(el.shadowRoot.activeElement).toBe($(el, '.op-profile-note'));
+  });
+
+  it('Yes keeps the "reuse" answers, says so, and forgets them on request', async () => {
+    const el = await sendOnboarding();
+    button(el, 'Yes, remember them').click();
     expect(JSON.parse(localStorage.getItem(PROFILE_KEY))).toEqual({ 'alx-onboarding.fullName': 'Hana Tesfaye', 'alx-onboarding.phone': '+251911234567' });
     expect($(el, '.op-profile-note').textContent).toMatch(/kept on this device/);
+    expect(el.shadowRoot.activeElement).toBe($(el, '.op-profile-note'));
     button(el, 'Forget them on this device').click();
     expect(localStorage.getItem(PROFILE_KEY)).toBeNull();
     expect($(el, '.op-profile-note').textContent).toBe('Done. They are no longer kept on this device.');
     expect(el.shadowRoot.activeElement).toBe($(el, '.op-profile-note'));
+  });
+
+  it('Settings has "Forget my details" when details are kept, and says so when they are not', async () => {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify({ 'alx-onboarding.fullName': 'Hana Tesfaye' }));
+    const el = await mountFlow('onboarding');
+    button(el, 'Settings').click();
+    expect($(el, '.op-details h3').textContent).toBe('My details on this device');
+    button(el, 'Forget my details').click();
+    expect(localStorage.getItem(PROFILE_KEY)).toBeNull();
+    expect($(el, '.op-details-note').textContent).toBe('Done. They are no longer kept on this device.');
+    expect(el.shadowRoot.activeElement).toBe($(el, '.op-details-note'));
+    expect(button(el, 'Forget my details')).toBeUndefined();
+
+    button(el, "Continue with my device's own tools").click();
+    button(el, 'Settings').click();
+    expect($(el, '.op-details-note').textContent).toBe('Your name and phone number are not kept on this device.');
+    expect(button(el, 'Forget my details')).toBeUndefined();
   });
 });

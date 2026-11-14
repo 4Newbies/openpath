@@ -5,7 +5,7 @@ import { loadFlow } from './loader.js';
 import { folderUrl, resolveLanguages } from './language.js';
 import { errorMessage, FALLBACK_LANG, labelOf, langAttrs, packInfo, pick, t, tList } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
-import { earlierAnswer, forgetProfile, saveProfile } from './profile.js';
+import { earlierAnswer, forgetEntries, forgetProfile, hasProfile, saveProfile } from './profile.js';
 import { ACCESS_TO_HELPER, HELPERS, helpersToAccess, loadPrefs, savePrefs } from './prefs.js';
 import { getSpeech, getVoice, loadVoiceModule, voiceAvailable } from './providers.js';
 import { renderReview } from './review.js';
@@ -725,6 +725,8 @@ export class OpenPathFlow extends HTMLElement {
         current: this.uiLang,
         onLanguage: (code) => this.switchLanguage(code),
         onDeviceTools: () => this.closeSetup({}),
+        detailsKept: hasProfile(),
+        onForgetDetails: () => forgetProfile(),
         onContinue: (choices) => this.closeSetup(choices),
         // Bigger text and high contrast show straight away (no re-render, focus stays).
         onPreview: (key, on) => {
@@ -816,26 +818,62 @@ export class OpenPathFlow extends HTMLElement {
   renderDone(focus) {
     const heading = h('h2', { class: 'op-question', tabindex: '-1', text: this.tr('doneTitle') });
     const step = h('div', { class: 'op-step' }, heading, h('p', { class: 'op-body', text: this.tr('doneBody') }));
+    // Ask before keeping anything on this device (it may be shared). No is the default:
+    // leaving this screen without answering keeps nothing.
+    if (this.profileOffer) step.append(this.rememberQuestion());
     // Say plainly what is kept on this device for next time, and let the learner forget it.
-    if (this.profileKept) {
+    else if (this.profileKept) {
       const note = h('p', { class: 'op-body op-profile-note', text: this.tr('profileKept') });
-      const forget = h('button', {
-        type: 'button',
-        class: 'op-button op-secondary',
-        text: this.tr('forgetProfile'),
-        onclick: () => {
-          forgetProfile();
-          this.profileKept = false;
-          setText(note, this.tr('profileForgotten'));
-          forget.remove();
-          note.setAttribute('tabindex', '-1');
-          note.focus();
-        },
-      });
-      step.append(note, forget);
+      step.append(note, this.forgetButton(note));
     }
     this.view.append(step);
     if (focus) heading.focus();
+  }
+
+  /** "Remember my name and phone on this device for job applications?" No comes first. */
+  rememberQuestion() {
+    const legendId = `op-${this.uid}-remember`;
+    const box = h('div', { class: 'op-group op-remember', role: 'group', 'aria-labelledby': legendId });
+    const answer = (yes) => {
+      const keep = this.profileOffer;
+      this.profileOffer = null;
+      // No also clears older copies of these answers, so the last person's name
+      // is not offered to the next person on a shared computer.
+      if (yes) this.profileKept = saveProfile(keep);
+      else forgetEntries(Object.keys(keep));
+      const note = h('p', { class: 'op-body op-profile-note', tabindex: '-1', text: this.tr(this.profileKept ? 'profileKept' : 'profileNotKept') });
+      box.replaceWith(note);
+      if (this.profileKept) note.after(this.forgetButton(note));
+      note.focus();
+    };
+    box.append(
+      h('p', { id: legendId, class: 'op-legend op-subheading', text: this.tr('rememberProfileQuestion') }),
+      h('p', { class: 'op-hint', text: this.tr('rememberProfileHint') }),
+      h(
+        'div',
+        { class: 'op-nav' },
+        h('button', { type: 'button', class: 'op-button op-primary', onclick: () => answer(false), text: this.tr('rememberProfileNo') }),
+        h('button', { type: 'button', class: 'op-button op-secondary', onclick: () => answer(true), text: this.tr('rememberProfileYes') }),
+      ),
+    );
+    return box;
+  }
+
+  forgetButton(note) {
+    const forget = h('button', {
+      type: 'button',
+      class: 'op-button op-secondary',
+      text: this.tr('forgetProfile'),
+      onclick: () => {
+        forgetProfile();
+        this.profileKept = false;
+        setText(note, this.tr('profileForgotten'));
+        forget.remove();
+        note.setAttribute('tabindex', '-1');
+        note.focus();
+      },
+    });
+    return forget;
   }
 
   next() {
@@ -982,11 +1020,13 @@ export class OpenPathFlow extends HTMLElement {
     const publicAnswers = Object.fromEntries(
       Object.entries(clean).filter(([id]) => !this.nav.question(id).private),
     );
-    // Keep "reuse" answers (name, phone) for other flows to prefill.
+    // "reuse" answers (name, phone) could prefill other flows, but are only kept
+    // on this device if the learner says yes on the done screen.
     const keep = Object.fromEntries(
       this.flow.questions.filter((q) => q.reuse && !q.private && clean[q.id] !== undefined).map((q) => [`${this.flow.flowId}.${q.id}`, clean[q.id]]),
     );
-    this.profileKept = Object.keys(keep).length > 0 && saveProfile(keep);
+    this.profileOffer = Object.keys(keep).length > 0 ? keep : null;
+    this.profileKept = false;
     this.busy = false;
     this.queued = false;
     this.store.clear();

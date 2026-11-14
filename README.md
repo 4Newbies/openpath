@@ -215,10 +215,13 @@ learner ticks *Remember on this device*.
 
 *Apply* opens `<openpath-flow flow="job-application">` for that job:
 
-- Name and phone are filled in from the onboarding answers (no retyping, WCAG 3.3.7).
+- Name and phone can be filled in from the onboarding answers (no retyping, WCAG 3.3.7).
   Questions with `"prefillFrom": "alx-onboarding.fullName"` start with that earlier
-  answer. Answers to `"reuse": true` questions are kept on the device after sending, and
-  the done screen says so and offers *Forget them on this device*.
+  answer. Nothing is kept on the device by default, because many people use a shared
+  computer: after sending, the done screen asks *"Remember my name and phone on this
+  device for job applications?"* with **No** first. Only *Yes* keeps the answers to
+  `"reuse": true` questions. *No* also clears an older copy of them. Settings shows what
+  is kept and offers *Forget my details*.
 - Short questions about experience and availability take voice answers.
 - *"Do you need any support for the interview?"* is optional and private. It asks for no
   medical details, is stored apart from the application and is left out of

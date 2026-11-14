@@ -162,6 +162,13 @@
     "profileKept": "Your name and phone number are kept on this device, so you do not have to type them again when you apply for a job.",
     "forgetProfile": "Forget them on this device",
     "profileForgotten": "Done. They are no longer kept on this device.",
+    "rememberProfileQuestion": "Remember my name and phone on this device for job applications?",
+    "rememberProfileHint": "Choose No if other people use this device.",
+    "rememberProfileNo": "No, do not remember",
+    "rememberProfileYes": "Yes, remember them",
+    "profileNotKept": "Your name and phone number are not kept on this device.",
+    "myDetails": "My details on this device",
+    "forgetMyDetails": "Forget my details",
     "formFailed": "This form could not be loaded. Please try again later.",
     "errors": {
       "required_text": "Please type an answer to this question.",
