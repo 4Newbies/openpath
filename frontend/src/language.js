@@ -54,10 +54,21 @@ export async function resolveLanguages(el, prefs) {
   return { lang: hasPack(wanted) ? wanted : FALLBACK_LANG, switcher: list.filter(hasPack).map(packInfo) };
 }
 
-/** "light" (default), "dark" or "auto" (follow the device): the host's theme
- *  attribute, unless the learner chose "Dark colours". */
+/**
+ * "light", "dark" or "auto" (follow the device's dark mode).
+ * The learner's "Dark colours" wins both ways: on is dark, off is light.
+ * Until the learner chooses (prefs.dark is null) the host's theme
+ * attribute decides, and it is light by default.
+ */
 export function themeFor(el, prefs) {
-  if (prefs?.dark) return 'dark';
+  if (prefs?.dark === true) return 'dark';
+  if (prefs?.dark === false) return 'light';
   const attr = (el.getAttribute('theme') ?? '').trim();
   return attr === 'dark' || attr === 'auto' ? attr : 'light';
+}
+
+/** Is the form showing dark colours right now? */
+export function showsDark(el, prefs, matchMedia = globalThis.matchMedia?.bind(globalThis)) {
+  const theme = themeFor(el, prefs);
+  return theme === 'dark' || (theme === 'auto' && Boolean(matchMedia?.('(prefers-color-scheme: dark)')?.matches));
 }

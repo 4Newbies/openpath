@@ -455,7 +455,7 @@ The form keeps working offline or when the API is down:
 
 | Event | `detail` |
 |-------|----------|
-| `openpath:step` | `{ flowId, stepId, index, total }` (`stepId` is `"setup"` on "How do you want to use this?" and `"review"` on the review screen) |
+| `openpath:step` | `{ flowId, stepId, index, total }` (`stepId` is `"choose-language"` on the language screen, `"setup"` on "How do you want to use this?" and `"review"` on the review screen) |
 | `openpath:complete` | `{ flowId, sessionId, answers, context? }`, leaving out answers to `private` questions; `context` is the job for an application. Fired when the server has the answers (or at once without `api`). |
 | `openpath:queued` | `{ flowId }`: *Send* was pressed while the server couldn't be reached; the answers wait on the device and `openpath:complete` follows when they are sent. |
 
@@ -464,6 +464,21 @@ Both bubble and cross the shadow boundary (`composed: true`). Theme with
 `--openpath-font` on the element; see [Theming safely](#theming-safely).
 
 ## Theming safely
+
+### Light and dark
+
+The form has a light and a dark theme, and both are checked for contrast in the
+browser walk.
+
+| Who | How |
+|-----|-----|
+| Host page | `theme="light"` (default), `theme="dark"`, or `theme="auto"` (follow the device's dark mode) on `<openpath-flow>` or `<openpath-jobs>`. Without it the form is light, whatever the device is set to. |
+| Learner | **Dark colours** in "How do you want to use this?" and Settings. The box shows what is on screen. Ticking it gives dark colours and unticking it gives light colours, even on a dark host page; the choice is remembered. Left as it was shown, the host's theme keeps deciding; *Continue with my device's own tools* goes back to the host's theme. |
+
+Forced colours (Windows high contrast), more contrast and reduced motion are always
+followed automatically.
+
+### Brand colours
 
 Your brand colour can never make the form inaccessible: OpenPath measures it and
 corrects it if needed.

@@ -2,7 +2,7 @@ import { cleanAnswer, validateAnswer, validateAnswers } from '../../shared/flow.
 import { ApiError, createApi, isUnreachable, newClientKey } from './api.js';
 import { h, setText } from './dom.js';
 import { loadFlow } from './loader.js';
-import { folderUrl, resolveLanguages, themeFor } from './language.js';
+import { folderUrl, resolveLanguages, showsDark, themeFor } from './language.js';
 import { errorMessage, FALLBACK_LANG, labelOf, langAttrs, packInfo, pick, t, tList } from './messages.js';
 import { createNavigator, REVIEW } from './navigator.js';
 import { earlierAnswer, forgetEntries, forgetProfile, hasProfile, saveProfile } from './profile.js';
@@ -789,7 +789,12 @@ export class OpenPathFlow extends HTMLElement {
   closeSetup(choices) {
     const available = this.helperAvailability();
     const next = { chosen: true };
-    for (const k of HELPERS) next[k] = Boolean(choices[k]) && (k in available ? available[k] : true);
+    for (const k of HELPERS) if (k !== 'dark') next[k] = Boolean(choices[k]) && (k in available ? available[k] : true);
+    // "Dark colours" works both ways (on = dark, off = light) once the learner
+    // changes it. Left as it was shown, the host's theme keeps deciding;
+    // "Continue with my device's own tools" goes back to the host's theme.
+    if (!('dark' in choices)) next.dark = null;
+    else if (Boolean(choices.dark) !== this.setupShowedDark) next.dark = Boolean(choices.dark);
     // Turning voice off and on again asks for consent again.
     if (!next.voice) next.voiceConsent = this.prefs.voiceConsent === 'deny' ? null : this.prefs.voiceConsent;
     this.setPrefs(next);
@@ -897,10 +902,11 @@ export class OpenPathFlow extends HTMLElement {
     if (this.step === QUEUED) return this.renderQueued(focus);
     if (this.step === LANGUAGE) return this.renderLanguage(focus);
     if (this.step === SETUP) {
+      this.setupShowedDark = showsDark(this, this.prefs);
       const setup = renderSetup({
         tr: (k, v) => this.tr(k, v),
         uid: this.uid,
-        prefs: this.prefs,
+        prefs: { ...this.prefs, dark: this.setupShowedDark }, // the checkbox shows what is on screen
         available: this.helperAvailability(),
         languages: this.switcherLangs ?? [],
         current: this.uiLang,

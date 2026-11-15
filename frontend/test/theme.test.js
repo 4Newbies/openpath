@@ -46,6 +46,37 @@ describe('colour theme', () => {
     expect(theme(await mount(flow, { theme: 'light' }, { prefs: { chosen: true, dark: true } }))).toBe('dark');
   });
 
+  it('"Dark colours" works both ways: off means light, even on a dark host page', async () => {
+    const el = await mount(flow, { theme: 'dark' }, { prefs: { chosen: true } });
+    expect(theme(el)).toBe('dark');
+    button(el, 'Settings').click();
+    const box = [...el.shadowRoot.querySelectorAll('.op-setup input')].find((i) => i.value === 'dark');
+    expect(box.checked).toBe(true); // shows what is on screen
+    box.checked = false;
+    box.dispatchEvent(new Event('change'));
+    expect(theme(el)).toBe('light'); // preview
+    button(el, 'Continue with these helpers').click();
+    expect(theme(el)).toBe('light');
+    expect(JSON.parse(localStorage.getItem('openpath:prefs')).dark).toBe(false);
+    el.remove();
+    expect(theme(await mount(flow, { theme: 'dark' }, { prefs: { chosen: true, dark: false } }))).toBe('light');
+  });
+
+  it('left as shown, the host keeps deciding; "my device\'s own tools" goes back to the host', async () => {
+    const el = await mount(flow, { theme: 'auto' }, { prefs: { chosen: true } });
+    button(el, 'Settings').click();
+    button(el, 'Continue with these helpers').click(); // the checkbox was not touched
+    expect(theme(el)).toBe('auto');
+    expect(JSON.parse(localStorage.getItem('openpath:prefs')).dark).toBeNull();
+    el.remove();
+    const chosen = await mount(flow, { theme: 'light' }, { prefs: { chosen: true, dark: true } });
+    expect(theme(chosen)).toBe('dark');
+    button(chosen, 'Settings').click();
+    button(chosen, "Continue with my device's own tools").click();
+    expect(theme(chosen)).toBe('light');
+    expect(JSON.parse(localStorage.getItem('openpath:prefs')).dark).toBeNull();
+  });
+
   it('the job list follows the same theme attribute and the learner\'s choice', async () => {
     globalThis.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ '@graph': [] }) }));
     const make = async (attrs, prefs) => {
