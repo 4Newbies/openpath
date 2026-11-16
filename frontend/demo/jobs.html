@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jobs – OpenPath Career Gateway demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 1rem;
+        background: #f6f6f2;
+        color: #1b1b1b;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      main { max-width: 48rem; margin: 0 auto; }
+      a { color: #0b5cad; }
+      a:focus-visible { outline: 3px solid #1b1b1b; outline-offset: 3px; }
+      openpath-jobs { --openpath-color: #0b5cad; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p><a href="/demo/">Onboarding demo</a> · <a href="/demo/employer.html">For employers: post a job</a></p>
+      <h1>Career Gateway</h1>
+      <p>Jobs from employers who say which support they offer. Sample data for the demo.</p>
+
+      <script src="/openpath.js"></script>
+      <openpath-jobs src="/jobs/jobs.json" api="http://localhost:4000" lang="en" languages="en,am,ar"></openpath-jobs>
+    </main>
+  </body>
+</html>

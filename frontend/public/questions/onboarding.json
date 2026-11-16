@@ -1,0 +1,174 @@
+{
+  "$schema": "../../../shared/questions.schema.json",
+  "version": "1.6.2",
+  "flowId": "alx-onboarding",
+  "title": { "en": "Join ALX", "am": "ALXን ይቀላቀሉ" },
+  "questions": [
+    {
+      "id": "intro",
+      "type": "info",
+      "icon": "info",
+      "label": { "en": "Before you start", "am": "ከመጀመርዎ በፊት" },
+      "simple": { "en": "How this form works", "am": "ይህ ቅጽ እንዴት እንደሚሠራ" },
+      "hint": {
+        "en": "You will see one question at a time. There is no time limit. Your answers are saved as you go, so you can stop and come back later. Questions marked optional can be skipped.",
+        "am": "በአንድ ጊዜ አንድ ጥያቄ ብቻ ያያሉ። የጊዜ ገደብ የለም። መልሶችዎ እየመለሱ ሲሄዱ ይቀመጣሉ፤ ስለዚህ ማቆምና በኋላ መመለስ ይችላሉ። «አማራጭ» የተባሉ ጥያቄዎችን መዝለል ይችላሉ።"
+      }
+    },
+    {
+      "id": "fullName",
+      "type": "text",
+      "icon": "person",
+      "required": true,
+      "voice": true,
+      "reuse": true,
+      "autocomplete": "name",
+      "maxLength": 120,
+      "label": { "en": "What is your full name?", "am": "ሙሉ ስምዎ ማን ነው?" },
+      "simple": { "en": "Your name", "am": "ስምዎ" },
+      "hint": { "en": "Write it the way you want us to use it.", "am": "እንድንጠራዎ በሚፈልጉት መንገድ ይጻፉት።" }
+    },
+    {
+      "id": "phone",
+      "type": "phone",
+      "icon": "phone",
+      "required": true,
+      "voice": true,
+      "reuse": true,
+      "country": "ET",
+      "autocomplete": "tel-national",
+      "label": { "en": "What is your phone number?", "am": "ስልክ ቁጥርዎ ስንት ነው?" },
+      "simple": { "en": "Your phone number", "am": "ስልክ ቁጥርዎ" },
+      "hint": {
+        "en": "For example 0911 234 567 or 0711 234 567. For a number from another country, choose its country code first.",
+        "am": "ለምሳሌ 0911 234 567 ወይም 0711 234 567። የሌላ አገር ቁጥር ከሆነ መጀመሪያ የአገሩን መለያ ቁጥር ይምረጡ።"
+      }
+    },
+    {
+      "id": "dateOfBirth",
+      "type": "date",
+      "icon": "calendar",
+      "required": true,
+      "calendar": "ethiopian",
+      "label": { "en": "What is your date of birth?", "am": "የትውልድ ቀንዎ መቼ ነው?" },
+      "simple": { "en": "When were you born?", "am": "መቼ ተወለዱ?" }
+    },
+    {
+      "id": "language",
+      "type": "single",
+      "icon": "language",
+      "required": true,
+      "voice": true,
+      "label": { "en": "Which language do you prefer for learning?", "am": "ለመማር የትኛውን ቋንቋ ይመርጣሉ?" },
+      "simple": { "en": "Which language do you want?", "am": "የትኛውን ቋንቋ ይፈልጋሉ?" },
+      "options": [
+        { "value": "en", "label": {"en": "English", "am": "እንግሊዝኛ (English)"} },
+        { "value": "am", "label": {"en": "Amharic (አማርኛ)", "am": "አማርኛ"} },
+        { "value": "om", "label": {"en": "Afaan Oromoo", "am": "ኦሮምኛ (Afaan Oromoo)"} },
+        { "value": "ti", "label": {"en": "Tigrinya (ትግርኛ)", "am": "ትግርኛ"} },
+        { "value": "so", "label": {"en": "Somali (Soomaali)", "am": "ሶማሊኛ (Soomaali)"} },
+        { "value": "other", "label": {"en": "Another language", "am": "ሌላ ቋንቋ"} }
+      ]
+    },
+    {
+      "id": "location",
+      "type": "text",
+      "icon": "location",
+      "required": true,
+      "voice": true,
+      "autocomplete": "address-level2",
+      "maxLength": 120,
+      "label": { "en": "Which city or region do you live in?", "am": "የሚኖሩት በየትኛው ከተማ ወይም ክልል ነው?" },
+      "simple": { "en": "Where do you live?", "am": "የት ነው የሚኖሩት?" },
+      "hint": {
+        "en": "For example Addis Ababa, or the name of your camp or town.",
+        "am": "ለምሳሌ አዲስ አበባ፣ ወይም የካምፕዎ ወይም የከተማዎ ስም።"
+      }
+    },
+    {
+      "id": "idType",
+      "type": "single",
+      "icon": "id-card",
+      "required": true,
+      "voice": true,
+      "label": { "en": "Which ID document do you have?", "am": "ምን ዓይነት መታወቂያ ሰነድ አለዎት?" },
+      "simple": { "en": "What ID do you have?", "am": "ምን መታወቂያ አለዎት?" },
+      "hint": {
+        "en": "You do not need to upload it now. If you have no document, a partner can help.",
+        "am": "አሁን መላክ አያስፈልግዎትም። ምንም ሰነድ ከሌለዎት አጋር ድርጅት ሊረዳዎት ይችላል።"
+      },
+      "options": [
+        { "value": "kebele-id", "label": {"en": "Kebele ID", "am": "የቀበሌ መታወቂያ"} },
+        { "value": "passport", "label": {"en": "Passport", "am": "ፓስፖርት"} },
+        { "value": "refugee-id", "label": {"en": "Refugee ID", "am": "የስደተኛ መታወቂያ"} },
+        { "value": "other-document", "label": {"en": "Another document", "am": "ሌላ ሰነድ"} },
+        {
+          "value": "refer-me",
+          "label": {
+            "en": "I don't have a document. Please refer me to a partner who can help.",
+            "am": "ምንም ሰነድ የለኝም። እባክዎ ሊረዳኝ ወደሚችል አጋር ድርጅት ያገናኙኝ።"
+          },
+          "simple": { "en": "I have no ID. Please help me.", "am": "መታወቂያ የለኝም። እባክዎ እርዱኝ።" }
+        }
+      ]
+    },
+    {
+      "id": "referringPartner",
+      "type": "text",
+      "icon": "partner",
+      "required": false,
+      "voice": true,
+      "maxLength": 200,
+      "showIf": { "id": "idType", "equals": "refer-me" },
+      "label": { "en": "Which organisation is helping you, if any?", "am": "የሚረዳዎት ድርጅት ካለ፣ የትኛው ነው?" },
+      "simple": { "en": "Who is helping you?", "am": "ማን ነው የሚረዳዎት?" },
+      "hint": {
+        "en": "For example a refugee agency or a local community group. Skip this if no one is helping you yet.",
+        "am": "ለምሳሌ የስደተኞች ድርጅት ወይም የአካባቢ ማኅበረሰብ ቡድን። እስካሁን የሚረዳዎት ከሌለ ይህን ይዝለሉ።"
+      }
+    },
+    {
+      "id": "course",
+      "type": "single",
+      "icon": "course",
+      "required": true,
+      "voice": true,
+      "label": { "en": "Which course do you want to join?", "am": "የትኛውን ኮርስ መቀላቀል ይፈልጋሉ?" },
+      "simple": { "en": "Which course?", "am": "የትኛው ኮርስ?" },
+      "options": [
+        {
+          "value": "virtual-assistant",
+          "label": { "en": "Virtual Assistant", "am": "ቨርቹዋል አሲስታንት (Virtual Assistant)" }
+        },
+        {
+          "value": "software-engineering",
+          "label": { "en": "Software Engineering", "am": "ሶፍትዌር ኢንጂነሪንግ (Software Engineering)" }
+        },
+        { "value": "data-analytics", "label": {"en": "Data Analytics", "am": "ዳታ አናሊቲክስ (Data Analytics)"} },
+        {
+          "value": "ai-career-essentials",
+          "label": { "en": "AI Career Essentials", "am": "የAI ሙያ መሠረቶች (AI Career Essentials)" }
+        },
+        { "value": "not-sure", "label": {"en": "I'm not sure yet", "am": "እስካሁን እርግጠኛ አይደለሁም"} }
+      ]
+    },
+    {
+      "id": "supportRequest",
+      "type": "text",
+      "icon": "lock",
+      "required": false,
+      "private": true,
+      "multiline": true,
+      "maxLength": 1000,
+      "label": {
+        "en": "Is there anything you'd like our support team to know privately?",
+        "am": "የድጋፍ ቡድናችን በምስጢር እንዲያውቀው የሚፈልጉት ነገር አለ?"
+      },
+      "simple": { "en": "Anything private to tell our support team?", "am": "ለድጋፍ ቡድናችን በምስጢር የሚነግሩት ነገር አለ?" },
+      "hint": {
+        "en": "Only the support team can see this. It is kept apart from your profile.",
+        "am": "ይህን ማየት የሚችለው የድጋፍ ቡድኑ ብቻ ነው። ከመገለጫዎ ተለይቶ ይቀመጣል።"
+      }
+    }
+  ]
+}

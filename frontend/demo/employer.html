@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Post a job – OpenPath Career Gateway demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 1rem;
+        background: #f3f4f6;
+        color: #1b1b1b;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+      }
+      main { max-width: 44rem; margin: 0 auto; }
+      a { color: #0b5cad; }
+      a:focus-visible { outline: 3px solid #1b1b1b; outline-offset: 3px; }
+      #after[hidden] { display: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p><a href="/demo/jobs.html">Back to the job list</a></p>
+      <h1>For employers: post a job</h1>
+      <p>Say which support you offer, so job seekers who need it can find you.</p>
+
+      <script src="/openpath.js"></script>
+      <openpath-flow flow="employer-accommodations" api="http://localhost:4000" lang="en" languages="en,am,ar"></openpath-flow>
+
+      <p id="after" hidden role="status">Your job is in the <a href="/demo/jobs.html">job list</a>.</p>
+    </main>
+    <script>
+      document.addEventListener('openpath:complete', (e) => {
+        if (e.detail.flowId === 'employer-accommodations' && e.detail.sessionId) document.getElementById('after').hidden = false;
+      });
+    </script>
+  </body>
+</html>

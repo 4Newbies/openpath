@@ -1,0 +1,145 @@
+import { h, setText } from './dom.js';
+import { TEXT_SIZES } from './prefs.js';
+
+// "How do you want to use this?" The first control is the button that keeps
+// everything off, so screen reader, voice typing and switch users can go
+// straight on with their own tools.
+
+/**
+ * The language switcher, used here and in <openpath-jobs>: only when the host
+ * offers several languages. Each language is written in itself, with its own
+ * lang, and the current one is pressed. Null when there is nothing to switch.
+ */
+export function renderLanguageSwitcher({ tr, languages = [], current, onLanguage }) {
+  if (languages.length < 2) return null;
+  return h(
+    'fieldset',
+    { class: 'op-group op-lang' },
+    h('legend', { class: 'op-legend op-subheading', text: tr('language') }),
+    h(
+      'div',
+      { class: 'op-lang-list' },
+      languages.map((l) =>
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'op-button op-secondary op-small',
+            lang: l.code,
+            dir: l.dir,
+            'data-lang': l.code,
+            'aria-pressed': l.code === current ? 'true' : 'false',
+            onclick: () => l.code !== current && onLanguage(l.code),
+          },
+          // The chosen language shows a tick as well as its colour (aria-pressed tells screen readers).
+          l.code === current ? h('span', { class: 'op-lang-check', 'aria-hidden': 'true', text: '✓' }) : null,
+          h('span', { class: 'op-lang-name', text: l.name }),
+        ),
+      ),
+    ),
+  );
+}
+
+// When the host offers several languages, a language switcher comes right
+// after the heading.
+// "My details on this device" says whether a name and phone are kept here
+// and, when they are, offers "Forget my details" (for shared computers).
+export function renderSetup({ tr, uid, prefs, available, onDeviceTools, onContinue, onPreview, languages = [], current, onLanguage, detailsKept = false, onForgetDetails }) {
+  const headingId = `op-${uid}-setup-heading`;
+  const introId = `op-${uid}-setup-intro`;
+  const options = [
+    ['readAloud', 'helperReadAloud', available.readAloud],
+    ['voice', 'helperVoice', available.voice],
+    ['simple', 'helperSimple', true],
+    ['highContrast', 'helperContrast', true],
+    ['dark', 'helperDark', true],
+  ].filter(([, , ok]) => ok);
+
+  const boxes = {};
+  const rows = options.map(([key, label]) => {
+    const id = `op-${uid}-setup-${key}`;
+    const input = h('input', {
+      type: 'checkbox',
+      id,
+      value: key,
+      checked: prefs[key],
+      onchange: () => onPreview(key, input.checked),
+    });
+    boxes[key] = input;
+    return h('div', { class: 'op-option' }, input, h('label', { for: id, text: tr(label) }));
+  });
+
+  // Text size: Normal (100%), Large (150%), Largest (200%). Shown straight away.
+  const sizeName = `op-${uid}-text-size`;
+  const SIZE_LABELS = { 100: 'textSizeNormal', 150: 'textSizeLarge', 200: 'textSizeLargest' };
+  const sizes = TEXT_SIZES.map((size) => {
+    const id = `${sizeName}-${size}`;
+    const input = h('input', {
+      type: 'radio',
+      id,
+      name: sizeName,
+      value: String(size),
+      checked: (prefs.textSize ?? 100) === size,
+      onchange: () => input.checked && onPreview('textSize', size),
+    });
+    return { size, input, row: h('div', { class: 'op-option' }, input, h('label', { for: id, text: tr(SIZE_LABELS[size]) })) };
+  });
+  const textSize = h(
+    'fieldset',
+    { class: 'op-group op-text-size' },
+    h('legend', { class: 'op-legend op-subheading', text: tr('textSizeLegend') }),
+    h('div', { class: 'op-options' }, sizes.map((x) => x.row)),
+  );
+
+  const chosen = () => ({
+    ...Object.fromEntries(Object.entries(boxes).map(([k, el]) => [k, el.checked])),
+    textSize: sizes.find((x) => x.input.checked)?.size ?? 100,
+  });
+  const heading = h('h2', { id: headingId, class: 'op-question', tabindex: '-1', text: tr('setupTitle') });
+  const languageSwitcher = renderLanguageSwitcher({ tr, languages, current, onLanguage });
+  const detailsNote = h('p', { class: 'op-hint op-details-note', text: tr(detailsKept ? 'profileKept' : 'profileNotKept') });
+  const forget =
+    detailsKept && onForgetDetails
+      ? h('button', {
+          type: 'button',
+          class: 'op-button op-secondary',
+          text: tr('forgetMyDetails'),
+          onclick: () => {
+            onForgetDetails();
+            setText(detailsNote, tr('profileForgotten'));
+            detailsNote.setAttribute('tabindex', '-1');
+            forget.remove();
+            detailsNote.focus();
+          },
+        })
+      : null;
+  const details = h(
+    'section',
+    { class: 'op-group op-details', 'aria-labelledby': `op-${uid}-details-heading` },
+    h('h3', { id: `op-${uid}-details-heading`, class: 'op-legend op-subheading', text: tr('myDetails') }),
+    detailsNote,
+    forget,
+  );
+  const node = h(
+    'div',
+    { class: 'op-step op-setup' },
+    heading,
+    languageSwitcher,
+    h('p', { id: introId, class: 'op-hint', text: tr('setupIntro') }),
+    h('button', { type: 'button', class: 'op-button op-primary op-wide', onclick: onDeviceTools, text: tr('useDeviceTools') }),
+    h(
+      'fieldset',
+      { class: 'op-group op-helpers' },
+      h('legend', { class: 'op-legend op-subheading', text: tr('helpersLegend') }),
+      h('div', { class: 'op-options' }, rows),
+    ),
+    textSize,
+    h(
+      'div',
+      { class: 'op-nav' },
+      h('button', { type: 'button', class: 'op-button op-secondary op-push', onclick: () => onContinue(chosen()), text: tr('continueWithHelpers') }),
+    ),
+    details,
+  );
+  return { node, focusHeading: () => heading.focus() };
+}

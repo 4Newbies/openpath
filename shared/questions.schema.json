@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openpath.dev/schema/questions.schema.json",
+  "title": "OpenPath question file",
+  "description": "One flow of questions shown one per screen by <openpath-flow>. Validated in the browser (shared/flow.js) and on the server against the same rules.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "flowId", "title", "questions"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": {
+      "description": "Version of this question file. Changing it discards progress saved in the browser for the old version.",
+      "type": "string",
+      "minLength": 1
+    },
+    "flowId": {
+      "description": "Stable id for this flow. The API only accepts answers for flows it has loaded.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "title": { "$ref": "#/$defs/localized" },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/question" }
+    }
+  },
+  "$defs": {
+    "prefillSource": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}\\.[a-zA-Z][a-zA-Z0-9_]{0,63}$"
+    },
+    "langCode": {
+      "description": "A language code: en, am, ar, or a code with a region such as pt-BR.",
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$"
+    },
+    "localized": {
+      "description": "Text in each language, keyed by language code. English is required; other languages fall back to English.",
+      "type": "object",
+      "required": ["en"],
+      "propertyNames": { "$ref": "#/$defs/langCode" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "audioUrl": {
+      "description": "Audio file URL: http(s) or a path relative to the page. No other schemes (javascript:, data: ...).",
+      "type": "string",
+      "pattern": "^(https?://\\S+|(?![a-zA-Z][a-zA-Z0-9+.-]*:)(?!//)\\S+)$"
+    },
+    "audio": {
+      "description": "Recorded audio of the question for read-aloud, per language. Played instead of a synthetic voice; loaded only when played.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/langCode" },
+      "additionalProperties": { "$ref": "#/$defs/audioUrl" }
+    },
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "label"],
+      "properties": {
+        "value": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$" },
+        "label": { "$ref": "#/$defs/localized" },
+        "simple": { "$ref": "#/$defs/localized" },
+        "hint": { "$ref": "#/$defs/localized" }
+      }
+    },
+    "showIf": {
+      "description": "Only show this question when an earlier question's answer equals the value. For multi questions, the answer must include the value.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "equals"],
+      "properties": {
+        "id": { "type": "string" },
+        "equals": { "type": ["string", "boolean"] }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "label"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{0,63}$", "not": { "enum": ["setup", "review", "done", "queued"] } },
+        "type": { "enum": ["text", "phone", "date", "single", "multi", "yesno", "info"] },
+        "label": { "$ref": "#/$defs/localized" },
+        "simple": { "$ref": "#/$defs/localized", "description": "Plain-words version of the label." },
+        "hint": { "$ref": "#/$defs/localized" },
+        "icon": { "type": "string", "pattern": "^[a-z0-9-]{1,32}$" },
+        "audio": { "$ref": "#/$defs/audio" },
+        "required": { "type": "boolean", "default": false },
+        "voice": { "type": "boolean", "default": true, "description": "Voice input for this question when the learner turned it on (default true). Set false to offer typing only." },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/option" }
+        },
+        "showIf": { "$ref": "#/$defs/showIf" },
+        "autocomplete": {
+          "description": "HTML autocomplete token for text, phone and date questions, e.g. name, tel, bday.",
+          "type": "string",
+          "pattern": "^[a-z0-9 -]{1,64}$"
+        },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "multiline": { "type": "boolean", "description": "Text questions only: show a multi-line box." },
+        "prefillFrom": {
+          "description": "Start with the learner's earlier answer to another flow's question (WCAG 3.3.7): \"flowId.questionId\", or a list tried in order. Not for private questions.",
+          "oneOf": [
+            { "$ref": "#/$defs/prefillSource" },
+            { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/prefillSource" } }
+          ]
+        },
+        "reuse": {
+          "type": "boolean",
+          "description": "Keep this answer on the device after sending, so other flows can prefill it. The done screen says so and offers to forget it. Not for private questions."
+        },
+        "country": {
+          "description": "Phone questions only. The country the Country code list starts on (ISO 3166 code, default \"ET\"); the learner can choose another. Numbers are checked for the chosen country and stored in international format (+251911234567). \"any\": free format, stored as typed.",
+          "enum": ["AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AR", "AS", "AT", "AU", "AW", "AX", "AZ", "BA", "BB", "BD", "BE", "BF", "BG", "BH", "BI", "BJ", "BL", "BM", "BN", "BO", "BQ", "BR", "BS", "BT", "BW", "BY", "BZ", "CA", "CC", "CD", "CF", "CG", "CH", "CI", "CK", "CL", "CM", "CN", "CO", "CR", "CU", "CV", "CW", "CX", "CY", "CZ", "DE", "DJ", "DK", "DM", "DO", "DZ", "EC", "EE", "EG", "EH", "ER", "ES", "ET", "FI", "FJ", "FK", "FM", "FO", "FR", "GA", "GB", "GD", "GE", "GF", "GG", "GH", "GI", "GL", "GM", "GN", "GP", "GQ", "GR", "GT", "GU", "GW", "GY", "HK", "HN", "HR", "HT", "HU", "ID", "IE", "IL", "IM", "IN", "IO", "IQ", "IR", "IS", "IT", "JE", "JM", "JO", "JP", "KE", "KG", "KH", "KI", "KM", "KN", "KP", "KR", "KW", "KY", "KZ", "LA", "LB", "LC", "LI", "LK", "LR", "LS", "LT", "LU", "LV", "LY", "MA", "MC", "MD", "ME", "MF", "MG", "MH", "MK", "ML", "MM", "MN", "MO", "MP", "MQ", "MR", "MS", "MT", "MU", "MV", "MW", "MX", "MY", "MZ", "NA", "NC", "NE", "NF", "NG", "NI", "NL", "NO", "NP", "NR", "NU", "NZ", "OM", "PA", "PE", "PF", "PG", "PH", "PK", "PL", "PM", "PR", "PS", "PT", "PW", "PY", "QA", "RE", "RO", "RS", "RU", "RW", "SA", "SB", "SC", "SD", "SE", "SG", "SH", "SI", "SJ", "SK", "SL", "SM", "SN", "SO", "SR", "SS", "ST", "SV", "SX", "SY", "SZ", "TC", "TD", "TG", "TH", "TJ", "TK", "TL", "TM", "TN", "TO", "TR", "TT", "TV", "TW", "TZ", "UA", "UG", "US", "UY", "UZ", "VA", "VC", "VE", "VG", "VN", "VU", "WF", "WS", "XK", "YE", "YT", "ZA", "ZM", "ZW", "any"]
+        },
+        "calendar": {
+          "description": "Date questions only. \"ethiopian\" shows day, month and year lists in the Ethiopian calendar and stores { date: ISO Gregorian, ethiopian: { year, month, day } }. Default \"gregorian\" (stored as YYYY-MM-DD).",
+          "enum": ["gregorian", "ethiopian"]
+        },
+        "private": {
+          "type": "boolean",
+          "description": "Sensitive answer: stored apart from the profile and left out of the openpath:complete event."
+        },
+        "setsPreference": {
+          "description": "Multi questions only: copy the answer into the form's display preferences.",
+          "enum": ["access"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "enum": ["single", "multi"] } } },
+          "then": { "required": ["options"] },
+          "else": { "not": { "required": ["options"] } }
+        },
+        {
+          "if": { "properties": { "type": { "const": "info" } } },
+          "then": { "not": { "required": ["required"] } }
+        },
+        {
+          "if": { "properties": { "type": { "not": { "const": "date" } } } },
+          "then": { "not": { "required": ["calendar"] } }
+        },
+        {
+          "if": { "properties": { "type": { "not": { "const": "phone" } } } },
+          "then": { "not": { "required": ["country"] } }
+        }
+      ]
+    }
+  }
+}

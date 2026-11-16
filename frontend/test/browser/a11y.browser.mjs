@@ -1,0 +1,820 @@
+// Real-browser accessibility check for <openpath-flow> and <openpath-jobs>, using the Chrome or
+// Edge already installed on this machine (playwright-core, no download).
+//
+//   npm run build && npm run test:browser          (all languages)
+//   OPENPATH_LANGS=ar npm run test:browser         (only some languages)
+//   OPENPATH_PAGES=jobs,employer npm run test:browser  (only some pages: flow, jobs, employer)
+//   npm run test:browser:docker                    (employer posts a job on a freshly built Docker API)
+//
+// The employer walks post test jobs to the API; run against the in-memory
+// API (npm run dev:memory) if you don't want them in your database.
+//
+// Walks the whole default flow in English, Amharic and Arabic (right to
+// left), once per mode: every helper off, each helper on by itself, bigger
+// text + high contrast at 320px (= 400% zoom), dark mode at 320px, and 640px
+// (200% zoom). The language is chosen with the form's own language switcher.
+// On every screen it checks:
+//   axe (WCAG 2.2 AA, incl. colour contrast) has no serious/critical issues,
+//   no sideways scroll, targets >= 44x44px, text >= 18px, lang and dir on the
+//   form, focus lands on the question heading, errors are linked and
+//   announced, the 3px focus ring, no requests leave this machine, and
+//   nothing is spoken unless read-aloud is on. It also checks that Back/Next
+//   follow the reading direction and the phone box stays left to right.
+//   Read-aloud and voice use fake providers registered by the page
+//   (OpenPath.setSpeechProvider / setVoiceProvider), so the run is the same
+//   on every machine. The API is optional.
+
+import { spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright-core';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(here, '../..');
+// The walk starts its own demo server and its own in-memory API on ports of
+// its own, so it never writes to the demo database (the Docker API on :4000).
+// WALK_API=none tests the form with no API at all (answers wait on the device).
+const PORT = Number(process.env.DEMO_PORT || 5199);
+const BASE = `http://localhost:${PORT}`;
+const API_PORT = Number(process.env.WALK_API_PORT || 4199);
+const API = `http://localhost:${API_PORT}`;
+const NO_API = process.env.WALK_API === 'none' && !process.argv.includes('--docker');
+const DOCKER_API = process.env.WALK_API === 'docker' || process.argv.includes('--docker');
+const axeSource = fs.readFileSync(path.join(root, 'node_modules/axe-core/axe.min.js'), 'utf8');
+const readJson = (p) => JSON.parse(fs.readFileSync(path.join(root, p), 'utf8'));
+const FLOW = readJson('public/questions/onboarding.json');
+const LANGS = (process.env.OPENPATH_LANGS || 'en,am,ar').split(',');
+const PACKS = Object.fromEntries(['en', ...LANGS].map((l) => [l, readJson(`lang/${l}.json`)]));
+
+// The same lookup the form uses: [lang simple, lang, en simple, en].
+function S(lang, key, simple = false, vars = {}) {
+  const p = PACKS[lang];
+  const en = PACKS.en;
+  const list = simple ? [p.simple, p.strings, en.simple, en.strings] : [p.strings, en.strings];
+  for (const c of list) {
+    const v = key.split('.').reduce((o, k) => (o && typeof o === 'object' ? o[k] : undefined), c);
+    if (typeof v === 'string') return v.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? vars[k] : `{${k}}`));
+  }
+  throw new Error(`no string ${key}`);
+}
+// Question text as the form shows it (English when there is no translation).
+function Q(lang, id, simple = false) {
+  const q = FLOW.questions.find((x) => x.id === id);
+  const text = simple && q.simple ? q.simple : q.label;
+  return text[lang] ?? text.en;
+}
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Fake providers, registered the moment openpath.js defines window.OpenPath
+// (the page itself is served unchanged).
+const FAKE_PROVIDERS = () => {
+  window.__speech = { log: [], stops: 0 };
+  window.__say = [];
+  let value;
+  Object.defineProperty(window, 'OpenPath', {
+    configurable: true,
+    get: () => value,
+    set(v) {
+      value = v;
+      v.setSpeechProvider({
+        isAvailable: () => true,
+        speak: (text) => {
+          window.__speech.log.push(text);
+          return new Promise((r) => (window.__speech.end = r));
+        },
+        stop: () => {
+          window.__speech.stops++;
+          window.__speech.end?.();
+        },
+      });
+      v.setVoiceProvider({ isAvailable: () => true, listen: () => Promise.resolve(window.__say.shift() || ''), stop: () => {} });
+    },
+  });
+};
+
+const failures = [];
+const fail = (where, msg) => failures.push(`${where}: ${msg}`);
+
+async function reachable(url) {
+  try {
+    return (await fetch(url)).ok;
+  } catch {
+    return false;
+  }
+}
+
+async function launch() {
+  for (const channel of ['chrome', 'msedge']) {
+    try {
+      return await chromium.launch({ channel, headless: true });
+    } catch {
+      /* try the next one */
+    }
+  }
+  throw new Error('No Chrome or Edge found.');
+}
+
+const shadow = (page, fn, arg) =>
+  page.evaluate(([src, a]) => {
+    const host = document.querySelector('openpath-flow');
+    // eslint-disable-next-line no-new-func
+    return new Function('host', 'root', 'arg', src)(host, host.shadowRoot, a);
+  }, [fn, arg]);
+
+/** The form card's edges line up with the page heading (left and right, whatever the form's direction). */
+async function checkAlignment(page, where) {
+  const m = await page.evaluate(() => {
+    const h1 = document.querySelector('h1')?.getBoundingClientRect();
+    const find = (root) => root.querySelector('.op-card') ?? [...root.querySelectorAll('*')].map((el) => el.shadowRoot && find(el.shadowRoot)).find(Boolean);
+    const card = find(document)?.getBoundingClientRect();
+    return h1 && card ? { h1: [Math.round(h1.left), Math.round(h1.right)], card: [Math.round(card.left), Math.round(card.right)] } : null;
+  });
+  if (m && (Math.abs(m.h1[0] - m.card[0]) > 1 || m.card[1] > m.h1[1] + 1)) fail(where, `form card ${m.card.join('..')} does not line up with the heading ${m.h1.join('..')}`);
+}
+
+async function checkScreen(page, where, lang) {
+  await checkAlignment(page, where);
+  const violations = await page.evaluate(async () => {
+    const r = await window.axe.run(document, {
+      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
+    });
+    return r.violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => JSON.stringify(n.target)).join(', ')}`);
+  });
+  violations.forEach((v) => fail(where, `axe ${v}`));
+
+  const scroll = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+  if (scroll[0] > scroll[1]) fail(where, `sideways scroll: content ${scroll[0]}px in a ${scroll[1]}px viewport`);
+
+  const problems = await shadow(
+    page,
+    `
+    const out = [];
+    for (const el of root.querySelectorAll('button, input:not([type=radio]):not([type=checkbox]), select, textarea, .op-option')) {
+      const r = el.getBoundingClientRect();
+      if (r.width < 44 || r.height < 44) out.push('target ' + (el.className || el.tagName) + ' is ' + Math.round(r.width) + 'x' + Math.round(r.height));
+    }
+    for (const el of root.querySelectorAll('p, label, button, input, select, textarea, dt, dd, legend, h2')) {
+      if (el.closest('.op-sr')) continue;
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      if (fs < 18) out.push('text ' + el.tagName + ' "' + el.textContent.trim().slice(0, 30) + '" is ' + fs + 'px');
+    }
+    const formRoot = root.querySelector('.op-root');
+    if (formRoot.getAttribute('lang') !== arg.lang) out.push('lang is "' + formRoot.getAttribute('lang') + '", expected ' + arg.lang);
+    if (formRoot.getAttribute('dir') !== arg.dir) out.push('dir is "' + formRoot.getAttribute('dir') + '", expected ' + arg.dir);
+    return out;
+  `,
+    { lang, dir: PACKS[lang].dir },
+  );
+  problems.forEach((p) => fail(where, p));
+}
+
+const focusedIsHeading = (page) => shadow(page, `return !!root.activeElement && root.activeElement.matches('h2.op-question[tabindex="-1"]');`);
+
+async function checkError(page, where, nextName, { field }) {
+  await page.locator('openpath-flow').getByRole('button', { name: nextName, exact: true }).click();
+  const r = await shadow(page, `
+    const a = root.activeElement;
+    const err = root.querySelector('.op-error');
+    if (!a || !err) return { ok: false, why: 'no focused field or no error text' };
+    const group = a.closest('fieldset');
+    const described = (a.getAttribute('aria-describedby') || '') + ' ' + (group ? group.getAttribute('aria-describedby') || '' : '');
+    return {
+      ok: a.getAttribute('aria-invalid') === 'true' && described.split(/\\s+/).includes(err.id),
+      why: 'invalid=' + a.getAttribute('aria-invalid') + ' describedby=' + described.trim() + ' errorId=' + err.id,
+      tag: a.tagName.toLowerCase() + (a.type ? '[' + a.type + ']' : ''),
+      message: err.textContent,
+    };
+  `);
+  if (!r.ok) fail(where, `error not linked to the field: ${r.why}`);
+  if (field && r.tag !== field) fail(where, `focus went to ${r.tag}, expected ${field}`);
+  await page.waitForTimeout(120);
+  const live = await shadow(page, `return root.querySelector('[aria-live=polite]').textContent;`);
+  if (!live || !r.message?.includes(live)) fail(where, `live region said "${live}", expected the error "${r.message}"`);
+  return r.message;
+}
+
+const MODES = [
+  { label: 'all helpers off, 1280px', width: 1280, helpers: [] },
+  { label: 'simple words', width: 1280, helpers: ['helperSimple'] },
+  { label: 'read aloud', width: 1280, helpers: ['helperReadAloud'] },
+  { label: 'voice input', width: 1280, helpers: ['helperVoice'] },
+  { label: 'large text (150%), 320px', width: 320, helpers: ['textSizeLarge'] },
+  { label: 'largest text (200%) + high contrast, 320px', width: 320, helpers: ['textSizeLargest', 'helperContrast'] },
+  // The device is set to dark mode, the host page says nothing: the form stays light.
+  { label: 'device in dark mode (form stays light), 320px', width: 320, helpers: [], colorScheme: 'dark', expectBg: 'rgb(255, 255, 255)' },
+  // The learner chooses "Dark colours": axe checks contrast in the dark theme.
+  { label: 'dark colours (learner), 320px', width: 320, helpers: ['helperDark'], expectBg: 'rgb(27, 27, 31)' },
+  { label: '640px (200% zoom)', width: 640, helpers: [] },
+];
+
+async function walk(browser, mode, lang, apiUp) {
+  const at = (s) => `${lang} / ${mode.label} / ${s}`;
+  const has = (h) => mode.helpers.includes(h);
+  const simple = has('helperSimple');
+  const s = (key, vars) => S(lang, key, simple, vars); // after the setup screen
+  const rtl = PACKS[lang].dir === 'rtl';
+  const context = await browser.newContext({ viewport: { width: mode.width, height: 800 }, colorScheme: mode.colorScheme ?? 'light' });
+  const page = await context.newPage();
+  await page.addInitScript(axeSource);
+  const pageErrors = [];
+  page.on('pageerror', (e) => pageErrors.push(e.message));
+  page.on('response', async (r) => {
+    if (r.status() >= 400 && r.url().startsWith(API)) fail(at('api'), `${r.request().method()} ${r.url()} -> ${r.status()} ${await r.text().catch(() => '')}`);
+    if (r.status() >= 400 && r.url().includes('/lang/')) fail(at('pack'), `${r.url()} -> ${r.status()}`);
+  });
+  page.on('request', (r) => {
+    if (new URL(r.url()).hostname !== 'localhost') fail(at('network'), `request left this machine: ${r.url()}`);
+    if (new URL(r.url()).port === '4000') fail(at('network'), `request to the demo API (the walk must use its own): ${r.url()}`);
+  });
+  await page.addInitScript(FAKE_PROVIDERS);
+  await page.goto(`${BASE}/demo/index.html`);
+  await page.evaluate(() => {
+    window.__events = [];
+    window.__queued = 0;
+    document.addEventListener('openpath:complete', (e) => window.__events.push(e.detail));
+    document.addEventListener('openpath:queued', () => window.__queued++);
+  });
+  const host = page.locator('openpath-flow');
+  const field = (name) => host.locator(`[name="${name}"]`);
+  const radio = (value) => host.locator(`input[type=radio][value="${value}"]`);
+  const button = (name, exact = true) => host.getByRole('button', { name, exact });
+  // With voice on, every step that has a field shows a mic (date: one per list).
+  const checkMics = async (where) => {
+    if (!has('helperVoice')) return;
+    const r = await shadow(page, `
+      const fields = root.querySelectorAll('.op-form input, .op-form select, .op-form textarea').length;
+      return { fields, mics: root.querySelectorAll('.op-mic').length, date: !!root.querySelector('.op-date') };
+    `);
+    if (r.fields && r.mics < (r.date ? 3 : 1)) fail(where, `voice is on but this step shows ${r.mics} mic(s)`);
+    if (r.fields) micSteps++;
+  };
+  let micSteps = 0;
+  const next = async (where) => {
+    await button(s('next')).click();
+    if (!(await focusedIsHeading(page))) fail(where, 'focus did not move to the next question heading');
+    await checkMics(where);
+  };
+
+  // 1. The first screen asks only for the language (the demo offers three).
+  await host.locator('.op-lang-choice').first().waitFor();
+  await checkScreen(page, at('language'), 'en');
+  const offered = await host.locator('.op-lang-choice').evaluateAll((els) => els.map((b) => [b.getAttribute('lang'), b.textContent]));
+  for (const [code, name] of offered) if (PACKS[code] && name !== PACKS[code].name) fail(at('language'), `the ${code} button is not written in ${code}`);
+  if ((await shadow(page, `return root.querySelectorAll('button').length;`)) !== offered.length) fail(at('language'), 'the language screen has other buttons');
+  await host.locator(`.op-lang-choice[lang="${lang}"]`).click();
+  // 2. How do you want to use this? Now in that language, focus on its heading.
+  await host.getByRole('heading', { name: S(lang, 'setupTitle') }).waitFor();
+  if (!(await focusedIsHeading(page))) fail(at('language'), 'focus did not move to the next screen');
+  await checkScreen(page, at('setup'), lang);
+  // After the language switcher, the first control keeps every helper off.
+  const firstControl = await shadow(page, `return [...root.querySelectorAll('button, input')].find((c) => !c.closest('.op-lang')).textContent;`);
+  if (firstControl !== S(lang, 'useDeviceTools')) fail(at('setup'), `first control is "${firstControl}"`);
+  if (mode.helpers.length) {
+    for (const key of mode.helpers) await host.getByLabel(S(lang, key), { exact: true }).check();
+    await button(S(lang, 'continueWithHelpers')).click();
+  } else {
+    await button(S(lang, 'useDeviceTools')).click();
+  }
+  if (!(await focusedIsHeading(page))) fail(at('setup'), 'focus did not move to the first question');
+
+  // intro (info)
+  await checkScreen(page, at('info'), lang);
+  if (mode.expectBg) {
+    const bg = await shadow(page, `return getComputedStyle(root.querySelector('.op-card')).backgroundColor;`);
+    if (bg !== mode.expectBg) fail(at('theme'), `form background is ${bg}, expected ${mode.expectBg}`);
+  }
+  if (has('helperReadAloud')) {
+    await page.waitForFunction(() => window.__speech.log.length > 0);
+    const said = await page.evaluate(() => window.__speech.log[0]);
+    if (!said.includes(Q(lang, 'intro'))) fail(at('read aloud'), `first step read as "${said}"`);
+    if (!(await button(s('stopReading')).isVisible())) fail(at('read aloud'), 'no Stop control while reading');
+    await page.keyboard.press('Escape');
+    if ((await page.evaluate(() => window.__speech.stops)) < 1) fail(at('read aloud'), 'Escape did not stop speech');
+    if (!(await button(s('listen')).isVisible())) fail(at('read aloud'), 'no Listen button');
+  }
+  await next(at('info'));
+
+  // full name (text)
+  await checkError(page, at('text'), s('next'), { field: 'input[text]' });
+  await checkScreen(page, at('text with error'), lang);
+  if ((await field('fullName').getAttribute('autocomplete')) !== 'name') fail(at('text'), 'no autocomplete="name"');
+  // Back and Next follow the reading direction.
+  const [backX, nextX] = await Promise.all([button(s('back')).boundingBox(), button(s('next')).boundingBox()]).then((b) => b.map((x) => x.x));
+  if (rtl ? !(nextX < backX) : !(nextX > backX)) fail(at('direction'), `Back at x=${backX}, Next at x=${nextX} in a ${rtl ? 'right-to-left' : 'left-to-right'} form`);
+  if (has('helperVoice')) {
+    await speak(page, at('voice text'), lang, 'Hana Tesfaye', async () => (await field('fullName').inputValue()) === 'Hana Tesfaye');
+    const focused = await shadow(page, `return root.activeElement && root.activeElement.name;`);
+    if (focused !== 'fullName') fail(at('voice text'), 'focus did not return to the field after speaking');
+    await checkScreen(page, at('voice text result'), lang);
+  } else {
+    await field('fullName').fill('Hana Tesfaye');
+  }
+  await next(at('text'));
+
+  // phone: a native "Country code" list (Ethiopia, then neighbours, then A-Z),
+  // local formats accepted, stored internationally
+  await field('phone').fill('12');
+  const phoneError = await checkError(page, at('phone'), s('next'), { field: 'input[tel]' });
+  if (!phoneError.includes('0911 234 567')) fail(at('phone'), `the error gives no example: "${phoneError}"`);
+  if ((await field('phone').getAttribute('autocomplete')) !== 'tel-national') fail(at('phone'), 'no autocomplete="tel-national"');
+  const phoneBox = await shadow(page, `
+    const select = root.querySelector('select.op-phone-country');
+    const input = root.querySelector('[name=phone]');
+    const label = root.querySelector('label[for="' + select.id + '"]');
+    const sr = select.getBoundingClientRect();
+    const ir = input.getBoundingClientRect();
+    const near = [...select.querySelector('optgroup').children].map((o) => o.value);
+    return { value: select.value, label: label?.textContent, near, count: select.options.length,
+             codeFirst: sr.right <= ir.left + 1 || sr.bottom <= ir.top + 1, dir: getComputedStyle(input).direction,
+             listDir: getComputedStyle(select).direction };
+  `);
+  if (phoneBox.value !== 'ET') fail(at('phone'), `the country code list starts on "${phoneBox.value}"`);
+  if (phoneBox.label !== s('phoneCountryLabel')) fail(at('phone'), `the list is labelled "${phoneBox.label}"`);
+  if (phoneBox.near.join() !== 'ET,ER,SO,SD,SS,KE,DJ') fail(at('phone'), `the list starts with ${phoneBox.near.join()}`);
+  if (phoneBox.count < 200) fail(at('phone'), `only ${phoneBox.count} countries`);
+  if (!phoneBox.codeFirst || phoneBox.dir !== 'ltr') fail(at('phone'), `the code and number are not left to right: ${JSON.stringify(phoneBox)}`);
+  if (phoneBox.listDir !== PACKS[lang].dir) fail(at('phone'), `the list is ${phoneBox.listDir}, the form ${PACKS[lang].dir}`);
+  const pasteBlocked = await shadow(page, `
+    const el = root.querySelector('[name=phone]');
+    const dt = new DataTransfer();
+    dt.setData('text/plain', '0911 234 567');
+    const ev = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true, composed: true });
+    el.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  `);
+  if (pasteBlocked) fail(at('phone'), 'paste is blocked');
+  await field('phone').fill('0911 234 567');
+  await checkScreen(page, at('phone'), lang);
+  await next(at('phone'));
+
+  // date of birth, Ethiopian calendar: three native selects
+  await checkError(page, at('date'), s('next'), { field: 'select[select-one]' });
+  await checkScreen(page, at('date with error'), lang);
+  await host.getByLabel(s('day'), { exact: true }).selectOption('18');
+  await host.getByLabel(s('month'), { exact: true }).selectOption('7');
+  await host.getByLabel(s('year'), { exact: true }).selectOption('1993');
+  // The calendar switch shows the same day in the other calendar, and back.
+  await button(s('useGregorian')).click();
+  const boxes = await shadow(page, `return [...root.querySelectorAll('.op-date input')].map((i) => i.value).join('/');`);
+  if (boxes !== '27/03/2001') fail(at('calendar switch'), `Gregorian boxes show ${boxes}`);
+  if ((await shadow(page, `return root.activeElement && root.activeElement.className;`))?.includes('op-calendar-switch') !== true) {
+    fail(at('calendar switch'), 'focus did not stay on the calendar switch');
+  }
+  await checkScreen(page, at('date, Gregorian'), lang);
+  await button(s('useEthiopian')).click();
+  await next(at('date'));
+
+  // language (single)
+  await checkError(page, at('single'), s('next'), { field: 'input[radio]' });
+  if (has('helperVoice')) {
+    await speak(page, at('voice choice'), lang, 'አማርኛ', () => radio('am').isChecked());
+  } else {
+    await radio('am').check();
+  }
+  await checkScreen(page, at('single'), lang);
+  await next(at('single'));
+
+  await field('location').fill('Addis Ababa');
+  await next(at('location'));
+
+  // ID type -> showIf
+  const total = async () => Number((await host.locator('.op-progress').textContent()).match(/(\d+)\D*$/)[1]);
+  const before = await total();
+  await radio('refer-me').check();
+  if ((await total()) !== before + 1) fail(at('showIf'), 'step count did not grow by one');
+  await next(at('idType'));
+  await field('referringPartner').waitFor();
+  await button(s('skip')).click();
+  if (!(await focusedIsHeading(page))) fail(at('skip'), 'focus did not move after Skip');
+
+  await radio('data-analytics').check();
+  await next(at('course'));
+
+  await field('supportRequest').fill('I use a wheelchair.');
+  await checkScreen(page, at('textarea'), lang);
+  await next(at('support'));
+
+  // review: the date in the Ethiopian calendar, the phone in international format
+  await host.getByRole('heading', { name: s('reviewTitle') }).waitFor();
+  await checkScreen(page, at('review'), lang);
+  const review = await shadow(page, `return [...root.querySelectorAll('.op-review-item dd:first-of-type')].map((d) => d.textContent);`);
+  const months = PACKS[lang].strings.ethiopianMonths ?? PACKS.en.strings.ethiopianMonths;
+  const date = S(lang, 'ethiopianDateFormat', false, { day: '18', month: months[6], year: '1993' });
+  if (!review.includes(date)) fail(at('review'), `date not shown as "${date}": ${review.join(' | ')}`);
+  if (!review.includes('+251 911 234 567')) fail(at('review'), `phone not shown as +251 911 234 567: ${review.join(' | ')}`);
+  await host.getByRole('button', { name: new RegExp(escapeRe(Q(lang, 'course', simple))) }).click();
+  if (!(await focusedIsHeading(page))) fail(at('edit'), 'focus did not move to the question when editing');
+  await radio('virtual-assistant').check();
+  await next(at('edit'));
+  if (!(await host.getByRole('heading', { name: s('reviewTitle') }).isVisible())) fail(at('edit'), 'Next after Edit did not return to the review');
+
+  // Settings is on every step, shows the language switcher, and comes back to the same place.
+  await button(s('settings')).click();
+  await host.getByRole('heading', { name: s('setupTitle') }).waitFor();
+  if ((await host.locator('.op-lang button').count()) !== 3) fail(at('settings'), 'no language switcher in Settings');
+  await checkScreen(page, at('settings'), lang);
+  await button(mode.helpers.length ? s('continueWithHelpers') : s('useDeviceTools')).click();
+  await host.getByRole('heading', { name: s('reviewTitle') }).waitFor();
+
+  await button(s('back')).focus();
+  await page.keyboard.press('Tab');
+  const ring = await shadow(page, `const s = getComputedStyle(root.activeElement); return s.outlineStyle + ' ' + s.outlineWidth;`);
+  if (ring !== 'solid 3px') fail(at('focus ring'), `keyboard focus outline is "${ring}"`);
+
+  await button(s('submit')).click();
+  if (!apiUp) {
+    // No server: the answers wait on the device and the learner is told so.
+    await host.getByRole('heading', { name: s('queuedTitle') }).waitFor();
+    await checkScreen(page, at('queued'), lang);
+    if ((await host.locator('.op-offline').textContent()) !== s('savedOffline')) fail(at('queued'), 'no "saved on this device" note');
+    if ((await page.evaluate(() => window.__queued)) !== 1) fail(at('queued'), 'no openpath:queued event');
+    const pending = await page.evaluate(() => JSON.parse(localStorage.getItem('openpath:alx-onboarding') || '{}').pendingSubmit);
+    if (pending !== true) fail(at('queued'), 'the queued submit is not kept on the device');
+    pageErrors.forEach((e) => fail(at('page'), `uncaught error: ${e}`));
+    await context.close();
+    return null;
+  }
+  await host.getByRole('heading', { name: s('doneTitle') }).waitFor();
+  await checkScreen(page, at('done'), lang);
+
+  const events = await page.evaluate(() => window.__events);
+  if (events.length !== 1) fail(at('complete'), `expected 1 openpath:complete event, got ${events.length}`);
+  else {
+    const a = events[0].answers;
+    if ('supportRequest' in a) fail(at('complete'), 'the private support request was included in the event');
+    if (a.course !== 'virtual-assistant') fail(at('complete'), 'edited answer missing from the event');
+    if ('referringPartner' in a) fail(at('complete'), 'skipped answer should be absent');
+    if (a.phone !== '+251911234567') fail(at('complete'), `phone is ${a.phone}`);
+    if (JSON.stringify(a.dateOfBirth) !== JSON.stringify({ date: '2001-03-27', calendar: 'ethiopian', ethiopian: { year: 1993, month: 7, day: 18 } })) {
+      fail(at('complete'), `date of birth is ${JSON.stringify(a.dateOfBirth)}`);
+    }
+  }
+  if (await page.evaluate(() => localStorage.getItem('openpath:alx-onboarding'))) fail(at('complete'), 'localStorage was not cleared after submit');
+  if (has('helperVoice') && micSteps < 7) fail(at('voice'), `only ${micSteps} question steps were checked for a mic`);
+  if (!has('helperReadAloud')) {
+    const spoken = await page.evaluate(() => window.__speech.log.length);
+    if (spoken) fail(at('rule'), `spoke ${spoken} time(s) although read-aloud was off`);
+  }
+  pageErrors.forEach((e) => fail(at('page'), `uncaught error: ${e}`));
+  await context.close();
+  return events[0];
+}
+
+// Answer by voice: consent the first time, then check the result went in.
+async function speak(page, where, lang, words, check) {
+  const host = page.locator('openpath-flow');
+  await page.evaluate((w) => window.__say.push(w), words);
+  const mic = host.getByRole('button', { name: S(lang, 'speakAnswer') });
+  if ((await mic.getAttribute('aria-pressed')) !== null) fail(where, 'mic button should not have aria-pressed');
+  await mic.click();
+  const allow = host.getByRole('button', { name: S(lang, 'consentAllow'), exact: true });
+  if (await allow.isVisible().catch(() => false)) {
+    await checkScreen(page, `${where} (consent)`, lang);
+    await allow.click();
+  }
+  const saidPrefix = S(lang, 'youSaid').split('{text}')[0].trim();
+  await host.locator('.op-voice-status').filter({ hasText: saidPrefix }).waitFor();
+  if (!(await check())) fail(where, `the spoken answer "${words}" was not filled in`);
+}
+
+// ---- Career Gateway pages: job list (+ filter + apply) and employer form -----
+
+const JOB_FLOW = readJson('public/questions/job-application.json');
+const EMPLOYER_FLOW = readJson('public/questions/employer-accommodations.json');
+const PAGES = (process.env.OPENPATH_PAGES || (DOCKER_API ? 'employer' : 'flow,jobs,employer')).split(',');
+const qText = (flow, lang, id) => {
+  const q = flow.questions.find((x) => x.id === id);
+  return q.label[lang] ?? q.label.en;
+};
+
+// Find elements and focus through nested shadow roots (the application form
+// opens inside the job list's shadow root).
+const DEEP = () => {
+  window.__deepAll = (sel, root = document) => {
+    const out = [...root.querySelectorAll(sel)];
+    for (const el of root.querySelectorAll('*')) if (el.shadowRoot) out.push(...window.__deepAll(sel, el.shadowRoot));
+    return out;
+  };
+  window.__deepActive = () => {
+    let a = document.activeElement;
+    while (a && a.shadowRoot && a.shadowRoot.activeElement) a = a.shadowRoot.activeElement;
+    return a;
+  };
+};
+
+/** The same checks as checkScreen, across every OpenPath shadow root on the page. */
+async function checkDeep(page, where, lang) {
+  await checkAlignment(page, where);
+  const violations = await page.evaluate(async () => {
+    const r = await window.axe.run(document, {
+      runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
+    });
+    return r.violations
+      .filter((v) => v.impact === 'serious' || v.impact === 'critical')
+      .map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => JSON.stringify(n.target)).join(', ')}`);
+  });
+  violations.forEach((v) => fail(where, `axe ${v}`));
+  const scroll = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+  if (scroll[0] > scroll[1]) fail(where, `sideways scroll: content ${scroll[0]}px in a ${scroll[1]}px viewport`);
+  const problems = await page.evaluate(({ lang, dir }) => {
+    const out = [];
+    const visible = (el) => el.getClientRects().length > 0;
+    for (const el of window.__deepAll('button, input:not([type=radio]):not([type=checkbox]), select, textarea, .op-option')) {
+      if (!visible(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 44 || r.height < 44) out.push(`target ${el.className || el.tagName} is ${Math.round(r.width)}x${Math.round(r.height)}`);
+    }
+    for (const el of window.__deepAll('.op-root p, .op-root label, .op-root button, .op-root input, .op-root dt, .op-root dd, .op-root li, .op-root legend, .op-root h2, .op-root h3')) {
+      if (el.closest('.op-sr') || !visible(el)) continue;
+      const fs = parseFloat(getComputedStyle(el).fontSize);
+      if (fs < 18) out.push(`text ${el.tagName} "${el.textContent.trim().slice(0, 30)}" is ${fs}px`);
+    }
+    for (const root of window.__deepAll('.op-root')) {
+      if (root.getAttribute('lang') !== lang) out.push(`lang is "${root.getAttribute('lang')}", expected ${lang}`);
+      if (root.getAttribute('dir') !== dir) out.push(`dir is "${root.getAttribute('dir')}", expected ${dir}`);
+    }
+    return out;
+  }, { lang, dir: PACKS[lang].dir });
+  problems.forEach((p) => fail(where, p));
+}
+
+async function careerContext(browser, mode, lang, extra = {}) {
+  const context = await browser.newContext({ viewport: { width: mode.width, height: 800 }, colorScheme: mode.colorScheme ?? 'light' });
+  const page = await context.newPage();
+  await page.addInitScript(axeSource);
+  await page.addInitScript(DEEP);
+  await page.addInitScript(FAKE_PROVIDERS);
+  await page.addInitScript(
+    ([prefs, profile]) => {
+      if (sessionStorage.getItem('__seeded')) return; // only before the first load
+      sessionStorage.setItem('__seeded', '1');
+      localStorage.setItem('openpath:prefs', JSON.stringify(prefs));
+      if (profile) localStorage.setItem('openpath:profile', JSON.stringify(profile));
+    },
+    [{ chosen: true, lang, textSize: mode.big ? 200 : 100, highContrast: Boolean(mode.big), dark: Boolean(mode.dark) }, extra.profile ?? null],
+  );
+  const pageErrors = [];
+  const requests = [];
+  page.on('pageerror', (e) => pageErrors.push(e.message));
+  page.on('request', (r) => {
+    requests.push(`${r.method()} ${r.url()} ${r.postData() ?? ''}`);
+    if (new URL(r.url()).hostname !== 'localhost') fail(`${lang} / ${mode.label}`, `request left this machine: ${r.url()}`);
+    if (new URL(r.url()).port === '4000') fail(`${lang} / ${mode.label}`, `request to the demo API (the walk must use its own): ${r.url()}`);
+  });
+  page.on('response', async (r) => {
+    if (r.status() >= 400 && (r.url().startsWith(API) || r.url().includes('/lang/') || r.url().includes('/questions/'))) {
+      fail(`${lang} / ${mode.label}`, `${r.request().method()} ${r.url()} -> ${r.status()}`);
+    }
+  });
+  return { context, page, pageErrors, requests };
+}
+
+const CAREER_MODES = [
+  { label: '1280px', width: 1280 },
+  { label: 'dark colours (learner), 1280px', width: 1280, dark: true },
+  { label: '640px (200% zoom)', width: 640 },
+  { label: 'largest text (200%) + high contrast, 320px (400% zoom)', width: 320, big: true },
+];
+
+async function jobsWalk(browser, mode, lang, apiUp) {
+  const at = (s) => `${lang} / jobs / ${mode.label} / ${s}`;
+  const s = (key, vars) => S(lang, key, false, vars);
+  const { context, page, pageErrors, requests } = await careerContext(browser, mode, lang, {
+    profile: { 'alx-onboarding.fullName': 'Hana Tesfaye', 'alx-onboarding.phone': '+251911234567' },
+  });
+  await page.goto(`${BASE}/demo/jobs.html`);
+  await page.evaluate(() => {
+    window.__events = [];
+    document.addEventListener('openpath:complete', (e) => window.__events.push(e.detail));
+  });
+  const host = page.locator('openpath-jobs');
+  await host.locator('.op-job').first().waitFor();
+  await checkDeep(page, at('list'), lang);
+
+  // A heading per job and one clearly named Apply button.
+  const jobs = await host.locator('.op-job').evaluateAll((els) =>
+    els.map((el) => ({ title: el.querySelector('h3')?.textContent, buttons: [...el.querySelectorAll('button')].map((b) => b.textContent), id: el.querySelector('button')?.dataset.job })),
+  );
+  if (jobs.length < 6) fail(at('list'), `only ${jobs.length} jobs listed`);
+  for (const j of jobs) {
+    if (!j.title) fail(at('list'), 'a job has no heading');
+    if (j.buttons.length !== 1 || j.buttons[0] !== s('applyFor', { title: j.title })) fail(at('list'), `job "${j.title}" buttons: ${j.buttons.join(' | ')}`);
+  }
+  if ((await host.locator('.op-jobs-count').textContent()) !== s('jobsCount', { count: jobs.length })) fail(at('count'), 'wrong count text');
+  const ld = await page.evaluate(() => JSON.parse(document.querySelector('script[type="application/ld+json"][data-openpath-jobs]')?.textContent ?? 'null'));
+  if (ld?.['@context'] !== 'https://schema.org' || ld['@graph']?.length !== jobs.length) fail(at('json-ld'), 'no JobPosting JSON-LD for every job in the host page');
+
+  // The private filter: announced, never leaves the browser, not stored.
+  // On narrow screens the filter starts closed (a <details>): open it like a learner would.
+  const box = host.locator('details.op-jobs-filter-box');
+  if ((await box.count()) && !(await box.evaluate((d) => d.open))) await box.locator('summary').click();
+  if (!(await host.getByText(s('supportFilterPrivacy')).isVisible())) fail(at('filter'), 'the privacy sentence is not shown');
+  const url = page.url();
+  const sent = requests.length;
+  await host.locator('input[value="remote-work"]').check();
+  const announced = await host.locator('[aria-live]').filter({ hasText: /\d/ }).first().textContent({ timeout: 3000 }).catch(() => '');
+  const countText = await host.locator('.op-jobs-count').textContent();
+  if (!announced || announced !== countText) fail(at('filter'), `live region said "${announced}", count says "${countText}"`);
+  if (requests.length !== sent) fail(at('filter'), `the filter caused requests: ${requests.slice(sent).join(', ')}`);
+  if (requests.some((r) => r.includes('remote-work'))) fail(at('filter'), 'the chosen support was sent somewhere');
+  if (page.url() !== url) fail(at('filter'), 'the filter changed the URL');
+  if (await page.evaluate(() => localStorage.getItem('openpath:support-filter'))) fail(at('filter'), 'the filter was stored without "Remember"');
+  await checkDeep(page, at('filtered'), lang);
+
+  // Apply: the application form, prefilled from onboarding, with the private question.
+  const apply = host.locator('.op-apply').first();
+  const jobId = await apply.getAttribute('data-job');
+  const [jobTitle, jobOrg] = await host.locator('.op-job').first().evaluate((el) => [el.querySelector('h3').textContent, el.querySelector('dd').textContent]);
+  await apply.click();
+  const focused = await page.evaluate(() => window.__deepActive()?.textContent ?? '');
+  if (focused !== s('applyingFor', { title: jobTitle, organisation: jobOrg })) fail(at('apply'), `focus after Apply: "${focused}"`);
+  const form = host.locator('openpath-flow');
+  const button = (name) => form.getByRole('button', { name, exact: true });
+  const next = async (where) => {
+    await button(s('next')).click();
+    if (!(await page.evaluate(() => window.__deepActive()?.matches('h2.op-question') ?? false))) fail(at(where), 'focus did not move to the next question');
+  };
+  await form.getByRole('heading', { name: qText(JOB_FLOW, lang, 'intro') }).waitFor();
+  await checkDeep(page, at('application intro'), lang);
+  await next('intro');
+  if ((await form.locator('[name=fullName]').inputValue()) !== 'Hana Tesfaye') fail(at('prefill'), 'name was not prefilled from onboarding');
+  if (!(await form.locator('.op-prefilled').isVisible())) fail(at('prefill'), 'no "filled in from your earlier answers" note');
+  await checkDeep(page, at('prefilled name'), lang);
+  await next('name');
+  if ((await form.locator('[name=phone]').inputValue()) !== '911234567') fail(at('prefill'), 'phone was not prefilled');
+  await next('phone');
+  await form.locator('input[value="1-3"]').check();
+  await next('experience years');
+  await button(s('skip')).click();
+  await form.locator('input[value="now"]').check();
+  await next('start');
+  await form.locator('input[value="part-time"]').check();
+  await next('hours');
+  await form.locator('input[value="extra-time"]').check();
+  await checkDeep(page, at('private support question'), lang);
+  await next('support');
+  await form.getByRole('heading', { name: s('reviewTitle') }).waitFor();
+  await checkDeep(page, at('application review'), lang);
+  await button(s('submit')).click();
+  await form.getByRole('heading', { name: apiUp ? s('doneTitle') : s('queuedTitle') }).waitFor();
+  await checkDeep(page, at('application sent'), lang);
+  if (apiUp) {
+    const events = await page.evaluate(() => window.__events);
+    const e = events[0];
+    if (!e || e.context?.jobId !== jobId) fail(at('complete'), `the application event has no job: ${JSON.stringify(e?.context)}`);
+    if (e && ('interviewSupport' in e.answers || 'supportFilter' in e)) fail(at('complete'), 'private answers or the filter are in the event');
+    if (e && !e.sessionId) fail(at('complete'), 'no sessionId');
+  }
+  await host.locator('.op-back-to-jobs').click();
+  const back = await page.evaluate(() => window.__deepActive()?.dataset?.job);
+  if (back !== jobId) fail(at('back'), 'focus did not return to the Apply button');
+  pageErrors.forEach((e) => fail(at('page'), `uncaught error: ${e}`));
+  await context.close();
+}
+
+async function employerWalk(browser, mode, lang, apiUp) {
+  const at = (s) => `${lang} / employer / ${mode.label} / ${s}`;
+  const s = (key, vars) => S(lang, key, false, vars);
+  const { context, page, pageErrors } = await careerContext(browser, mode, lang);
+  await page.goto(`${BASE}/demo/employer.html`);
+  const form = page.locator('openpath-flow');
+  const button = (name) => form.getByRole('button', { name, exact: true });
+  const next = async (where) => {
+    await button(s('next')).click();
+    if (!(await page.evaluate(() => window.__deepActive()?.matches('h2.op-question') ?? false))) fail(at(where), 'focus did not move to the next question');
+  };
+  await form.getByRole('heading', { name: qText(EMPLOYER_FLOW, lang, 'intro') }).waitFor();
+  await checkDeep(page, at('intro'), lang);
+  await next('intro');
+  const title = `Browser test job ${lang} ${mode.width}`;
+  await button(s('next')).click(); // empty: error
+  await checkDeep(page, at('job title with error'), lang);
+  await form.locator('[name=jobTitle]').fill(title);
+  await next('job title');
+  await form.locator('[name=organisation]').fill('OpenPath browser test');
+  await next('organisation');
+  await form.locator('[name=location]').fill('Adama');
+  await next('location');
+  await form.locator('input[value="part-time"]').check();
+  await next('type');
+  await button(s('skip')).click();
+  await form.locator('input[value="step-free-workplace"]').check();
+  await form.locator('input[value="written-instructions"]').check();
+  await checkDeep(page, at('support offered'), lang);
+  await next('support offered');
+  await form.getByRole('heading', { name: s('reviewTitle') }).waitFor();
+  await checkDeep(page, at('review'), lang);
+  await button(s('submit')).click();
+  await form.getByRole('heading', { name: apiUp ? s('doneTitle') : s('queuedTitle') }).waitFor();
+  await checkDeep(page, at('sent'), lang);
+  if (apiUp) {
+    const list = await (await fetch(`${API}/v1/jobs`)).json();
+    const job = list['@graph'].find((j) => JSON.stringify(j.title).includes(title));
+    if (!job) fail(at('api'), 'the new job is not in GET /v1/jobs');
+    else if (JSON.stringify(job.jobBenefits) !== JSON.stringify(['Step-free workplace', 'Written instructions'])) fail(at('api'), `support stored as ${JSON.stringify(job.jobBenefits)}`);
+  }
+  pageErrors.forEach((e) => fail(at('page'), `uncaught error: ${e}`));
+  await context.close();
+}
+
+// ---- run --------------------------------------------------------------------
+if (!fs.existsSync(path.join(root, 'dist/openpath.js'))) {
+  console.error('dist/openpath.js is missing. Run `npm run build` first.');
+  process.exit(2);
+}
+for (const [what, url] of [['demo', `${BASE}/demo/`], ['API', `${API}/v1/health`]]) {
+  if (await reachable(url)) {
+    console.error(`Port for the walk's ${what} is already in use (${url}). Stop it, or set ${what === 'demo' ? 'DEMO_PORT' : 'WALK_API_PORT'}.`);
+    process.exit(2);
+  }
+}
+// WALK_API=docker: build the API image from this checkout and run it with its
+// own Postgres, as a separate Compose project (its own containers and volume,
+// removed afterwards), so an old image can never pass for the current code.
+// npm run test:browser:docker runs the employer walk this way.
+const DOCKER_PROJECT = 'openpath-walk';
+const dockerEnv = {
+  ...process.env,
+  API_PORT: String(API_PORT),
+  POSTGRES_HOST_PORT: process.env.WALK_DB_PORT || '5499',
+  CORS_ORIGINS: BASE,
+  RATE_LIMIT_MAX: '0',
+  POSTGRES_PASSWORD: 'walk-only',
+};
+const compose = (...args) =>
+  spawnSync('docker', ['compose', '-p', DOCKER_PROJECT, '-f', path.resolve(root, '../docker-compose.yml'), ...args], { env: dockerEnv, encoding: 'utf8' });
+if (DOCKER_API) {
+  console.log('Building and starting a fresh Docker API (docker compose -p openpath-walk up --build)...');
+  const up = compose('up', '--build', '-d', '--wait', 'db', 'api');
+  if (up.status !== 0) {
+    console.error(`docker compose failed:\n${up.stdout}\n${up.stderr}`);
+    compose('down', '-v');
+    process.exit(2);
+  }
+}
+// Otherwise its own in-memory API: nothing is written to a database, no rate limit.
+const apiServer =
+  NO_API || DOCKER_API
+    ? null
+    : spawn(process.execPath, [path.resolve(root, '../backend/scripts/dev-memory.js')], {
+        env: { ...process.env, PORT: String(API_PORT), CORS_ORIGINS: BASE, RATE_LIMIT_MAX: '0', DATABASE_URL: '', NODE_ENV: 'development' },
+        stdio: 'ignore',
+      });
+// Its own demo server, with the demo pages pointed at that API.
+const server = spawn(process.execPath, [path.join(root, 'scripts/serve.mjs')], {
+  env: { ...process.env, PORT: String(PORT), OPENPATH_DEMO_API: API },
+  stdio: 'ignore',
+});
+let stopped = false;
+const stopServers = () => {
+  if (stopped) return;
+  stopped = true;
+  server.kill();
+  apiServer?.kill();
+  if (DOCKER_API) compose('down', '-v');
+};
+process.on('exit', stopServers);
+for (let i = 0; i < (DOCKER_API ? 600 : 100); i++) {
+  if ((await reachable(`${BASE}/demo/index.html`)) && (NO_API || (await reachable(`${API}/v1/health`)))) break;
+  await new Promise((r) => setTimeout(r, 100));
+}
+const apiUp = !NO_API && (await reachable(`${API}/v1/health`));
+if (!NO_API && !apiUp) {
+  console.error(`The walk's ${DOCKER_API ? 'Docker' : 'in-memory'} API did not start on ${API}.`);
+  stopServers();
+  process.exit(2);
+}
+console.log(`demo: ${BASE}/demo/  api: ${apiUp ? `${DOCKER_API ? 'freshly built Docker image + its own Postgres' : 'in-memory'} on ${API} (the demo database is never touched)` : 'none (answers wait on the device; checks the queued screen)'}`);
+
+const browser = await launch();
+try {
+  for (const lang of LANGS) {
+    for (const mode of PAGES.includes('flow') ? MODES : []) {
+      const before = failures.length;
+      const done = await walk(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${mode.label}`, `stopped: ${e.message.split('\n').slice(0, 3).join(' / ')}`));
+      if (apiUp && done && !done.sessionId) fail(`${lang} / ${mode.label}`, 'the API is running but the complete event has no sessionId');
+      console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${lang} ${PACKS[lang].dir}  ${mode.label}`);
+    }
+    // Career Gateway: the job list (filter, apply) and the employer form.
+    for (const [page, run, modes] of [['jobs', jobsWalk, CAREER_MODES], ['employer', employerWalk, CAREER_MODES.filter((m) => m.width !== 640)]]) {
+      if (!PAGES.includes(page)) continue;
+      for (const mode of modes) {
+        const before = failures.length;
+        await run(browser, mode, lang, apiUp).catch((e) => fail(`${lang} / ${page} / ${mode.label}`, `stopped: ${e.message.split('\n').slice(0, 3).join(' / ')}`));
+        console.log(`${failures.length === before ? 'ok  ' : 'FAIL'} ${lang} ${PACKS[lang].dir}  ${page}: ${mode.label}`);
+      }
+    }
+  }
+} finally {
+  await browser.close();
+  stopServers();
+}
+
+if (failures.length) {
+  console.error(`\n${failures.length} problem(s):\n  - ${failures.join('\n  - ')}`);
+  process.exit(1);
+}
+console.log(`All browser accessibility checks passed (${LANGS.join(', ')}).`);

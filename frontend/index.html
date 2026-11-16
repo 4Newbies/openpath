@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenPath (dev)</title>
+    <style>
+      body { margin: 0; padding: 1rem; background: #f3f4f6; font-family: system-ui, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>OpenPath dev page</h1>
+      <!-- Source build with hot reload. The installable bundle is shown in demo/. -->
+      <openpath-flow questions="/questions/onboarding.json" api="http://localhost:4000" lang="en"></openpath-flow>
+    </main>
+    <script type="module" src="/src/index.js"></script>
+  </body>
+</html>

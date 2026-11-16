@@ -1,0 +1,146 @@
+/* <openpath-jobs>: added to styles.css inside its shadow root. Logical
+   properties only, so it lays out in both directions. */
+
+.op-jobs-heading {
+  margin-block: 0 0.5em;
+  font-size: 1.6em;
+  line-height: 1.3;
+}
+.op-jobs-heading:focus {
+  outline: none;
+}
+.op-jobs-heading:focus-visible {
+  outline: 3px solid var(--op-focus);
+  outline-offset: 3px;
+}
+
+.op-jobs-filter-box {
+  margin-block-end: 1.5em;
+  border: var(--op-border-width) solid var(--op-border);
+  border-radius: 0.3em;
+}
+.op-jobs-filter-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5em;
+  min-block-size: 44px; /* a large target on touch screens */
+  padding-block: 0.5em;
+  padding-inline: 1em;
+  cursor: pointer;
+}
+.op-jobs-filter-summary .op-subheading {
+  margin: 0;
+}
+.op-jobs-filter-summary:focus-visible {
+  outline: 3px solid var(--op-focus);
+  outline-offset: 2px;
+}
+.op-jobs-filter-count {
+  padding-block: 0.1em;
+  padding-inline: 0.6em;
+  border-radius: 1em;
+  background: var(--op-accent-fill);
+  color: var(--op-accent-text);
+  font-weight: 700;
+}
+.op-jobs-filter-count[hidden] {
+  display: none;
+}
+.op-jobs-filter {
+  margin: 0;
+  padding-block: 0 1em;
+  padding-inline: 1em;
+  border: 0;
+}
+.op-privacy {
+  margin-block: 0 1em;
+  padding-block: 0.5em;
+  padding-inline: 0.75em;
+  border-inline-start: 5px solid var(--op-accent-line);
+  background: var(--op-selected);
+}
+.op-options-inline {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14em), 1fr));
+}
+.op-jobs-filter-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75em;
+  margin-block-start: 1em;
+}
+.op-remember {
+  flex: 1 1 14em;
+}
+
+.op-jobs-count {
+  margin-block: 0 1em;
+  font-weight: 700;
+}
+
+.op-jobs-list,
+.op-job-support {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.op-job {
+  margin-block-end: 1em;
+  padding-block: 1em;
+  padding-inline: 1em;
+  border: var(--op-border-width) solid var(--op-border);
+  border-radius: 0.3em;
+}
+.op-job-title {
+  margin-block: 0 0.5em;
+  font-size: 1.3em;
+  line-height: 1.3;
+}
+.op-job-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25em 1em;
+  margin-block: 0 0.75em;
+}
+.op-job-facts dt {
+  font-weight: 700;
+}
+.op-job-facts dd {
+  margin: 0;
+  min-inline-size: 0;
+}
+.op-job-desc {
+  margin-block: 0 0.75em;
+}
+.op-job-support {
+  margin-block-end: 1em;
+}
+.op-job-support li {
+  padding-inline-start: 1.2em;
+  position: relative;
+}
+.op-job-support li::before {
+  content: '✓'; /* decorative: */
+  content: '✓' / '';
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--op-accent);
+  font-weight: 700;
+}
+.op-apply {
+  inline-size: 100%;
+}
+.op-back-to-jobs {
+  margin-block-end: 1em;
+}
+
+/* Narrow screens and large zoom: facts stack under their labels. */
+@media (max-width: 30em) {
+  .op-job-facts {
+    grid-template-columns: 1fr;
+  }
+  .op-job-facts dd {
+    margin-block-end: 0.5em;
+  }
+}

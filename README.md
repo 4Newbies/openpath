@@ -1,0 +1,695 @@
+# OpenPath
+
+A drop-in accessible form. One script tag gives any website a one-question-per-screen
+form driven by a JSON question file (WCAG 2.2 AA).
+
+```html
+<script src="openpath.js"></script>
+<openpath-flow questions="/questions/onboarding.json"
+               api="http://localhost:4000" lang="en" languages="en,am"></openpath-flow>
+```
+
+Put the `lang/` folder (from `frontend/dist/lang/`) next to `openpath.js`.
+English is built in; other languages are loaded from there only when used.
+
+## Install
+
+Copy `openpath.js` and the `lang/` folder (prebuilt in `dist/` in the submission repo, or
+`cd frontend && npm install && npm run build` into `frontend/dist/`) to your site, then add the
+two lines above (a `<script>` and an `<openpath-flow>`) to any page.
+
+## Run without Docker
+
+All you need is Node.js 20 or newer. From the repo root:
+
+```sh
+npm run demo:nodocker
+```
+
+This installs the dependencies the first time, starts the API with an **in-memory store**
+on http://localhost:4000 and serves the demo on http://localhost:5173:
+
+- http://localhost:5173/demo/ — the form (English, Amharic, Arabic)
+- http://localhost:5173/savanna/index.html — Savanna, with "Start accessible onboarding"
+- http://localhost:5173/demo/jobs.html — Career Gateway job list (filter, apply)
+- http://localhost:5173/demo/employer.html — employer form: post a job and the support offered
+
+Press Ctrl+C to stop both. **Nothing is saved to a database: every session and answer is
+lost when the API stops or restarts.** That is fine for trying the form and for frontend
+work; use Docker (below) when you need data to stay. If the Docker API is already running
+on port 4000, the command uses it instead, but only if it serves the current question files;
+an out-of-date one (an image started without `--build`) is reported and the demo gets its
+own in-memory API on the next free port. Other ports: `API_PORT=4100 DEMO_PORT=5180 npm run demo:nodocker`
+(the demo page itself calls `http://localhost:4000`).
+
+Only the API, in memory: `cd backend && npm install && npm run dev:memory`.
+
+The form also works with no API at all: answers stay on the device, a note says they will
+be sent when the server is back, and they are sent then (see
+[When the server can't be reached](#when-the-server-cant-be-reached)).
+
+## Run with Docker (API + Postgres)
+
+```sh
+# 1. API + Postgres (one command; uses .env if present, see .env.example)
+docker compose up --build
+
+# 2. Build the tag and serve the demo, Savanna and the question file on :5173
+cd frontend && npm install && npm run demo
+#    http://localhost:5173/demo/                 plain page using the tag (English, Amharic, Arabic)
+#    http://localhost:5173/savanna/index.html    Savanna, with "Start accessible onboarding"
+```
+
+Without the `api` attribute the tag skips the network and only fires events.
+For hot-reload development of the tag: `cd frontend && npm run dev` (http://localhost:5173/).
+
+## Test it
+
+```sh
+cd backend  && npm install && npm test        # API + schema tests (in-memory store)
+# also against Postgres from docker compose (a separate openpath_test database,
+# created automatically; the demo database is never touched):
+TEST_DATABASE_URL=postgres://openpath:local-dev-only@localhost:5433/openpath_test npm test
+
+cd frontend && npm install && npm test        # unit, element and axe (jsdom) tests
+npm run build && npm run test:browser         # real Chrome/Edge: the onboarding form, the job list (filter,
+                                              # apply) and the employer form, in en, am and ar (right to left),
+                                              # with each helper on and all off: axe incl. contrast in the
+                                              # light and dark themes, 320px/200%/400% reflow, focus, targets.
+                                              # It starts its own in-memory API (:4199) and demo server (:5199)
+                                              # and fails if anything calls the demo API on :4000, so it never
+                                              # touches the demo database. WALK_API=none tests with no API;
+                                              # OPENPATH_LANGS=ar and OPENPATH_PAGES=jobs,employer run fewer;
+                                              # DEMO_PORT / WALK_API_PORT change the ports.
+npm run test:browser:docker                   # builds the API image from this checkout, runs it with its own
+                                              # Postgres (Compose project "openpath-walk", removed afterwards)
+                                              # and checks an employer can post a job, in en, am and ar.
+npm run review:amharic                        # rebuild docs/amharic-review.md after changing Amharic text
+```
+
+## Layout
+
+| Path | What |
+|------|------|
+| `shared/questions.schema.json` | JSON Schema for question files |
+| `shared/flow.js` | File + answer validation, `showIf`, phone countries, used by both the tag and the API |
+| `shared/ethiopian.js` | Ethiopian ⇄ Gregorian calendar conversion |
+| `frontend/lang/` | Language packs: `en.json` (built in), `am.json`, `ar.json` (draft) |
+| `docs/amharic-review.md` | All Amharic beside its English, for a native speaker to check |
+| `frontend/public/questions/` | The flows folder: `onboarding.json` (also bundled as the fallback), `job-application.json`, `employer-accommodations.json` |
+| `frontend/public/jobs/jobs.json` | Six sample jobs (schema.org/JobPosting, English and Amharic) |
+| `shared/jobs.js`, `shared/support-tags.js` | JobPosting validation and the shared list of support tags |
+| `frontend/src/` | `<openpath-flow>` (`element.js`: loader, store, navigator, steps, review) and `<openpath-jobs>` (`jobs.js`) |
+| `frontend/demo/` | `index.html` (plain host page), `onboarding.html` (opened from Savanna), `jobs.html` and `employer.html` |
+| `frontend/public/savanna/` | Savanna static pages, unchanged except one link in `index.html` |
+| `backend/` | Express API under `/v1`, Postgres store, `openapi.yaml`; optional speech-to-text in `src/speech.js` |
+| `client/`, `server/` | Earlier prototype; not part of OpenPath and left out of the submission repo |
+
+## Accessibility helpers
+
+**Every helper is off until the learner turns it on.** With all helpers off the
+form is plain, native HTML (real labels, buttons, fieldsets, one live region)
+built to work with the learner's own tools: TalkBack, VoiceOver, NVDA and JAWS,
+voice typing (Android/iOS dictation, Windows voice access), switch access,
+keyboard only, browser zoom to 400% and Windows high contrast. The automated
+checks (axe, focus order, reflow) pass; sessions with real screen reader and
+switch users are still to be done. OpenPath never speaks by itself unless the
+learner chose read-aloud, so it doesn't talk over a screen reader.
+
+When an answer shows or hides a later question (`showIf`), the step count changes in
+place (*Step 3 of 5*) without moving focus, and the live region says it once, a moment
+later: *"One more question was added. There are now 5 questions."* (or *taken away*).
+Changing the answer back and forth quickly says nothing more.
+
+The first screen asks **"How do you want to use this?"**. When the host offers
+several languages, a language switcher comes first; the next control,
+*Continue with my device's own tools*, turns every helper off. The choice is
+saved in `localStorage` (`openpath:prefs`) and the screen is skipped on later
+visits; a **Settings** button on every step reopens it. Helpers the browser
+can't support are not offered.
+
+| Helper | What it does |
+|--------|--------------|
+| Read questions to me | A **Listen** button on every step reads the question, hint and options; each step is also read once when the learner moves to it. **Stop** (or Escape) stops it, and it stops on every step change. |
+| I want to speak my answers | A **Speak your answer** button (a real `<button>` whose label changes to **Stop listening** while it listens) on questions with `"voice": true`. Asks for consent once for each place the voice is sent to. What was said goes into the field, which stays editable, and focus returns to it; choice questions match the words to an option. It never moves on by itself. |
+| Simple words | Shows each question's `simple` text and simple option labels, the question's icon (decorative), and short, plain interface text and errors (from each language pack's `simple` strings). |
+| Text size | Normal (100%), Large (150%) or Largest (200%), shown as soon as it is chosen. No sideways scroll at 320px at any size. An older saved "Bigger text" becomes Large. |
+| High contrast | Black on white (or white and yellow on black in dark mode), thicker borders. |
+
+Without asking, the form also follows the device's **dark mode**
+(`prefers-color-scheme`), **more contrast** (`prefers-contrast`), **forced
+colours** (Windows high contrast) and **reduced motion**.
+
+### Read-aloud: audio files, then browser voices
+
+For each step OpenPath uses, in order:
+
+1. the question's **audio file** for the current language, if the question file has one;
+2. a **browser voice** (`speechSynthesis`) for the current language;
+3. otherwise read-aloud is **not available** and the Listen button is hidden.
+
+Audio files are only downloaded when they are played. Add them per language with the
+optional `audio` field (http(s) URLs or paths relative to the page):
+
+```json
+{ "id": "fullName", "type": "text", "label": { "en": "What is your full name?" },
+  "audio": { "en": "/audio/full-name.en.mp3", "am": "/audio/full-name.am.mp3" } }
+```
+
+Few devices have an Amharic voice, so recorded `am` audio is the dependable way to read Amharic aloud.
+
+### Voice input
+
+For each language the form uses, in order:
+
+1. the **server's speech-to-text**, when the API has a provider for this language
+   (see [Speech providers](#speech-providers-free-default-optional-services-self-hosted));
+2. the browser's own **`SpeechRecognition`** (or `webkitSpeechRecognition`);
+3. otherwise **no mic button** at all.
+
+Before first use the learner is told where their voice goes, for example
+*"Your voice is sent over the internet to your browser's speech service (Google, if you use Chrome) to turn it into text. Allow?"*
+or, with the server's provider, *"Your voice is recorded and sent over the internet to Addis Scribe to turn it into text. This site does not keep the recording. Allow?"*
+(**Allow** / **No, I will type**). The provider's name comes from the server. The answer is remembered for
+that destination; if the voice would go somewhere else (another language, another provider), the form asks again.
+
+With the browser recogniser, listening ends when the learner stops talking. With the
+server, the form records until the learner presses **Stop listening** (it says so when
+it starts), or for at most 30 seconds, then sends the clip and fills in the text. Either way
+the text goes into the field to check and edit, and the form never moves on by itself.
+Escape, or moving to another step, throws a recording away without sending it. Under every
+mic: *"Speech-to-text can make mistakes. Check your answer."* The mic is on every question
+type (text, long text, phone, each date list, single and multiple choice, yes/no). The voice
+code is only loaded once the learner turns voice on.
+
+Every failure is shown under the mic, announced, and ends with *"You can type instead."*:
+no microphone, microphone blocked, nothing heard, offline, language not supported by the
+recogniser or the server, page not secure (microphones need https or localhost: a phone on
+`http://192.168.x.x` gets this message), the server busy (429), or any other failure.
+Saying **No, I will type** hides the mics; choosing *I want to speak my answers* again in
+Settings asks again.
+
+What was checked in real Chrome (not only with fakes): the browser recogniser starts and
+listens (Chrome's own "no speech" timeout gives the right message); with a server provider
+the browser records, converts to 16 kHz WAV, uploads, and the text lands in the field with
+focus and can be edited; the mic shows on every question type of the onboarding form and
+consent is asked once. Chrome's recogniser can't be fed a test recording, so recognising
+real words with it still needs a person speaking.
+
+### Your own providers
+
+Register these after the `openpath.js` script tag, for example to use a cloud
+Amharic voice or your own speech-to-text service:
+
+```js
+OpenPath.setSpeechProvider({
+  isAvailable(lang, { audioUrl } = {}) { return true; },     // can you read this language?
+  speak(text, lang, { audioUrl } = {}) { return promise; },  // settle when finished or stopped
+  stop() {},
+});
+
+OpenPath.setVoiceProvider({
+  isAvailable(lang) { return true; },
+  listen(lang, { onRecorded } = {}) { return promise; },
+                                     // resolve with the text heard; reject with an Error whose .code is
+                                     // permission | no_speech | offline | no_microphone | busy | aborted.
+                                     // Call onRecorded() (optional) when recording ends and the text is on its way.
+  stop() {},                         // stop listening; listen() then settles with what was heard
+  cancel() {},                       // optional: throw the recording away (Escape, step change)
+});
+```
+
+`lang` is the form's language code (`"en"`, `"am"`, `"ar"` ...). A provider registered here is
+used for every language, before the server and the browser. Its consent question is the browser one.
+Pass `null` to go back to the built-in choice.
+
+## Speech providers: free default, optional services, self-hosted
+
+Voice input needs something to turn speech into text. The API picks one with
+`SPEECH_PROVIDER`; keys are read only from the environment (see `.env.example`).
+
+| `SPEECH_PROVIDER` | Who turns speech into text | Languages (default) | Cost |
+|-------------------|----------------------------|---------------------|------|
+| `none` (default) | Nobody on the server. The form uses the **browser's own recogniser** (in Chrome that is Google's service; Firefox has none, so no mic). | Whatever the browser does; Amharic is rarely supported | Free |
+| `addis` | **Addis Scribe** (`ADDIS_SCRIBE_API_URL`, `ADDIS_SCRIBE_API_KEY`): the raw audio is posted with the key as a Bearer token, as the earlier `server/` prototype did | `am` | Paid service |
+| `azure` | **Microsoft Azure Speech**, short-audio REST API (`AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`) | `am,en,ar` | Paid service, has a free tier |
+| `selfhosted` | **Your own Whisper server** with the OpenAI-compatible `POST /v1/audio/transcriptions` (faster-whisper-server, whisper.cpp server, LocalAI, vLLM ...): `SPEECH_SELFHOSTED_URL`, optional `SPEECH_SELFHOSTED_API_KEY` and `SPEECH_SELFHOSTED_MODEL` (default `whisper-1`) | `am,en,ar` | Your hardware; audio stays on your network |
+
+- **`GET /v1/speech/capabilities`** tells the form which languages the server transcribes and
+  the provider's **label**, which the consent question names. The labels are "Addis Scribe",
+  "Microsoft Azure Speech", or a self-hosted server's host; set `SPEECH_PROVIDER_LABEL` to change it
+  (for example "the ALX speech server"). Set `SPEECH_LANGUAGES` (e.g. `am,en,ar=ar-SA`) to
+  choose the languages; the server is used only for those, and other languages fall back to the browser.
+- **`POST /v1/speech/transcribe?lang=am`** takes the audio as the request body (`audio/wav`,
+  `audio/webm`, `audio/ogg`, `audio/mp4` or `audio/mpeg`; Azure takes WAV and Ogg only) and
+  returns `{ "text": "..." }`. Clips are at most **30 seconds** and `SPEECH_MAX_BYTES` (1 MiB).
+  The form converts recordings to 16 kHz mono WAV when the browser can, so every provider takes them.
+- **Privacy:** the audio is held in memory for one request and passed to the provider. It is never
+  written to disk, the database or a log, and neither is the text. Only the provider and the kind of failure are logged
+  (e.g. `speech provider "azure" failed: provider_error (HTTP 401)`). What the provider itself
+  keeps is set by your contract with it; with `selfhosted` the audio never leaves your servers.
+- **Rate limit:** voice answers have their own per-IP limit, `SPEECH_RATE_LIMIT_MAX` (default
+  300 per `RATE_LIMIT_WINDOW_MS`), on top of the API-wide one, because each one costs money or GPU time.
+- A wrong setup (unknown provider, missing key or URL) stops the API at start with a clear message,
+  and the API prints the provider and languages it uses when it starts. If the provider fails at runtime,
+  the learner is asked to type; nothing is made up.
+
+## Career Gateway
+
+A second tag, `<openpath-jobs>`, lists jobs from employers who say which support they
+offer, lets learners filter privately by the support they need, and opens the job
+application form (with all the accessibility helpers) for the job they pick.
+
+```html
+<script src="openpath.js"></script>
+<openpath-jobs src="/jobs/jobs.json" api="https://api.example.org" lang="en" languages="en,am,ar"></openpath-jobs>
+```
+
+Try it: `npm run demo:nodocker`, then http://localhost:5173/demo/jobs.html (job seekers) and
+http://localhost:5173/demo/employer.html (employers).
+
+| Attribute | What it does |
+|-----------|--------------|
+| `src` | URL of the jobs: schema.org/JobPosting JSON (a list, one job, or JSON-LD with `@graph`). |
+| `api` | Also lists the API's jobs (`GET /v1/jobs`; the API's version of a job wins) and saves applications there. Without it the file alone is used; if the API is down the file still shows. |
+| `lang`, `languages` | Language, as for `<openpath-flow>`. With several `languages` the list has its own language switcher under the "Jobs" heading; the choice is saved like the form's, so *Apply* opens in it. The learner's choice and helpers from "How do you want to use this?" are followed. |
+| `apply-flow` | Question file opened by *Apply* (default `job-application`), from `flows-path` (default: the `questions/` folder next to `openpath.js`). |
+| `heading-level` | Level of the "Jobs" heading (default 2); job titles are one level below. |
+
+The list:
+
+- Every job title is a heading, each job has exactly one button, *Apply for &lt;title&gt;*.
+- Facts are in a description list; dates show in the Ethiopian calendar in Amharic.
+- It is keyboard and screen reader friendly and reflows at 200% and 400% zoom.
+- The jobs are also written into the host page as JSON-LD
+  (`<script type="application/ld+json">`), so search engines and other platforms can
+  read them. `title` and `description` start with a plain-text English value (or the
+  first value when a job has no English) next to the language-tagged values, because
+  search engines read a JobPosting title as plain text. The API's `GET /v1/jobs` does
+  the same; jobs are stored as they were sent.
+
+### Private "Support I need" filter
+
+Learners tick the support they need; the list shows only jobs offering all of it, and
+the number of results is announced. The screen says: *"Only you can see this. Employers
+are not told."* The filter runs only in the browser: it is never sent to a server, never
+put in the URL, never included in an event or the application, and not stored unless the
+learner ticks *Remember on this device*.
+
+The filter sits in a native `<details>` element. On narrow screens (phones, or high zoom)
+it starts closed so the jobs come first; its summary shows how many are chosen, e.g.
+*Support I need, Chosen: 2*. On wider screens it starts open.
+
+### Applying
+
+*Apply* opens `<openpath-flow flow="job-application">` for that job:
+
+- Name and phone can be filled in from the onboarding answers (no retyping, WCAG 3.3.7).
+  Questions with `"prefillFrom": "alx-onboarding.fullName"` start with that earlier
+  answer. Nothing is kept on the device by default, because many people use a shared
+  computer: after sending, the done screen asks *"Remember my name and phone on this
+  device for job applications?"* with **No** first. Only *Yes* keeps the answers to
+  `"reuse": true` questions. *No* also clears an older copy of them. Settings shows what
+  is kept and offers *Forget my details*.
+- Short questions about experience and availability take voice answers.
+- *"Do you need any support for the interview?"* is optional and private. It asks for no
+  medical details, is stored apart from the application and is left out of
+  `openpath:complete`.
+- Disability information is never required to apply.
+- The job (`{ jobId, jobTitle, organisation }`) is sent with the session and included in
+  `openpath:complete` as `context`.
+
+### Employers
+
+`<openpath-flow flow="employer-accommodations">` asks for the job title, organisation,
+location, type, a description and the support offered (the same tags). Submitting it
+creates a job in the API. Partner platforms can also create or update jobs with
+`POST /v1/jobs` (a JobPosting, matched by `identifier`) when `JOBS_API_KEY` is set; send
+it as `Authorization: Bearer <key>`. In production `POST /v1/jobs` is off without a key.
+
+**Before real use:** the employer form is open to anyone and its jobs are listed straight
+away. Add employer sign-in or a review step first.
+
+### JobPosting format
+
+Only schema.org terms are used. Text in several languages uses JSON-LD language-tagged
+values. **Accommodations are stored in `jobBenefits`**, one text per support tag, using the
+tag's English text from `shared/support-tags.js`. OpenPath maps them back to the tags and
+shows them in the learner's language; other `jobBenefits` text is shown as written.
+
+```json
+{
+  "@context": "https://schema.org",
+  "@type": "JobPosting",
+  "identifier": "sample-data-entry-addis",
+  "title": [{ "@value": "Data entry clerk", "@language": "en" }, { "@value": "የመረጃ መዝጋቢ", "@language": "am" }],
+  "description": [{ "@value": "Enter customer records ...", "@language": "en" }],
+  "hiringOrganization": { "@type": "Organization", "name": "Addis Digital Services" },
+  "jobLocation": { "@type": "Place", "address": { "@type": "PostalAddress", "addressLocality": "Addis Ababa", "addressCountry": "ET" } },
+  "employmentType": "FULL_TIME",
+  "datePosted": "2026-11-02",
+  "validThrough": "2027-06-30",
+  "jobBenefits": ["Screen-reader-friendly application", "Step-free workplace"]
+}
+```
+
+Also accepted: `jobLocationType: "TELECOMMUTE"` with `applicantLocationRequirements`
+(`{ "@type": "Country", "name": "ET" }`), `url` and `directApply`. `employmentType` is one or
+more of `FULL_TIME`, `PART_TIME`, `CONTRACTOR`, `TEMPORARY`, `INTERN`, `VOLUNTEER`,
+`PER_DIEM`, `OTHER`. Jobs past `validThrough` are not listed.
+
+The support tags are: screen-reader-friendly application, sign language interpreter at
+interview, step-free workplace, flexible hours, remote work possible, written
+instructions, and extra time in assessments.
+
+`frontend/public/jobs/jobs.json` has six fictional sample jobs in Ethiopia, in English
+and Amharic.
+
+## Languages
+
+| Attribute | What it does |
+|-----------|--------------|
+| `lang="am"` | Language to start in (default `en`). |
+| `languages="am,en,ar"` | Optional. Shows a language switcher on the first screen and in Settings. Each language is written in itself, with its own `lang` attribute. The learner's choice is remembered on the device. |
+| `lang-path="/static/openpath/lang/"` | Optional. Where the packs are. Default: the `lang/` folder next to `openpath.js`. |
+
+English is built into `openpath.js`. Other packs are fetched only when used. A missing
+string, a broken pack or a failed download falls back to English; the form keeps working.
+`lang` and `dir` on the form come from the pack. Anything shown in English because it has
+no translation (a missing interface string or untranslated question text) is marked
+`lang="en"`, and `dir="ltr"` in a right-to-left form, so screen readers switch voice.
+
+| Language | Status |
+|----------|--------|
+| English (`en`) | Source text, built in |
+| Amharic (`am`) | **Draft**: written without a native speaker, not yet reviewed ([docs/amharic-review.md](docs/amharic-review.md)) |
+| Arabic (`ar`) | **Draft** (`"draft": true`): written to prove right-to-left layout, not reviewed |
+
+No language other than English has been reviewed by a native speaker.
+
+### Add a language (one JSON file)
+
+1. Copy `frontend/lang/en.json` to `frontend/lang/<code>.json`, for example `ti.json`.
+2. Set `code` (`"ti"`), `name` written in that language (`"ትግርኛ"`) and `dir` (`"ltr"`, or `"rtl"` for Arabic, Hebrew, Urdu ...).
+3. Translate the `strings`. Keep `{words in brackets}` as they are. `simple` holds the
+   simple-words versions; leave out any you don't have and the normal text is used.
+   Lists: `gregorianMonths`, `ethiopianMonths`, `voiceYes`/`voiceNo` (words voice input accepts).
+4. Optional: add `"draft": true` and a `note` until a native speaker has checked it.
+5. `npm run build` copies it to `dist/lang/`. Offer it with `languages="...,ti"`.
+
+`npm test` checks that every pack is valid and has every English string. To translate
+the questions too, add the code next to `en` in the question file
+(`"label": { "en": "Your name", "ti": "..." }`); the API accepts any language code.
+
+### Right to left
+
+All styles use logical properties (`margin-inline-start`, `padding-block`,
+`border-inline-start`, `text-align: start` ...), never left/right, and a test fails if one
+creeps in. A pack with `"dir": "rtl"` sets `dir="rtl"` on the form, so the reading order,
+Back/Next, the error bar and the checkboxes all flip with no extra CSS. Phone numbers stay
+left to right. `lang/ar.json` is a **draft** written to prove this works; it needs review
+by a native Arabic speaker.
+
+### Amharic and Ethiopic script
+
+Every question in `onboarding.json` has Amharic. Ethiopic text uses fonts already on the
+device (Noto Sans Ethiopic, Nyala, Kefa, Ebrima, Abyssinica SIL, then sans-serif; nothing
+is downloaded) with a line height of 1.7. All Amharic is collected in
+`docs/amharic-review.md` for a native speaker to correct.
+
+## Country settings
+
+### Calendar for date questions
+
+```json
+{ "id": "dateOfBirth", "type": "date", "calendar": "ethiopian", "label": { "en": "What is your date of birth?" } }
+```
+
+`calendar` is where the learner **starts**. A button under the fields switches between
+*Use Gregorian calendar* and *Use Ethiopian calendar*; the same day is carried over, focus
+stays on the button and the change is announced. Every date is stored as the ISO Gregorian
+date plus the calendar the learner used:
+
+| Calendar used | Input | Stored answer |
+|---------------|-------|---------------|
+| `"gregorian"` (default start) | three boxes: day, month, year | `{ "date": "2001-03-27", "calendar": "gregorian" }` |
+| `"ethiopian"` | three native lists: day, month (13 months, in the learner's language), year | `{ "date": "2001-03-27", "calendar": "ethiopian", "ethiopian": { "year": 1993, "month": 7, "day": 18 } }` |
+
+A plain `"2001-03-27"` sent to the API is accepted as a Gregorian date. Pagume (month 13)
+has 5 days, or 6 when the Ethiopian year mod 4 is 3. The browser and the API both check
+that the two dates agree (`calendar_mismatch` otherwise). The review screen shows the date
+in the calendar the learner used: *18 Megabit 1993 (Ethiopian calendar)*,
+*መጋቢት 18 ቀን 1993 ዓ.ም.*, *27 March 2001*. The default flow starts date of birth in the
+Ethiopian calendar.
+
+### Phone country
+
+```json
+{ "id": "phone", "type": "phone", "country": "ET", "label": { "en": "What is your phone number?" } }
+```
+
+`country` (default `"ET"`) is where the native **Country code** list starts. The list
+shows that country, then Ethiopia and its neighbours (Eritrea, Somalia, Sudan, South Sudan,
+Kenya, Djibouti), then every other country A to Z, named in the form's language where the
+browser knows the name (`Intl.DisplayNames`), otherwise in English. In a right-to-left form
+the list reads right to left; the code and the number box stay left to right.
+
+The learner types the number the way they know it (`0911 234 567`, `911 234 567`). The
+answer carries the chosen calling code (`+251 0911 234 567`), so the browser and the API
+check it against **that** country, and it is stored as `+251911234567`. A number typed with
+its own `+` code picks that country in the list.
+
+- Ethiopia and its six neighbours have their own rules (number pattern, trunk prefix,
+  example in the error: *This is not a phone number for Kenya. Type it like this:
+  0712 345 678. For a number from another country, choose its country code.*).
+- Every other country gets a length check (8 to 15 digits with the calling code; a leading
+  0 is dropped except where it is part of the number, such as Italy) and the error names
+  the country.
+
+`"country": "any"` is a plain phone box (7 to 15 digits, stored as typed). Calling codes are
+in `shared/phone-countries.js`; to give a country its own rules, add it to
+`PHONE_COUNTRIES` in `shared/flow.js` (calling code, trunk prefix, number pattern, example,
+grouping).
+
+## Rate limit
+
+The API limits requests **per IP address**. In a training centre, school or camp, many
+learners often share one public IP address, so set the limit for the size of the group:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `RATE_LIMIT_MAX` | `1000` | Requests allowed per IP address per window. One learner makes about 15 requests to finish the form, so 1000 is about 60 learners per 15 minutes from one address. `0` turns the limit off (only if something else protects the API). |
+| `RATE_LIMIT_WINDOW_MS` | `900000` (15 min) | Length of the window, in milliseconds. |
+| `TRUST_PROXY` | `0` | Number of reverse proxies in front of the API. Set it (usually `1`) behind a proxy or load balancer, otherwise every learner looks like the proxy's address and they all share one limit. |
+
+Set them in `.env` (Docker Compose) or the environment (`npm start`). The API prints the
+limit it uses when it starts. Over the limit, requests get `429` with code `rate_limited`;
+the form keeps the answers on the device and tries again later.
+
+## When the server can't be reached
+
+The form keeps working offline or when the API is down:
+
+- Answers are always kept on the device (`localStorage`) as the learner goes.
+- If saving to the server fails, a note at the top says, and screen readers hear, what
+  went wrong and what happens next:
+  - the device is offline: *"Saved on this device. It will be sent when you are back online."*
+  - the device is online but the API does not answer (it is down, or the page's address is
+    not in `CORS_ORIGINS`): *"... We cannot reach the server right now. Your answers will be
+    sent when it can be reached."* The browser console names the API and the page's origin.
+  - too many requests (429): *"... The server is busy right now ..."*
+  - the API does not know this form (usually an old API: `docker compose up --build`):
+    *"This form is not set up on the server yet ... Please tell the people who run this
+    website ..."*, shown on the first screen it happens, not only on *Send*.
+- If *Send* fails for another reason the answers stay on the review screen and the message
+  says why: a server error (*"Something went wrong on the server ... press Send my answers
+  again in a few minutes"*), or, when the server refuses one answer, that question opens
+  with the reason, as for a local error.
+- If the learner presses *Send*, the form shows *"Your answers are saved on this
+  device"* and queues the submit, also across a reload. It has *Try sending now* and
+  *Change my answers* buttons.
+- When the browser comes back online (and every 20 seconds while waiting) it retries,
+  then shows the thank-you screen and announces that the answers were sent.
+- Every request is safe to repeat: answers are saved as a whole set, a repeated
+  submit counts as sent, and the browser sends a random `clientKey` with "create a
+  session", so a retry after a lost reply gets the same session, not a second one.
+
+## Events
+
+| Event | `detail` |
+|-------|----------|
+| `openpath:step` | `{ flowId, stepId, index, total }` (`stepId` is `"choose-language"` on the language screen, `"setup"` on "How do you want to use this?" and `"review"` on the review screen) |
+| `openpath:complete` | `{ flowId, sessionId, answers, context? }`, leaving out answers to `private` questions; `context` is the job for an application. Fired when the server has the answers (or at once without `api`). |
+| `openpath:queued` | `{ flowId }`: *Send* was pressed while the server couldn't be reached; the answers wait on the device and `openpath:complete` follows when they are sent. |
+
+Both bubble and cross the shadow boundary (`composed: true`). Theme with
+`--openpath-color`, `--openpath-color-dark` (for the dark theme) and
+`--openpath-font` on the element; see [Theming safely](#theming-safely).
+
+## Theming safely
+
+### Light and dark
+
+The form has a light and a dark theme, and both are checked for contrast in the
+browser walk.
+
+| Who | How |
+|-----|-----|
+| Host page | `theme="light"` (default), `theme="dark"`, or `theme="auto"` (follow the device's dark mode) on `<openpath-flow>` or `<openpath-jobs>`. Without it the form is light, whatever the device is set to. |
+| Learner | **Dark colours** in "How do you want to use this?" and Settings. The box shows what is on screen. Ticking it gives dark colours and unticking it gives light colours, even on a dark host page; the choice is remembered. Left as it was shown, the host's theme keeps deciding; *Continue with my device's own tools* goes back to the host's theme. |
+
+Forced colours (Windows high contrast), more contrast and reduced motion are always
+followed automatically.
+
+### Brand colours
+
+Your brand colour can never make the form inaccessible: OpenPath measures it and
+corrects it if needed.
+
+```css
+openpath-flow, openpath-jobs {
+  --openpath-color: #0b5cad;      /* light theme */
+  --openpath-color-dark: #8cb8ff; /* dark theme (theme="dark", or theme="auto" in dark mode) */
+}
+```
+
+At start-up, and again whenever the colour, the theme or the device's settings
+change, both components check the colour against the form background (white, or
+`#1b1b1f` in the dark theme) using the WCAG 2.2 contrast formula:
+
+| Where the colour is used | Rule |
+|--------------------------|------|
+| Filled buttons (*Next*, *Send*, the chosen language, the mic while listening) | The colour is used as it is. The text on it is **black or white, whichever has the higher contrast** (always at least 4.5:1). |
+| Text in that colour (secondary buttons, icons, ticks) | At least **4.5:1** on the background. |
+| Borders, outlines, the selected option, checkboxes | At least **3:1** on the background. |
+| Font size | Never below **16px**, even if the page sets a smaller `font-size` on the element (18px by default). |
+
+If the colour fails a rule, OpenPath darkens it (light theme) or lightens it
+(dark theme) one small step at a time, keeping its hue, until it passes, and
+uses that version only where the rule applies. It tells you in the browser
+console, for example:
+
+```
+[openpath] --openpath-color: #fff59d has a contrast of only 1.11:1 on the light form
+background #ffffff. Text needs 4.5:1 and borders and focus rings need 3:1, so OpenPath
+uses #847600 (4.59:1) for text and #a29200 (3.15:1) for borders and outlines. Buttons
+filled with #fff59d use black text (18.79:1).
+```
+
+To keep your exact shade everywhere, pick one that already passes; a checker such
+as the WebAIM contrast checker shows the ratio. A value OpenPath can't read (use
+`#rrggbb`, `rgb()` or `hsl()`) is ignored with a warning, and the built-in colour
+is used. Font size warnings work the same way.
+
+- **High contrast** (the learner's helper, or the device's *more contrast*
+  setting) and **forced colours** (Windows high contrast) ignore host colours
+  completely and use the built-in palette or the device's colours.
+- **Not colour alone:** errors have a warning icon and words (and "Error:" for
+  screen readers), required and optional questions are told apart by the words
+  *(optional)*, selected options are native ticked checkboxes and radio buttons,
+  and the chosen language has a tick. Tests check all of this, and feed in bad
+  colours (pale yellow, light grey, mid-blue on dark, see-through colours) to
+  check that every text/background pair still passes.
+
+## Question file format
+
+A flow is one JSON file in the flows folder (`frontend/public/questions/`), checked against
+[`shared/questions.schema.json`](shared/questions.schema.json) by both the tag and the API.
+
+```json
+{
+  "version": "1.0.0",
+  "flowId": "my-flow",
+  "title": { "en": "Join us", "am": "..." },
+  "questions": [
+    { "id": "fullName", "type": "text", "required": true, "voice": true, "reuse": true,
+      "autocomplete": "name", "maxLength": 120,
+      "label": { "en": "What is your full name?" },
+      "simple": { "en": "Your name" },
+      "hint":  { "en": "Write it the way you want us to use it." } }
+  ]
+}
+```
+
+- `type`: `text`, `phone`, `date`, `single`, `multi`, `yesno` or `info` (a screen with no answer).
+- Every text (`label`, `simple`, `hint`, option labels) is an object with one entry per language code.
+- Optional per question: `required`, `voice` (offer *Speak your answer*), `reuse` (may be remembered
+  on the device after sending), `private` (stored apart, left out of `openpath:complete`), `showIf`
+  (show only for some earlier answers), `autocomplete`, `maxLength`, `icon`, `country` (phone),
+  `calendar` (`gregorian` or `ethiopian`), `prefillFrom` (`"<flowId>.<questionId>"`).
+- The schema is the full reference; the three files in `frontend/public/questions/` are worked examples.
+
+## Keyboard and ARIA
+
+- Everything works with the keyboard alone: Tab / Shift+Tab move through native controls in
+  reading order, Enter and Space use buttons, arrow keys move inside radio groups (browser default).
+  **Escape** stops read-aloud and voice input; OpenPath takes over no other key.
+- Each step is a native form: real `<label>`s, `<fieldset>`/`<legend>` for choices, `<button>`s.
+  ARIA is used only where HTML has no equivalent: `aria-describedby` (hints and errors),
+  `aria-invalid`, `aria-labelledby`, `aria-pressed` (toggle buttons), `aria-disabled`, `aria-hidden` (decorative
+  icons) and one `aria-live` region for step changes and errors.
+- On a step change focus moves to the new question's heading. An error is shown under its field
+  (text, not only colour), tied to it with `aria-invalid` and `aria-describedby`, and focus goes
+  to the field. Automated checks for this are in `frontend/test/` and the browser walk
+  (`npm run test:browser`); see [docs/wcag-2.2-aa-conformance.md](docs/wcag-2.2-aa-conformance.md).
+- **Not tested** with real screen reader, switch or voice-control users (see Known limits).
+
+## Privacy
+
+**Kept on the learner's device (`localStorage`):**
+
+| Key | What | When it goes |
+|-----|------|--------------|
+| `openpath:<flowId>` (or `:<flowId>:<jobId>`) | Current step, answers so far, the server session id | Replaced on each change; cleared after sending |
+| `openpath:prefs` | Helper choices, language, text size | Until the learner changes them or clears site data |
+| `openpath:profile` | Answers to `reuse` questions, **only if the learner says yes** after sending (default no) | *Forget my details* in Settings |
+| `openpath:support-filter` | The Career Gateway support filter | Never sent to the server |
+
+**Kept on the server (Postgres):** `openpath_sessions` (id, resume code, flow, language, status,
+step, dates, job context), `openpath_profile_answers` (answers), `openpath_support_requests`
+(answers to `private` questions, in their own table), `openpath_jobs` (job postings).
+
+**Not stored anywhere:** voice recordings and their text on the server side (held in memory for
+one request, never written to disk, database or log); the support filter; analytics or tracking
+(OpenPath has none). The API logs start-up messages and error kinds, not answers.
+
+**Not built yet:** automatic deletion or a retention period on the server, an endpoint for a
+learner to delete their submitted answers, and access control for reading answers (there is
+no read-answers endpoint; operators read Postgres directly).
+
+## Known limits
+
+- **No sessions with disabled users yet.** Screen readers (NVDA, JAWS, TalkBack, VoiceOver),
+  switch access and voice control are **not tested** with real users or by hand; the checks are
+  automated (axe, keyboard focus, reflow) in Chrome/Edge.
+- **Languages:** English is the source text. Amharic and Arabic are **drafts** written without a
+  native speaker and must be reviewed ([docs/amharic-review.md](docs/amharic-review.md)).
+- Voice input with `SPEECH_PROVIDER=none` depends on the browser: Firefox has none; in Chrome audio
+  goes to Google; Amharic is rarely supported. The `addis`, `azure` and `selfhosted` providers
+  are covered by unit tests with mocked services only: **not tested** against the live services.
+- Firefox and Safari: **not tested** (the browser walk uses Chrome or Edge).
+- The in-memory store (`npm run demo:nodocker`) loses everything on restart.
+- No server-side retention or deletion, and no admin view of answers (see Privacy).
+- `client/` and `server/` are an earlier prototype, not part of OpenPath (left out of the submission).
+
+## Troubleshooting
+
+**The employer form (or any form) says it is not set up on the server.** The API is an
+older version that does not know the form. Rebuild it: `docker compose up --build`
+(`docker compose up` alone reuses the old image).
+
+**The form says it cannot reach the server, but the API is running.** The page is open on
+an address the API does not allow. `CORS_ORIGINS` lists them; by default
+`http://localhost:5173` and `http://127.0.0.1:5173`. Add the address you use, for example
+`http://192.168.1.10:5173` for phones on the same wifi, and restart the API.
+
+## Contributors
+
+- Mohammed Ismail
+- Mohammed Sadik
+- Hayat Abdulfetah
+- Firomsa Girma
+
+## License
+
+[MIT](LICENSE)

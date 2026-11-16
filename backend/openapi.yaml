@@ -1,0 +1,508 @@
+openapi: 3.1.0
+info:
+  title: OpenPath session API
+  version: 0.1.0
+  description: |
+    Saves, resumes and submits answers to an OpenPath question flow.
+    Every answer is validated against the question file the server has loaded
+    for the session's flowId (shared/flow.js). Answers to questions marked
+    `private` (the support request) are stored in a separate table.
+
+    Every error uses the same shape: `{ "error": { "code", "message", "field"? } }`.
+servers:
+  - url: http://localhost:4000/v1
+tags:
+  - name: sessions
+  - name: speech
+    description: Optional server speech-to-text (SPEECH_PROVIDER). Off by default.
+paths:
+  /flows:
+    get:
+      summary: The flows this API serves
+      description: >-
+        Every question file in the flows folder (FLOWS_DIR), keyed by flowId, for example
+        alx-onboarding, job-application and employer-accommodations. Each session belongs
+        to one flow, and its answers are validated against that flow's own question file.
+      responses:
+        '200':
+          description: The flows
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [flows]
+                properties:
+                  flows:
+                    type: array
+                    items:
+                      type: object
+                      required: [flowId, version, title, questions]
+                      properties:
+                        flowId: { type: string, example: job-application }
+                        version: { type: string }
+                        title: { type: object, additionalProperties: { type: string } }
+                        questions: { type: integer, description: Number of questions. }
+  /flows/{flowId}:
+    get:
+      summary: One flow's question file
+      parameters:
+        - { name: flowId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: The question file (see shared/questions.schema.json)
+          content:
+            application/json:
+              schema: { type: object }
+        '404':
+          description: Unknown flow
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /health:
+    get:
+      tags: [flows]
+      summary: Is the API up and can it reach its store
+      responses:
+        '200':
+          description: The API and its store (Postgres or memory) answer
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok: { type: boolean, const: true }
+        '500':
+          description: The store cannot be reached
+  /jobs:
+    get:
+      summary: Open jobs, as schema.org/JobPosting JSON-LD
+      description: >-
+        Jobs from the employer form and from POST /v1/jobs, newest first, leaving out jobs whose
+        validThrough has passed. Support offered (accommodations) is in jobBenefits: one text per
+        support tag (shared/support-tags.js), using the tag's English text.
+      responses:
+        '200':
+          description: The jobs
+          content:
+            application/ld+json:
+              schema:
+                type: object
+                required: ['@context', '@graph']
+                properties:
+                  '@context': { type: string, const: 'https://schema.org' }
+                  '@graph': { type: array, items: { $ref: '#/components/schemas/JobPosting' } }
+    post:
+      summary: Create or update a job by identifier
+      description: >-
+        For partner platforms. Needs "Authorization: Bearer <JOBS_API_KEY>" when JOBS_API_KEY is set;
+        without a key it is open in development and off (403) in production. Only the JobPosting
+        properties listed in the schema are accepted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JobPosting' }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/JobPosting' } } } }
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/JobPosting' } } } }
+        '400': { description: Not a valid JobPosting (invalid_job), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Missing or wrong jobs API key, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Off in production without JOBS_API_KEY, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /jobs/{identifier}:
+    get:
+      summary: One job
+      parameters:
+        - { name: identifier, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+      responses:
+        '200': { description: The job, content: { application/ld+json: { schema: { $ref: '#/components/schemas/JobPosting' } } } }
+        '404': { description: No such job, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /sessions:
+    post:
+      tags: [sessions]
+      summary: Start a session
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [flowId]
+              additionalProperties: false
+              properties:
+                flowId: { type: string, example: alx-onboarding }
+                lang: { type: string, pattern: '^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$', default: en, example: am, description: 'Interface language of the form (en, am, ar ...).' }
+                context:
+                  type: object
+                  maxProperties: 10
+                  additionalProperties: { type: string, maxLength: 200 }
+                  example: { jobId: sample-data-entry-addis, jobTitle: Data entry clerk }
+                  description: What the session is about, e.g. the job a job-application session applies for.
+                clientKey:
+                  type: string
+                  pattern: '^[A-Za-z0-9_-]{16,64}$'
+                  description: >-
+                    Optional random key from the browser that makes this request safe to repeat:
+                    the same key returns the session it already created (200) instead of a new one.
+                    Treat it as a secret.
+      responses:
+        '200':
+          description: The session already created with this clientKey (a repeated request)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, resumeCode]
+                properties:
+                  id: { $ref: '#/components/schemas/SessionId' }
+                  resumeCode: { type: string }
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, resumeCode]
+                properties:
+                  id: { $ref: '#/components/schemas/SessionId' }
+                  resumeCode: { type: string, pattern: '^[A-Z2-9]{4}-[A-Z2-9]{4}$', example: K7QM-3XHT }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /sessions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    get:
+      tags: [sessions]
+      summary: Resume a session
+      operationId: getSession
+      responses:
+        '200':
+          description: The session and every saved answer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /sessions/{id}/answers:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    put:
+      tags: [sessions]
+      summary: Save progress
+      description: |
+        Replaces the full set of saved answers (idempotent: sending the same
+        body twice has the same effect). Formats and option values are checked;
+        missing required answers are allowed until submit.
+      operationId: saveAnswers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers: { $ref: '#/components/schemas/Answers' }
+                step:
+                  type: [string, 'null']
+                  description: Question id the person is on, or "review".
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { $ref: '#/components/schemas/SessionId' }
+                  status: { type: string, enum: [open] }
+                  step: { type: [string, 'null'] }
+                  updatedAt: { type: string, format: date-time }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /sessions/{id}/submit:
+    parameters:
+      - $ref: '#/components/parameters/SessionId'
+    post:
+      tags: [sessions]
+      summary: Submit the answers
+      description: |
+        Submits the answers in the body, or the last saved answers when the body
+        has none. Every visible required question must be answered; answers to
+        questions hidden by showIf are dropped. After submit the session is
+        read-only.
+
+        For the employer form, the job listing is saved and the session marked
+        submitted in one step. If the job cannot be saved, the answer is 500
+        with code job_not_saved, the session stays open and the same request
+        can be sent again.
+      operationId: submitSession
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers: { $ref: '#/components/schemas/Answers' }
+      responses:
+        '200':
+          description: Submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { $ref: '#/components/schemas/SessionId' }
+                  status: { type: string, enum: [submitted] }
+                  submittedAt: { type: string, format: date-time }
+                  jobId: { type: string, description: 'Employer form only: the identifier of the job listing created.' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500':
+          description: The employer form's job could not be saved (job_not_saved); nothing was submitted, try again
+  /speech/capabilities:
+    get:
+      tags: [speech]
+      summary: Which languages the server can turn into text, and who does it
+      description: >-
+        The form calls this to choose a voice provider per language: the server when it lists
+        the form's language, otherwise the browser's own recogniser, otherwise no microphone
+        button. `label` names where the audio goes (for the consent question): a service name
+        such as "Addis Scribe" or "Microsoft Azure Speech", the host of a self-hosted server,
+        or SPEECH_PROVIDER_LABEL. With SPEECH_PROVIDER=none, label is null and languages is empty.
+      responses:
+        '200':
+          description: The speech capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [label, languages, formats, maxSeconds, maxBytes]
+                properties:
+                  label: { type: [string, 'null'], example: Addis Scribe }
+                  languages: { type: array, items: { type: string }, example: [am] }
+                  formats:
+                    type: array
+                    description: Audio types POST /speech/transcribe accepts with this provider.
+                    items: { type: string, enum: [audio/wav, audio/webm, audio/ogg, audio/mp4, audio/mpeg] }
+                  maxSeconds: { type: integer, const: 30 }
+                  maxBytes: { type: integer, example: 1048576, description: SPEECH_MAX_BYTES }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /speech/transcribe:
+    post:
+      tags: [speech]
+      summary: Turn a short audio clip into text
+      description: >-
+        Send the audio as the request body (not JSON or multipart), with its type in
+        Content-Type and the language in `lang`. At most 30 seconds (checked exactly for WAV)
+        and SPEECH_MAX_BYTES (default 1 MiB). The form sends 16 kHz mono WAV when the browser
+        can convert the recording, otherwise what MediaRecorder made.
+        The audio is held in memory for this request only and passed to the provider; neither
+        the audio nor the text is stored or logged. The text is a suggestion: the form puts it
+        in the field for the learner to check and edit, and never moves on by itself.
+        Rate limited per IP address by SPEECH_RATE_LIMIT_MAX, on top of the API-wide limit.
+      parameters:
+        - name: lang
+          in: query
+          required: true
+          description: A language code listed by GET /speech/capabilities.
+          schema: { type: string, example: am }
+      requestBody:
+        required: true
+        content:
+          audio/wav: { schema: { type: string, format: binary } }
+          audio/webm: { schema: { type: string, format: binary } }
+          audio/ogg: { schema: { type: string, format: binary } }
+          audio/mp4: { schema: { type: string, format: binary } }
+          audio/mpeg: { schema: { type: string, format: binary } }
+      responses:
+        '200':
+          description: >-
+            What was said. Empty text means nothing was heard.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [text]
+                properties:
+                  text: { type: string, example: ዮናስ አበበ }
+        '400':
+          description: >-
+            invalid_lang (missing or not a language code), unsupported_language (the provider
+            does not do this language), empty_audio, or invalid_audio (a WAV file that can't be read)
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '404':
+          description: speech_off - SPEECH_PROVIDER is none
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '413':
+          description: payload_too_large (over SPEECH_MAX_BYTES) or audio_too_long (over 30 seconds)
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '415':
+          description: unsupported_media_type - not an audio type this provider accepts
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '422':
+          description: speech_rejected - the provider could not read this audio
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '502':
+          description: speech_failed - the provider is down, or its key is wrong
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '504':
+          description: speech_timeout - the provider took longer than SPEECH_TIMEOUT_MS
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+components:
+  parameters:
+    SessionId:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/SessionId' }
+  schemas:
+    SessionId:
+      type: string
+      pattern: '^[A-Za-z0-9_-]{22}$'
+      description: 128 random bits, base64url. Treat it as a secret.
+    Answers:
+      type: object
+      description: >-
+        Map of question id to answer. text/phone/single are strings, multi is an array of
+        option values, yesno is a boolean. A date is stored as the ISO Gregorian date plus the
+        calendar the learner used: { date: "YYYY-MM-DD", calendar: "gregorian" } or
+        { date, calendar: "ethiopian", ethiopian: { year, month, day } } (the two dates must agree,
+        otherwise calendar_mismatch). A plain "YYYY-MM-DD" is accepted as a Gregorian date.
+      additionalProperties:
+        oneOf:
+          - type: string
+          - type: boolean
+          - type: array
+            items: { type: string }
+          - $ref: '#/components/schemas/DateAnswer'
+      example:
+        fullName: Hana Tesfaye
+        phone: '+251 911 234 567'
+        dateOfBirth: { date: '2001-03-27', calendar: ethiopian, ethiopian: { year: 1993, month: 7, day: 18 } }
+    LocalizedText:
+      description: Text, or JSON-LD language-tagged values.
+      oneOf:
+        - { type: string }
+        - type: array
+          items:
+            type: object
+            required: ['@value']
+            properties:
+              '@value': { type: string }
+              '@language': { type: string, example: am }
+    JobPosting:
+      type: object
+      description: A schema.org/JobPosting. Only these properties are accepted.
+      required: ['@type', identifier, title, description, hiringOrganization, employmentType, datePosted]
+      additionalProperties: false
+      properties:
+        '@context': { type: string, example: 'https://schema.org' }
+        '@type': { type: string, const: JobPosting }
+        '@id': { type: string }
+        identifier: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' }
+        title: { $ref: '#/components/schemas/LocalizedText' }
+        description: { $ref: '#/components/schemas/LocalizedText' }
+        hiringOrganization:
+          type: object
+          properties: { '@type': { const: Organization }, name: { $ref: '#/components/schemas/LocalizedText' } }
+        jobLocation:
+          type: object
+          description: Required unless jobLocationType is TELECOMMUTE.
+          properties:
+            '@type': { const: Place }
+            address:
+              type: object
+              properties:
+                '@type': { const: PostalAddress }
+                addressLocality: { $ref: '#/components/schemas/LocalizedText' }
+                addressRegion: { $ref: '#/components/schemas/LocalizedText' }
+                addressCountry: { type: string, example: ET }
+        jobLocationType: { type: string, enum: [TELECOMMUTE] }
+        applicantLocationRequirements: { type: object, properties: { '@type': { const: Country }, name: { type: string } } }
+        employmentType:
+          oneOf:
+            - { type: string, enum: [FULL_TIME, PART_TIME, CONTRACTOR, TEMPORARY, INTERN, VOLUNTEER, PER_DIEM, OTHER] }
+            - { type: array, items: { type: string, enum: [FULL_TIME, PART_TIME, CONTRACTOR, TEMPORARY, INTERN, VOLUNTEER, PER_DIEM, OTHER] } }
+        datePosted: { type: string, format: date }
+        validThrough: { type: string, format: date }
+        jobBenefits:
+          type: array
+          items: { type: string, maxLength: 300 }
+          description: Support offered. One value per support tag, using the tag's English text, e.g. "Step-free workplace".
+        url: { type: string, format: uri }
+        directApply: { type: boolean }
+    DateAnswer:
+      type: object
+      required: [date, calendar]
+      properties:
+        date: { type: string, format: date, description: The day in the Gregorian calendar. }
+        calendar: { type: string, enum: [gregorian, ethiopian], description: The calendar the learner used. }
+        ethiopian:
+          type: object
+          description: Only when calendar is ethiopian.
+          required: [year, month, day]
+          properties:
+            year: { type: integer }
+            month: { type: integer, minimum: 1, maximum: 13, description: '13 is Pagume (5 days, 6 when year mod 4 is 3).' }
+            day: { type: integer, minimum: 1, maximum: 30 }
+    Session:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/SessionId' }
+        resumeCode: { type: string }
+        flowId: { type: string }
+        flowVersion: { type: string }
+        lang: { type: string, example: am }
+        status: { type: string, enum: [open, submitted] }
+        step: { type: [string, 'null'] }
+        answers: { $ref: '#/components/schemas/Answers' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        submittedAt: { type: [string, 'null'], format: date-time }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: |
+                Machine-readable code, e.g. unknown_flow, invalid_lang, invalid_body,
+                invalid_json, invalid_step, unknown_question, invalid_type, too_long,
+                invalid_phone, invalid_date, future_date, calendar_mismatch, invalid_option, required,
+                not_found, already_submitted, job_not_saved, payload_too_large, rate_limited, internal.
+            message: { type: string, description: Plain-language message safe to show to a person. }
+            field: { type: string, description: The question id or body field the error is about. }
+  responses:
+    BadRequest:
+      description: The request or an answer is not valid
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unprocessable:
+      description: A required question has no answer
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: No session with this id
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: The session was already submitted
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    TooLarge:
+      description: The request body is larger than BODY_LIMIT
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    RateLimited:
+      description: Too many requests from this address
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }

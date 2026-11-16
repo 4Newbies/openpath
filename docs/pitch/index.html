@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenPath pitch</title>
+<meta name="description" content="OpenPath: sign-up that works for everyone. 8 slides.">
+<style>
+  /* No external requests: system fonts only, no images, no scripts from elsewhere. */
+  :root {
+    --bg: #fbfaf7;
+    --ink: #16181d;
+    --muted: #4a4f5a;      /* 8.0:1 on --bg */
+    --accent: #0b5cad;     /* OpenPath demo colour, 6.3:1 on --bg */
+    --accent-ink: #ffffff; /* on --accent: 6.6:1 */
+    --line: #8a8f99;       /* 3.2:1 on --bg, for borders */
+    --panel: #eef1f6;
+    --code-bg: #16181d;
+    --code-ink: #f3f4f6;
+    --code-tag: #9cc8ff;
+    --code-attr: #ffd479;
+    --focus: #0b5cad;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Nyala", "Ebrima", "Noto Sans Ethiopic", "Noto Sans Arabic", sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121418; --ink: #f2f3f5; --muted: #b9bec8; --accent: #8cb8ff; --accent-ink: #0b1220;
+      --line: #7d8592; --panel: #1d2129; --code-bg: #0a0b0e; --focus: #8cb8ff;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121418; --ink: #f2f3f5; --muted: #b9bec8; --accent: #8cb8ff; --accent-ink: #0b1220;
+    --line: #7d8592; --panel: #1d2129; --code-bg: #0a0b0e; --focus: #8cb8ff;
+  }
+  @media (prefers-contrast: more) {
+    :root { --muted: var(--ink); --line: var(--ink); }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font); line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+  }
+  .skip {
+    position: absolute; inset-inline-start: 1rem; inset-block-start: -10rem;
+    background: var(--accent); color: var(--accent-ink); padding: .5rem 1rem; z-index: 10;
+  }
+  .skip:focus { inset-block-start: 1rem; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+  /* ---------- slides ---------- */
+  .slide {
+    min-height: 100vh; min-height: 100dvh;
+    padding: clamp(1.25rem, 5vmin, 4.5rem) clamp(1rem, 6vw, 6rem) clamp(5rem, 9vmin, 6.5rem);
+    display: flex; flex-direction: column; justify-content: center; gap: clamp(.75rem, 3vmin, 2.25rem);
+    font-size: clamp(1.1rem, 3.3vmin, 2.4rem);
+    border-block-end: 1px solid var(--line);
+  }
+  /* With JS: one slide on screen at a time. Without JS: all slides, one after another. */
+  .js .slide { display: none; border: 0; }
+  .js .slide.is-current { display: flex; }
+
+  .kicker {
+    margin: 0; color: var(--accent); font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    font-size: .8em;
+  }
+  h1, h2 { margin: 0; line-height: 1.05; letter-spacing: -.02em; text-wrap: balance; }
+  h2 { font-size: clamp(1.9rem, 7.5vmin, 4.8rem); }
+  h2.title { font-size: clamp(2.6rem, 12vmin, 8rem); }
+  .card .sr-only { position: absolute; }
+  /* Headings get focus only so screen readers read the new slide; they are not controls. */
+  h2:focus, h2:focus-visible { outline: none; }
+  .lead { margin: 0; font-size: 1.35em; color: var(--muted); max-width: 32ch; text-wrap: balance; }
+  .big { font-size: 1.6em; font-weight: 700; margin: 0; }
+  .team { margin: 0; font-size: 1.05em; }
+  .team span + span::before { content: " · "; color: var(--muted); }
+
+  ul.plain { list-style: none; margin: 0; padding: 0; }
+  .grid { display: grid; gap: clamp(.75rem, 2.5vmin, 2rem); }
+  .cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .cols-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 60rem) { .cols-4 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 40rem) { .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--panel); border-radius: .6rem; padding: clamp(.75rem, 2.4vmin, 1.6rem);
+    border-inline-start: .35rem solid var(--accent);
+  }
+  .card h3 { margin: 0 0 .35em; font-size: 1.15em; line-height: 1.15; }
+  .card p, .card li { margin: 0; color: var(--muted); }
+  .card li + li { margin-block-start: .2em; }
+  .card ul { margin: 0; padding-inline-start: 1.1em; }
+
+  .stat { font-size: 2.4em; font-weight: 800; line-height: 1; color: var(--accent); display: block; }
+  .stat-label { display: block; margin-block-start: .3em; color: var(--ink); font-weight: 600; }
+
+  .reasons { display: grid; gap: .6em; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+  .reasons li {
+    border: 2px solid var(--line); border-radius: .6rem; padding: .7em .9em;
+    font-size: 1.15em; font-weight: 700; display: flex; gap: .5em; align-items: center;
+  }
+  .x { color: var(--accent); font-weight: 800; }
+
+  pre {
+    margin: 0; background: var(--code-bg); color: var(--code-ink); border-radius: .6rem;
+    padding: clamp(.75rem, 2.5vmin, 1.5rem); font-family: var(--mono);
+    font-size: clamp(.8rem, 2.8vmin, 1.9rem); line-height: 1.5;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  .t { color: var(--code-tag); }
+  .a { color: var(--code-attr); }
+  code { font-family: var(--mono); font-size: .9em; }
+
+  .note { margin: 0; color: var(--muted); font-size: .9em; }
+  .rule {
+    margin: 0; padding: .7em 1em; border-radius: .6rem; font-weight: 700; font-size: 1.15em;
+    background: var(--accent); color: var(--accent-ink);
+  }
+  .swatches { display: flex; flex-wrap: wrap; gap: .5em 1.25em; align-items: center; margin-block-start: .5em; }
+  .sw { display: inline-flex; align-items: center; gap: .45em; }
+  .sw i { inline-size: 1.4em; block-size: 1.4em; border-radius: .25em; border: 2px solid var(--line); display: inline-block; }
+  .quote { font-size: 1.15em; font-weight: 700; margin: 0; }
+
+  /* ---------- controls ---------- */
+  .controls {
+    position: fixed; inset-inline: 0; inset-block-end: 0;
+    display: none; align-items: center; justify-content: space-between; gap: .75rem;
+    padding: .6rem clamp(1rem, 4vw, 2rem); background: var(--bg);
+    border-block-start: 1px solid var(--line); font-size: 1rem;
+  }
+  .js .controls { display: flex; }
+  .controls button {
+    font: inherit; font-weight: 700; min-inline-size: 44px; min-block-size: 44px; padding: .4rem 1rem;
+    border-radius: .4rem; border: 2px solid var(--accent); background: var(--bg); color: var(--accent); cursor: pointer;
+  }
+  .controls button:hover:not([aria-disabled="true"]) { background: var(--accent); color: var(--accent-ink); }
+  .controls button[aria-disabled="true"] { opacity: .45; cursor: default; }
+  .counter { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .help { color: var(--muted); font-size: .875rem; }
+  .progress { position: fixed; inset-block-start: 0; inset-inline-start: 0; block-size: 4px; background: var(--accent); display: none; }
+  .js .progress { display: block; }
+  @media (prefers-reduced-motion: no-preference) { .progress { transition: inline-size .2s ease; } }
+  .sr-only { position: fixed; inset-block-start: 0; inset-inline-start: 0; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  @media (max-width: 34rem) { .help { display: none; } }
+
+  @media (forced-colors: active) {
+    .card, .reasons li, .rule, pre { border: 2px solid CanvasText; }
+    .progress { background: Highlight; }
+  }
+
+  /* ---------- print: one slide per landscape page ---------- */
+  @page { size: 13.333in 7.5in; margin: 0; }
+  @media print {
+    :root, :root[data-theme="dark"] {
+      --bg: #ffffff; --ink: #16181d; --muted: #3d424c; --accent: #0b5cad; --accent-ink: #fff;
+      --line: #8a8f99; --panel: #eef1f6; --code-bg: #16181d;
+    }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    html, body { height: auto; }
+    .controls, .progress, #announce, .page-title { display: none !important; }
+    .js .slide, .slide {
+      display: flex !important; height: 7.5in; min-height: 0; overflow: hidden;
+      padding: .6in .8in; font-size: 19pt; border: 0;
+      break-after: page; page-break-after: always;
+    }
+    .slide:last-of-type { break-after: auto; page-break-after: auto; }
+    h2 { font-size: 42pt; } h2.title { font-size: 72pt; }
+    pre { font-size: 15pt; }
+  }
+</style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"></div>
+
+<main id="deck">
+  <h1 class="sr-only page-title">OpenPath pitch, 8 slides</h1>
+
+  <!-- 1 -->
+  <section class="slide" id="s1" aria-labelledby="h1" aria-roledescription="slide">
+    <p class="kicker">OpenPath</p>
+    <h2 id="h1" class="title" tabindex="-1">Sign-up that works for everyone.</h2>
+    <p class="team"><span>Mohammed Ismail</span><span>Mohammed Sadik</span><span>Hayat Abdulfetah</span><span>Firomsa Girma</span></p>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide" id="s2" aria-labelledby="h2" aria-roledescription="slide">
+    <p class="kicker">The problem</p>
+    <h2 id="h2" tabindex="-1">On 21 October, most people could not finish registering.</h2>
+    <ul class="plain reasons">
+      <li><span class="x" aria-hidden="true">✕</span> Time-outs</li>
+      <li><span class="x" aria-hidden="true">✕</span> No ID</li>
+      <li><span class="x" aria-hidden="true">✕</span> No screen reader support</li>
+    </ul>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide" id="s3" aria-labelledby="h3" aria-roledescription="slide">
+    <p class="kicker">Our answer</p>
+    <h2 id="h3" tabindex="-1">One script tag. One question per screen.</h2>
+    <pre aria-label="Install code, two lines"><code><span class="t">&lt;script</span> <span class="a">src</span>="openpath.js"<span class="t">&gt;&lt;/script&gt;</span>
+<span class="t">&lt;openpath-flow</span> <span class="a">questions</span>="/questions/onboarding.json" <span class="a">api</span>="https://api.example.org"<span class="t">&gt;&lt;/openpath-flow&gt;</span></code></pre>
+    <p class="note">That is the whole install. The questions live in one JSON file.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide" id="s4" aria-labelledby="h4" aria-roledescription="slide">
+    <p class="kicker">Accessibility</p>
+    <h2 id="h4" tabindex="-1">Works with their tools. Brings its own.</h2>
+    <div class="grid cols-2">
+      <div class="card">
+        <h3>The tools people already have</h3>
+        <ul>
+          <li>TalkBack, NVDA</li>
+          <li>Voice typing</li>
+          <li>Keyboard, zoom to 400%</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Ours, for those who have none</h3>
+        <ul>
+          <li>Read aloud</li>
+          <li>Speak your answer</li>
+          <li>Simple words</li>
+          <li>Text size, contrast</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">Every helper is off until the learner turns it on, so OpenPath never talks over a screen reader.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide" id="s5" aria-labelledby="h5" aria-roledescription="slide">
+    <p class="kicker">Built for Ethiopia</p>
+    <h2 id="h5" tabindex="-1">Made for where people are.</h2>
+    <div class="grid cols-3">
+      <div class="card"><h3>Languages</h3><p><span lang="am">አማርኛ</span>, English, <span lang="ar" dir="rtl">العربية</span>. One JSON file adds another.</p></div>
+      <div class="card"><h3>Ethiopian calendar</h3><p>13 months, switch either way.</p></div>
+      <div class="card"><h3>Offline</h3><p>Answers stay on the phone, sent when back online.</p></div>
+      <div class="card"><h3>No ID? Still in.</h3><p>“I have no ID. Please help me.” leads to a partner.</p></div>
+      <div class="card"><h3>Low data</h3><p>46&nbsp;kB gzipped. About 5&nbsp;kB per language, only when used.</p></div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide" id="s6" aria-labelledby="h6" aria-roledescription="slide">
+    <p class="kicker">Plugs in anywhere</p>
+    <h2 id="h6" tabindex="-1">Any site. Any platform.</h2>
+    <div class="grid cols-3">
+      <div class="card"><h3>Script tag</h3><p>Any web page.</p></div>
+      <div class="card"><h3>REST API</h3><p>With an OpenAPI file.</p></div>
+      <div class="card"><h3>JobPosting</h3><p>schema.org, readable by search engines.</p></div>
+    </div>
+    <p class="rule">Hosts change the questions and colours. They cannot break accessibility.</p>
+    <div class="note">
+      A pale brand yellow fails contrast, so OpenPath fixes it:
+      <div class="swatches">
+        <span class="sw"><i style="background:#fff59d" aria-hidden="true"></i><code>#fff59d</code> 1.11:1</span>
+        <span aria-hidden="true">→</span><span class="sr-only">becomes</span>
+        <span class="sw"><i style="background:#847600" aria-hidden="true"></i><code>#847600</code> 4.59:1</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide" id="s7" aria-labelledby="h7" aria-roledescription="slide">
+    <p class="kicker">Career Gateway</p>
+    <h2 id="h7" tabindex="-1">From sign-up to a job.</h2>
+    <div class="grid cols-4">
+      <div class="card"><h3>Job list</h3><p>Employers say which support they offer.</p></div>
+      <div class="card"><h3>“Support I need”</h3><p>Private filter. Never sent anywhere.</p></div>
+      <div class="card"><h3>Apply by voice</h3><p>Same helpers as sign-up.</p></div>
+      <div class="card"><h3>Employer form</h3><p>Post a job and the support on offer.</p></div>
+    </div>
+    <p class="quote">“Only you can see this. Employers are not told.”</p>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide" id="s8" aria-labelledby="h8" aria-roledescription="slide">
+    <p class="kicker">Proof and next steps</p>
+    <h2 id="h8" tabindex="-1">Tested. Honest about the gaps.</h2>
+    <div class="grid cols-3">
+      <div class="card">
+        <h3 class="sr-only">Proof</h3>
+        <p><span class="stat">439</span><span class="stat-label">automated tests pass</span>361 form, 78 API</p>
+        <p style="margin-top:.8em"><span class="stat">0</span><span class="stat-label">axe violations</span>48 real-browser checks: 3 languages, light and dark, 320&nbsp;px to 1280&nbsp;px</p>
+      </div>
+      <div class="card">
+        <h3>Not yet tested</h3>
+        <ul>
+          <li>With disabled users</li>
+          <li>Firefox, Safari</li>
+          <li>Amharic and Arabic by native speakers</li>
+          <li>Live speech services</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Next</h3>
+        <ul>
+          <li>Sessions with screen reader and switch users</li>
+          <li>Native-speaker review</li>
+          <li>Employer sign-in</li>
+          <li>Data retention and deletion</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">Test run 16 November 2026, Chrome/Edge, axe WCAG 2.2 AA rules.</p>
+  </section>
+</main>
+
+<nav class="controls" aria-label="Slides">
+  <button type="button" id="prev">Previous</button>
+  <span class="counter"><span id="count">1 / 8</span> <span class="help">· ← → keys</span></span>
+  <button type="button" id="next">Next</button>
+</nav>
+<div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  root.classList.add('js');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var prev = document.getElementById('prev');
+  var next = document.getElementById('next');
+  var count = document.getElementById('count');
+  var announce = document.getElementById('announce');
+  var bar = document.querySelector('.progress');
+  var current = 0;
+
+  function fromHash() {
+    var m = /^#s?(\d+)$/.exec(location.hash);
+    var n = m ? parseInt(m[1], 10) - 1 : 0;
+    return Math.min(Math.max(n, 0), slides.length - 1);
+  }
+
+  // how: 'key' moves focus to the new heading (screen readers read it);
+  // 'button' keeps focus on the button and announces instead.
+  function show(n, how) {
+    n = Math.min(Math.max(n, 0), slides.length - 1);
+    current = n;
+    slides.forEach(function (s, i) {
+      var on = i === n;
+      s.classList.toggle('is-current', on);
+      if (on) s.removeAttribute('hidden'); else s.setAttribute('hidden', '');
+    });
+    var heading = slides[n].querySelector('h1, h2');
+    count.textContent = (n + 1) + ' / ' + slides.length;
+    bar.style.inlineSize = ((n + 1) / slides.length * 100) + '%';
+    prev.setAttribute('aria-disabled', n === 0 ? 'true' : 'false');
+    next.setAttribute('aria-disabled', n === slides.length - 1 ? 'true' : 'false');
+    document.title = 'OpenPath pitch (' + (n + 1) + ' of ' + slides.length + ')';
+    if (location.hash !== '#s' + (n + 1)) history.replaceState(null, '', '#s' + (n + 1));
+    if (how === 'key') heading.focus();
+    else if (how === 'button') announce.textContent = 'Slide ' + (n + 1) + ' of ' + slides.length + ': ' + heading.textContent;
+  }
+
+  prev.addEventListener('click', function () { if (current > 0) show(current - 1, 'button'); });
+  next.addEventListener('click', function () { if (current < slides.length - 1) show(current + 1, 'button'); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    var t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    var onButton = t && t.tagName === 'BUTTON';
+    var k = e.key;
+    var forward = k === 'ArrowRight' || k === 'PageDown' || (k === ' ' && !onButton && !e.shiftKey);
+    var back = k === 'ArrowLeft' || k === 'PageUp' || (k === ' ' && !onButton && e.shiftKey);
+    if (forward) { e.preventDefault(); show(current + 1, 'key'); }
+    else if (back) { e.preventDefault(); show(current - 1, 'key'); }
+    else if (k === 'Home') { e.preventDefault(); show(0, 'key'); }
+    else if (k === 'End') { e.preventDefault(); show(slides.length - 1, 'key'); }
+  });
+
+  window.addEventListener('hashchange', function () { show(fromHash(), 'key'); });
+  // Print every slide, then go back to the one on screen.
+  window.addEventListener('beforeprint', function () { slides.forEach(function (s) { s.removeAttribute('hidden'); }); });
+  window.addEventListener('afterprint', function () { show(current); });
+
+  show(fromHash());
+})();
+</script>
+</body>
+</html>
